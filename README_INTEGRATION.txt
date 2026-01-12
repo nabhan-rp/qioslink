@@ -3,8 +3,9 @@ PANDUAN INTEGRASI UTAMA (CORE SERVER)
 
 File ini menjelaskan cara setup SERVER UTAMA QiosLink. 
 Jika Anda ingin mengintegrasikan ke WHMCS atau WooCommerce, baca file terpisah:
-- Lihat: README_WHMCS.txt
-- Lihat: README_WOO.txt
+- Lihat: README_WHMCS.txt (Untuk WHMCS)
+- Lihat: README_WOO.txt (Untuk WordPress/WooCommerce)
+- Lihat: README_SHOPIFY.txt (Untuk Shopify - Teknik Relay)
 - Lihat: README_SYSTEM_FLOW.txt (PENTING: Baca ini untuk paham logika kerjanya)
 
 1. SETUP SERVER UTAMA (QiosLink Core)

@@ -27,7 +27,8 @@ import {
   FileCode,
   AlertCircle,
   HelpCircle,
-  Package
+  Package,
+  ShoppingCart
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -43,7 +44,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- Constants ---
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.4.0";
 
 // --- Components ---
 
@@ -211,7 +212,7 @@ export default function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   
   // Integration Tab State
-  const [integrationTab, setIntegrationTab] = useState<'php' | 'node' | 'whmcs' | 'woo'>('php');
+  const [integrationTab, setIntegrationTab] = useState<'php' | 'node' | 'whmcs' | 'woo' | 'shopify'>('php');
   
   // Data State
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
@@ -285,7 +286,7 @@ export default function App() {
   }, []);
 
   // --- Handlers ---
-
+  // (Same as before)
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -376,20 +377,13 @@ export default function App() {
   };
 
   // --- Logic: Who sees what? ---
+  // (Same logic)
   const visibleTransactions = transactions.filter(t => {
     if (!currentUser) return false;
-    // 1. Superadmin: Sees ALL transactions
     if (currentUser.role === 'superadmin') return true;
-    
-    // 2. CS: Sees ALL transactions (Support role)
     if (currentUser.role === 'cs') return true;
-
-    // 3. Merchant: Sees only their OWN SALES
     if (currentUser.role === 'merchant') return t.merchantId === currentUser.id;
-
-    // 4. User: Sees only their OWN PURCHASES
     if (currentUser.role === 'user') return t.customerId === currentUser.id;
-
     return false;
   });
 
@@ -413,8 +407,7 @@ export default function App() {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
 
-  // 1. PUBLIC PAYMENT PAGE
-  // ... (Same as before) ...
+  // 1. PUBLIC PAYMENT PAGE (Same)
   if (isPublicMode && generatedQR) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -447,13 +440,13 @@ export default function App() {
     );
   }
 
-  // 2. LOGIN PAGE (Same as before)
+  // 2. LOGIN PAGE (Same)
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
           <div className="bg-indigo-600 p-8 text-center">
-            <div className="inline-flex p-3 bg-white/20 rounded-xl mb-4 text-white">
+             <div className="inline-flex p-3 bg-white/20 rounded-xl mb-4 text-white">
               <Shield size={32} />
             </div>
             <h1 className="text-2xl font-bold text-white">QiosLink Login</h1>
@@ -532,7 +525,7 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar (Same) */}
       <aside 
         className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-20 xl:w-72'
@@ -560,7 +553,6 @@ export default function App() {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             
-            {/* Common for Admin/Merchant/CS */}
             {['superadmin', 'merchant', 'cs'].includes(currentUser.role) && (
               <>
                 <SidebarItem 
@@ -578,7 +570,6 @@ export default function App() {
               </>
             )}
 
-            {/* Merchant & Superadmin Only */}
             {['superadmin', 'merchant'].includes(currentUser.role) && (
               <SidebarItem 
                 active={view === 'terminal'} 
@@ -588,7 +579,6 @@ export default function App() {
               />
             )}
 
-            {/* Superadmin Only */}
             {currentUser.role === 'superadmin' && (
               <>
                 <SidebarItem 
@@ -606,7 +596,6 @@ export default function App() {
               </>
             )}
             
-            {/* User Only */}
             {currentUser.role === 'user' && (
                <SidebarItem 
                 active={view === 'my_orders'} 
@@ -616,7 +605,6 @@ export default function App() {
               />
             )}
 
-            {/* Settings (Except User) */}
             {currentUser.role !== 'user' && (
               <SidebarItem 
                 active={view === 'settings'} 
@@ -628,7 +616,6 @@ export default function App() {
 
           </nav>
 
-          {/* Footer */}
           <div className="p-4 border-t border-gray-100">
              <button 
               onClick={handleLogout}
@@ -643,7 +630,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Header */}
+        {/* Header (Same) */}
         <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-10">
           <div className="flex items-center space-x-4">
             <button 
@@ -675,8 +662,7 @@ export default function App() {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 lg:p-10">
           
-          {/* VIEW: DASHBOARD & OTHERS (Skipped for brevity, same as previous) ... */}
-          {/* ... */}
+          {/* VIEW: DASHBOARD (Condensed) */}
           {view === 'dashboard' && (
              <div className="space-y-6">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -705,6 +691,7 @@ export default function App() {
              </div>
           )}
 
+          {/* VIEW: HISTORY (Condensed) */}
           {view === 'history' && (
              <Card>
                 <div className="flex justify-between mb-4"><h3 className="font-bold">Transaction History</h3></div>
@@ -724,6 +711,7 @@ export default function App() {
              </Card>
           )}
 
+          {/* VIEW: TERMINAL (Condensed) */}
           {view === 'terminal' && (
              <div className="max-w-md mx-auto">
                <Card>
@@ -735,6 +723,7 @@ export default function App() {
              </div>
           )}
           
+          {/* VIEW: SETTINGS (Condensed) */}
           {view === 'settings' && (
              <div className="max-w-2xl mx-auto">
                <Card>
@@ -748,6 +737,7 @@ export default function App() {
              </div>
           )}
 
+          {/* VIEW: USERS (Condensed) */}
           {view === 'users' && currentUser.role === 'superadmin' && (
             <Card>
               <h3 className="font-bold mb-4">User List</h3>
@@ -762,7 +752,7 @@ export default function App() {
                  <div className="relative z-10">
                    <h2 className="text-3xl font-bold mb-4">Developer Integration</h2>
                    <p className="text-indigo-200 max-w-xl">
-                     Download ready-to-use modules for WHMCS and WooCommerce.
+                     Download ready-to-use modules for WHMCS, WooCommerce, and Shopify.
                    </p>
                  </div>
                  <Code2 className="absolute right-0 bottom-0 text-indigo-800 opacity-20 -mr-6 -mb-6" size={200} />
@@ -771,9 +761,9 @@ export default function App() {
                {/* Tabs */}
                <div className="flex space-x-4 border-b border-gray-200 overflow-x-auto">
                   <button onClick={() => setIntegrationTab('php')} className={`pb-3 px-4 text-sm font-medium whitespace-nowrap border-b-2 ${integrationTab === 'php' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}>PHP API</button>
-                  <button onClick={() => setIntegrationTab('node')} className={`pb-3 px-4 text-sm font-medium whitespace-nowrap border-b-2 ${integrationTab === 'node' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}>Node.js</button>
-                  <button onClick={() => setIntegrationTab('whmcs')} className={`pb-3 px-4 text-sm font-medium whitespace-nowrap border-b-2 ${integrationTab === 'whmcs' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}>WHMCS Module</button>
+                  <button onClick={() => setIntegrationTab('whmcs')} className={`pb-3 px-4 text-sm font-medium whitespace-nowrap border-b-2 ${integrationTab === 'whmcs' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}>WHMCS</button>
                   <button onClick={() => setIntegrationTab('woo')} className={`pb-3 px-4 text-sm font-medium whitespace-nowrap border-b-2 ${integrationTab === 'woo' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500'}`}>WooCommerce</button>
+                  <button onClick={() => setIntegrationTab('shopify')} className={`pb-3 px-4 text-sm font-medium whitespace-nowrap border-b-2 ${integrationTab === 'shopify' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500'}`}>Shopify</button>
                </div>
 
                <div className="min-h-[300px]">
@@ -784,15 +774,6 @@ export default function App() {
                       <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto text-white text-xs font-mono">
                          See `backend_php.txt` for the updated code supporting external callbacks.
                       </div>
-                    </Card>
-                 )}
-
-                 {integrationTab === 'node' && (
-                    <Card>
-                      <h3 className="font-bold text-gray-800 mb-2">Node.js / JS Integration</h3>
-                      <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto">
-{`// Generate QR logic is in utils/qrisUtils.ts`}
-                      </pre>
                     </Card>
                  )}
 
@@ -807,14 +788,8 @@ export default function App() {
                              </div>
                           </div>
                           <p className="text-sm text-gray-600 mb-4">
-                             This module connects your WHMCS to this QiosLink Engine. It supports auto-check status via Callback Forwarding.
+                             Connect WHMCS to QiosLink with auto-check status via Callback Forwarding.
                           </p>
-                          <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-4 text-sm">
-                             <strong>Installation:</strong><br/>
-                             1. Download `module_whmcs.txt`.<br/>
-                             2. Create folder `/modules/gateways/qioslink/`.<br/>
-                             3. Follow instructions inside the text file.
-                          </div>
                           <button className="flex items-center space-x-2 text-blue-600 font-bold hover:underline">
                              <Download size={16}/> <span>Download module_whmcs.txt</span>
                           </button>
@@ -833,17 +808,42 @@ export default function App() {
                              </div>
                           </div>
                           <p className="text-sm text-gray-600 mb-4">
-                             Accept QRIS payments on your WordPress store. Requires QiosLink backend to be running.
+                             Accept QRIS payments on WordPress. Requires QiosLink backend.
                           </p>
-                          <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-4 text-sm">
-                             <strong>Installation:</strong><br/>
-                             1. Download `module_woocommerce.txt`.<br/>
-                             2. Save as `woo-qioslink.php`.<br/>
-                             3. Upload to `/wp-content/plugins/` and activate.
-                          </div>
                           <button className="flex items-center space-x-2 text-purple-600 font-bold hover:underline">
                              <Download size={16}/> <span>Download module_woocommerce.txt</span>
                           </button>
+                       </Card>
+                    </div>
+                 )}
+
+                 {integrationTab === 'shopify' && (
+                    <div className="space-y-4 animate-in fade-in">
+                       <Card>
+                          <div className="flex items-center space-x-3 mb-4">
+                             <div className="bg-green-100 p-2 rounded-lg text-green-700"><ShoppingCart size={20}/></div>
+                             <div>
+                                <h3 className="font-bold text-gray-800">Shopify Bridge</h3>
+                                <p className="text-xs text-gray-500">API Bridge for Manual Payment</p>
+                             </div>
+                          </div>
+                          <div className="bg-orange-50 border border-orange-200 p-3 rounded mb-4">
+                             <p className="text-xs text-orange-800">
+                                <strong>Note:</strong> Shopify is a SaaS platform and does not allow uploading PHP files. 
+                                This integration uses a "Relay Script" hosted on your QiosLink server to talk to Shopify API.
+                             </p>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                             Download the Bridge Script (`shopify_relay.php`) and upload it to your hosting (same place as callback.php).
+                          </p>
+                          <button className="flex items-center space-x-2 text-green-600 font-bold hover:underline">
+                             <Download size={16}/> <span>Download module_shopify.txt</span>
+                          </button>
+                          <div className="mt-2">
+                             <button className="flex items-center space-x-2 text-gray-500 text-sm hover:underline">
+                                <FileCode size={14}/> <span>Read README_SHOPIFY.txt</span>
+                             </button>
+                          </div>
                        </Card>
                     </div>
                  )}
