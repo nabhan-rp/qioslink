@@ -1,43 +1,66 @@
 
 ================================================================================
-FIX DATABASE CONNECTION (WAJIB REPLACE FILE LAMA)
+FIX DATABASE CONNECTION V2 (SOLUSI FINAL)
 ================================================================================
 Instruksi:
-1. Hapus file `api/db_connect.php` yang lama di hosting.
-2. Buat file baru `api/db_connect.php`.
-3. Copy isi di bawah ini.
-4. SAYA SANGAT MENYARANKAN GANTI PASSWORD DATABASE DI CPANEL JADI HURUF & ANGKA SAJA (CONTOH: JajanServer2025) UNTUK MENGHINDARI EROR KODE.
+1. Edit file ini di notepad, MASUKKAN PASSWORD DATABASE ANDA DI BAGIAN "$password".
+2. Upload/Replace file `api/db_connect.php` di hosting dengan kode ini.
+3. Kode ini menggunakan "ob_start()" untuk membuang spasi kosong/error HTML yang merusak JSON.
 ================================================================================
 
 <?php
-// 1. Matikan Error Reporting HTML agar tidak merusak JSON React
+// Mencegah output apapun keluar sebelum JSON siap (mengatasi whitespace problem)
+ob_start();
+
+// Matikan Error Reporting yang tampil di layar (biar JSON bersih)
 error_reporting(0);
 mysqli_report(MYSQLI_REPORT_OFF);
 
-// 2. Handle CORS (PENTING UNTUK REACT)
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8");
-
-// Jika browser kirim sinyal OPTIONS (Pre-flight), matikan script di sini
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+// =======================================================================
+// KONFIGURASI CORS YANG LEBIH KUAT (KOMPATIBEL CLOUDFLARE)
+// =======================================================================
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Max-Age: 86400');    // Cache preflight 1 hari
+} else {
+    header("Access-Control-Allow-Origin: *");
 }
 
-// 3. KREDENSIAL DATABASE
+// Handle Request OPTIONS (Preflight Browser)
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");         
+
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+        header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+
+    // Bersihkan buffer dan stop script agar browser senang
+    ob_end_clean();
+    exit(0);
+}
+
+header("Content-Type: application/json; charset=UTF-8");
+
+// =======================================================================
+// KREDENSIAL DATABASE (SILAKAN ISI DISINI)
+// =======================================================================
+
 $host = "localhost";
-$username = "jajanserver_u888_masterjajan"; 
 
-// SARAN: Ubah password di cPanel jadi "Jajan123" atau yang simpel, lalu update disini.
-// Jika password asli mengandung tanda baca aneh, kadang PHP salah baca.
-$password = "%2Fjajanserver%2Fjajanin"; 
+// Ganti ini dengan USERNAME DATABASE asli Anda (contoh: jajanserver_u888_masterjajan)
+$username = "USERNAME_DB_ANDA"; 
 
-$dbname = "jajanserver_qioslinkjajan";
+// Ganti ini dengan PASSWORD DATABASE asli Anda.
+// Jika password mengandung persen (%), pastikan ditulis apa adanya sesuai di cPanel.
+$password = "PASSWORD_DB_ANDA"; 
 
-// 4. KONEKSI DENGAN TRY-CATCH
+// Ganti ini dengan NAMA DATABASE asli Anda (contoh: jajanserver_qioslinkjajan)
+$dbname = "NAMA_DB_ANDA";    
+
+// =======================================================================
+// LOGIKA KONEKSI
+// =======================================================================
 try {
     $conn = new mysqli($host, $username, $password, $dbname);
     
@@ -45,12 +68,15 @@ try {
         throw new Exception($conn->connect_error);
     }
 } catch (Exception $e) {
-    // Return JSON error yang rapi, bukan HTML error
-    http_response_code(500);
+    // Jika gagal, bersihkan output sebelumnya (html error) dan kirim JSON rapi
+    ob_end_clean(); 
+    http_response_code(500); // Internal Server Error
     echo json_encode([
         "success" => false, 
-        "message" => "Database Connection Failed. Check Credentials."
+        "message" => "Database Connection Failed: " . $e->getMessage()
     ]);
     exit();
 }
-?>
+
+// Jangan pernah pakai closing tag php (tanda tanya lebih besar) di akhir file 
+// untuk menghindari whitespace error.
