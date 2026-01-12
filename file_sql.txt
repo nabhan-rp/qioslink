@@ -1,5 +1,5 @@
 -- =============================================================================
--- DATABASE SCHEMA (UPDATE V3.5 - PAYMENT LINKS)
+-- DATABASE SCHEMA (UPDATE V3.7 - PAYMENT LINKS)
 -- Rename file ini menjadi "database.sql" sebelum import.
 -- =============================================================================
 
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` varchar(100) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('superadmin','merchant','cs','user') NOT NULL DEFAULT 'user',
-  `merchant_config` text,
+  `merchant_config` text, -- Disini data Branding disimpan (JSON)
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `description` varchar(255) DEFAULT NULL,
   `status` enum('pending','paid','expired','cancelled') NOT NULL DEFAULT 'pending',
   `qr_string` text,
-  `payment_token` varchar(64) DEFAULT NULL, -- Token Unik untuk Link
+  `payment_token` varchar(64) DEFAULT NULL, -- Token Unik (Hash) untuk Link
   `payment_url` text DEFAULT NULL,          -- Full URL Link
   `expires_at` datetime DEFAULT NULL,       -- Waktu Kadaluarsa
   `is_single_use` tinyint(1) DEFAULT 0,     -- 1 = Link hangus setelah dibayar
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `external_callback_url` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `trx_id` (`trx_id`),
-  UNIQUE KEY `payment_token` (`payment_token`) -- Index biar cepat
+  UNIQUE KEY `payment_token` (`payment_token`) -- Index biar akses link cepat
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 3. Data Awal
