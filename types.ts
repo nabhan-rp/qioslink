@@ -5,8 +5,17 @@ export type UserRole = 'superadmin' | 'merchant' | 'cs' | 'user';
 export interface User {
   id: string;
   username: string;
+  email?: string; // Added email
   role: UserRole;
   merchantConfig?: MerchantConfig; // Only for merchant & superadmin
+}
+
+export interface WhitelabelConfig {
+  customDomain?: string; // e.g., pay.merchant.com
+  brandColor?: string; // Hex code
+  logoUrl?: string;
+  faviconUrl?: string;
+  footerText?: string;
 }
 
 export interface MerchantConfig {
@@ -15,6 +24,7 @@ export interface MerchantConfig {
   apiKey: string;
   qrisString: string; // The long string starting with 000201...
   callbackUrl?: string;
+  branding?: WhitelabelConfig; // Added branding config
 }
 
 export interface Transaction {
