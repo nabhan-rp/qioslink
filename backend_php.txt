@@ -1,0 +1,213 @@
+================================================================================
+QiosLink - PHP Backend for Shared Hosting
+================================================================================
+
+This file contains the PHP code needed to run the backend on a shared hosting environment (cPanel, etc).
+Separate the content below into individual files as indicated.
+
+--------------------------------------------------------------------------------
+FILE: db_connect.php
+--------------------------------------------------------------------------------
+<?php
+$host = "localhost";
+$username = "your_db_user";
+$password = "your_db_password";
+$dbname = "your_db_name";
+
+$conn = new mysqli($host, $username, $password, $dbname);
+
+if ($conn->connect_error) {
+    die(json_encode(["error" => "Connection failed: " . $conn->connect_error]));
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: qris_utils.php
+--------------------------------------------------------------------------------
+<?php
+function crc16($data) {
+    $crc = 0xFFFF;
+    for ($i = 0; $i < strlen($data); $i++) {
+        $x = (($crc >> 8) ^ ord($data[$i])) & 0xFF;
+        $x ^= $x >> 4;
+        $crc = (($crc << 8) ^ ($x << 12) ^ ($x << 5) ^ $x) & 0xFFFF;
+    }
+    return strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+}
+
+function formatField($tag, $value) {
+    $length = str_pad(strlen($value), 2, '0', STR_PAD_LEFT);
+    return $tag . $length . $value;
+}
+
+function generateDynamicQR($staticQr, $amount) {
+    // 1. Strip CRC (last 4 chars) and Tag 6304 if present
+    $rawQr = $staticQr;
+    $crcPos = strrpos($rawQr, '6304');
+    if ($crcPos !== false) {
+        $rawQr = substr($rawQr, 0, $crcPos);
+    }
+
+    // 2. We should ideally parse TLV to remove existing Tag 54 (Amount) if present
+    // For simplicity in this snippet, we assume Static QR doesn't have amount
+    // or we append amount at the end (before CRC).
+    
+    // 3. Create Amount Tag (54)
+    $amountStr = floor($amount); // Integer string
+    $amountField = formatField('54', $amountStr);
+
+    // 4. Construct Payload
+    $payload = $rawQr . $amountField . '6304';
+    
+    // 5. Calculate CRC
+    $crc = crc16($payload);
+    
+    return $payload . $crc;
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: login.php
+--------------------------------------------------------------------------------
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+require 'db_connect.php';
+
+$data = json_decode(file_get_contents("php://input"));
+
+if(isset($data->username) && isset($data->password)) {
+    $user = $data->username;
+    $pass = md5($data->password); // NOTE: Use password_hash() in production!
+
+    $stmt = $conn->prepare("SELECT id, username, role, merchant_config FROM users WHERE username = ? AND password = ?");
+    $stmt->bind_param("ss", $user, $pass);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        echo json_encode(["success" => true, "user" => $row]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Invalid credentials"]);
+    }
+} else {
+    echo json_encode(["success" => false, "message" => "Missing input"]);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: create_payment.php
+--------------------------------------------------------------------------------
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+require 'db_connect.php';
+require 'qris_utils.php';
+
+$data = json_decode(file_get_contents("php://input"));
+
+if(isset($data->amount) && isset($data->merchant_id)) {
+    // Fetch merchant QR string
+    $stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
+    $stmt->bind_param("i", $data->merchant_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if($res->num_rows > 0) {
+        $user = $res->fetch_assoc();
+        $config = json_decode($user['merchant_config']);
+        
+        $dynamicQR = generateDynamicQR($config->qris_string, $data->amount);
+        
+        // Save transaction to DB
+        $trx_id = "TRX-" . time() . rand(100,999);
+        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string) VALUES (?, ?, ?, ?, 'pending', ?)");
+        $desc = isset($data->description) ? $data->description : 'Payment';
+        $insert->bind_param("siiss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR);
+        $insert->execute();
+
+        echo json_encode([
+            "success" => true,
+            "trx_id" => $trx_id,
+            "qr_string" => $dynamicQR
+        ]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Merchant not found"]);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: callback.php (Webhook for Qiospay)
+--------------------------------------------------------------------------------
+<?php
+// Receive JSON from Qiospay
+$input = file_get_contents("php://input");
+$data = json_decode($input);
+
+require 'db_connect.php';
+
+// Qiospay usually sends: { "status": "success", "amount": 10000, "ref_id": "..." }
+// Note: You need to verify the exact payload structure from Qiospay docs.
+
+if(isset($data->status) && $data->status == 'success') {
+    // Logic to find transaction. 
+    // Since static QRIS pools payments, matching exact amount + approximate time is tricky.
+    // However, if Qiospay sends a unique Reference ID (RRN) that appears in your mutation,
+    // you might need to scrape/check mutation via H2H if the callback doesn't provide unique ID.
+    
+    // For this example, we assume we can match loosely or Qiospay passes a unique ID we generated 
+    // (Note: Static QR usually doesn't allow passing custom RefID to the bank, so we rely on Amount).
+    
+    $amount = $data->amount;
+    
+    // Find oldest PENDING transaction with this amount
+    $stmt = $conn->prepare("SELECT id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at ASC LIMIT 1");
+    $stmt->bind_param("i", $amount);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $id = $row['id'];
+        
+        // Update status
+        $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+        $update->bind_param("i", $id);
+        $update->execute();
+        
+        echo json_encode(["status" => "ok", "message" => "Transaction $id matched"]);
+    } else {
+        echo json_encode(["status" => "ignored", "message" => "No matching pending trx found"]);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: database_schema.sql
+--------------------------------------------------------------------------------
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('admin','merchant') DEFAULT 'merchant',
+  `merchant_config` text,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `transactions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `trx_id` varchar(50) NOT NULL,
+  `merchant_id` int(11) NOT NULL,
+  `amount` int(11) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `status` enum('pending','paid','expired') DEFAULT 'pending',
+  `qr_string` text,
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+
+INSERT INTO `users` (`username`, `password`, `role`, `merchant_config`) VALUES 
+('admin', MD5('admin'), 'admin', '{"merchantName":"Admin Shop","qris_string":"..."}'),
+('demo', MD5('demo'), 'merchant', '{"merchantName":"Demo Shop","qris_string":"..."}');
