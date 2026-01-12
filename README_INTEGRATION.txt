@@ -1,41 +1,43 @@
-PANDUAN INTEGRASI QIOSLINK (HOSTING)
+PANDUAN INTEGRASI UTAMA (CORE SERVER)
 =====================================
 
-1. BUILD REACT APP
-   - Jalankan perintah: `npm run build` di terminal komputer lokal Anda.
-   - Folder bernama `dist` akan muncul.
-   - Upload isi folder `dist` ini ke folder `public_html` di hosting Anda.
+File ini menjelaskan cara setup SERVER UTAMA QiosLink. 
+Jika Anda ingin mengintegrasikan ke WHMCS atau WooCommerce, baca file terpisah:
+- Lihat: README_WHMCS.txt
+- Lihat: README_WOO.txt
+- Lihat: README_SYSTEM_FLOW.txt (PENTING: Baca ini untuk paham logika kerjanya)
 
-2. BUAT DATABASE
-   - Masuk ke cPanel -> MySQL Databases.
-   - Buat database baru, user baru, dan hubungkan user ke database.
-   - Buka phpMyAdmin, import file SQL (lihat backend_php.txt bagian sql) untuk membuat tabel `users` dan `transactions`.
+1. SETUP SERVER UTAMA (QiosLink Core)
+   ----------------------------------
+   A. Upload File Frontend (React)
+      - Build project (`npm run build`) -> Upload folder `dist` ke `public_html`.
+   
+   B. Upload File Backend (PHP)
+      - Download kode dari `backend_php.txt`.
+      - Buat database MySQL di cPanel.
+      - Edit `db_connect.php` sesuai user/pass database.
+      - Upload `create_payment.php` dan `callback.php` ke `public_html`.
 
-3. UPLOAD CALLBACK.PHP
-   - Buka file `callback_php.txt` yang dihasilkan aplikasi ini.
-   - Copy isinya, edit bagian config database ($host, $username, $password, $dbname).
-   - Simpan sebagai `callback.php`.
-   - Upload ke `public_html`.
-
-4. SETTING QIOSPAY
-   - Login ke qiospay.id
-   - Masuk menu Integrasi.
-   - Di kolom URL Callback, masukkan: https://nama-domain-anda.com/callback.php
-
-5. UPLOAD FILE API LAINNYA (Opsional untuk Login Real)
-   - Jika ingin login benar-benar konek ke database (bukan simulasi localStorage),
-   - Anda perlu mengupload file `login.php` dan `create_payment.php` dari `backend_php.txt` sebelumnya.
-   - Lalu edit kode React (`App.tsx`) bagian `handleLogin` untuk menggunakan `fetch('https://domain-anda.com/login.php'...)` daripada logika mock yang ada sekarang.
+   C. Koneksi ke Qiospay
+      - Login qiospay.id -> Integrasi.
+      - URL Callback: `https://domain-anda.com/callback.php`
+      - Ini adalah "Gerbang Utama" masuknya uang.
 
 --------------------------------------------------------------------------------
 F.A.Q (PERTANYAAN UMUM)
 --------------------------------------------------------------------------------
 
-Q: Apakah saya perlu modul tambahan (misal dari CPulsa/OtomaX)?
-A: TIDAK PERLU. Aplikasi ini adalah "Custom Integration". Kode backend PHP yang kita buat
-   sudah menangani semua logika komunikasi dengan Qiospay. Modul luar biasanya hanya untuk
-   software server pulsa spesifik (OtomaX/IRS) dan tidak kompatibel dengan web custom ini.
+Q: Apa bedanya Server QiosLink dengan Modul WHMCS?
+A: 
+   - Server QiosLink (Web ini) adalah PUSAT pengolah data & QRIS.
+   - Modul WHMCS adalah CLIENT yang merequest QRIS ke Server QiosLink.
+   
+Q: Saya punya WHMCS dan WooCommerce, apakah bisa pakai 1 QiosLink?
+A: SANGAT BISA. Itulah fungsi fitur "Forwarding". QiosLink akan menjadi pusat gateway
+   untuk banyak website Anda sekaligus.
 
-Q: Bagaimana cara integrasi ke WHMCS?
-A: Untuk WHMCS, Anda perlu membuat "Gateway Module" sederhana di WHMCS yang mengirim request
-   ke API `create_payment.php` di aplikasi ini, atau langsung generate QR string.
+Q: Dimana saya dapat kode Modul WHMCS?
+A: Ada di file `module_whmcs.txt`. Baca `README_WHMCS.txt` cara pasangnya.
+
+Q: Apakah saya perlu modul CPulsa/OtomaX?
+A: TIDAK. Anda sedang membangun sistem sendiri (QiosLink) yang menggantikan fungsi modul tersebut.
