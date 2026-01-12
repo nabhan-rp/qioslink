@@ -59,7 +59,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.3.0 (SMTP Support)";
+const APP_VERSION = "3.3.1 (Fix Config Save)";
 
 const getEnv = () => {
   try {
@@ -365,15 +365,40 @@ export default function App() {
 
   // --- ACTIONS ---
 
-  const handleUpdateConfig = () => {
+  const handleUpdateConfig = async () => {
+      setApiLoading(true);
       // Logic to save merchant config
-      // In demo mode this just updates local state
       if (currentUser) {
           const updatedUser = { ...currentUser, merchantConfig: config };
-          setCurrentUser(updatedUser);
-          sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
-          alert('Configuration Saved');
+          
+          if (IS_DEMO_MODE) {
+              setCurrentUser(updatedUser);
+              sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
+              alert('Configuration Saved (Demo)');
+          } else {
+              try {
+                  const res = await fetch(`${API_BASE}/update_config.php`, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({
+                          user_id: currentUser.id,
+                          config: config
+                      })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                      setCurrentUser(updatedUser);
+                      sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
+                      alert('Configuration Saved to Database');
+                  } else {
+                      alert('Failed to save: ' + (data.message || 'Unknown error'));
+                  }
+              } catch (e) {
+                  alert('Connection Error while saving config');
+              }
+          }
       }
+      setApiLoading(false);
   };
 
   const handleTestEmail = async () => {
@@ -972,6 +997,18 @@ export default function App() {
                                  <label className="block text-sm font-medium mb-1">Merchant Name</label>
                                  <input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e => setConfig({...config, merchantName: e.target.value})} disabled={currentUser.role === 'user'} />
                              </div>
+                             
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Merchant Code / ID</label>
+                                    <input type="text" className="w-full border p-2 rounded" value={config.merchantCode} onChange={e => setConfig({...config, merchantCode: e.target.value})} disabled={currentUser.role === 'user'} placeholder="e.g. QP001" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">API Key (Internal)</label>
+                                    <input type="password" className="w-full border p-2 rounded" value={config.apiKey} onChange={e => setConfig({...config, apiKey: e.target.value})} disabled={currentUser.role === 'user'} placeholder="Secret Key" />
+                                </div>
+                             </div>
+
                              <div>
                                  <label className="block text-sm font-medium mb-1">Static QRIS Data (000201...)</label>
                                  <textarea rows={4} className="w-full border p-2 rounded font-mono text-xs" value={config.qrisString} onChange={e => setConfig({...config, qrisString: e.target.value})} disabled={currentUser.role === 'user'} />
@@ -984,7 +1021,7 @@ export default function App() {
                                 </div>
                                 <p className="text-xs text-gray-400 mt-1">Paste this in your Qiospay Dashboard.</p>
                              </div>
-                             {currentUser.role !== 'user' && <button onClick={handleUpdateConfig} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700">Save Configuration</button>}
+                             {currentUser.role !== 'user' && <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save Configuration</button>}
                          </div>
                      </Card>
                  )}

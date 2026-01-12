@@ -1,20 +1,22 @@
 
 ================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.0
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.1
 ================================================================================
-Update Terakhir: Penambahan register.php & Logic RBAC manage_users.php.
+Update Terakhir: Fix Config Saving, Added Forwarding Logic in Callback
 
 Struktur folder hosting:
 /public_html
   /api/
      ├── db_connect.php
      ├── login.php
-     ├── register.php        (BARU)
-     ├── manage_users.php    (UPDATED)
+     ├── register.php
+     ├── manage_users.php
      ├── get_data.php
      ├── create_payment.php
      ├── update_config.php
+     ├── test_smtp.php
      └── qris_utils.php
+  ├── callback.php  (ROOT PUBLIC_HTML)
 
 --------------------------------------------------------------------------------
 FILE 1: /api/db_connect.php
@@ -64,7 +66,7 @@ if(isset($data->username) && isset($data->password)) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 3: /api/register.php (BARU)
+FILE 3: /api/register.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -95,7 +97,7 @@ if(isset($input['username']) && isset($input['password'])) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 4: /api/manage_users.php (UPDATED RBAC LOGIC)
+FILE 4: /api/manage_users.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -104,7 +106,6 @@ $input = json_decode(file_get_contents("php://input"), true);
 $action = isset($_GET['action']) ? $_GET['action'] : ($input['action'] ?? '');
 
 if ($action === 'list') {
-    // Di produksi, sebaiknya filter berdasarkan session user
     $sql = "SELECT id, username, role, merchant_config FROM users ORDER BY id ASC";
     $result = $conn->query($sql);
     $users = [];
@@ -124,7 +125,6 @@ if ($action === 'create' || $action === 'update') {
     $config = isset($input['config']) ? json_encode($input['config']) : null;
     $creator_role = isset($input['creator_role']) ? $input['creator_role'] : 'user';
 
-    // SERVER-SIDE VALIDATION FOR RBAC
     if ($creator_role === 'merchant') {
         if ($role === 'superadmin' || $role === 'merchant') {
              echo json_encode(['success' => false, 'message' => 'Merchants cannot create Admins/Merchants']);
@@ -209,45 +209,58 @@ if(isset($data->amount) && isset($data->merchant_id)) {
         $user = $res->fetch_assoc();
         $config = json_decode($user['merchant_config']);
         
+        // Pastikan qrisString ada di config database
+        if (!isset($config->qrisString) || empty($config->qrisString)) {
+            echo json_encode(["success" => false, "message" => "Merchant QRIS Data Incomplete"]);
+            exit;
+        }
+
         $dynamicQR = generateDynamicQR($config->qrisString, $data->amount);
         $trx_id = "TRX-" . time() . rand(100,999);
         $desc = isset($data->description) ? $data->description : 'Payment';
+        $ext_id = isset($data->external_id) ? $data->external_id : null;
+        $ext_cb = isset($data->callback_url) ? $data->callback_url : null;
         
-        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string) VALUES (?, ?, ?, ?, 'pending', ?)");
-        $insert->bind_param("siiss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR);
+        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string, external_ref_id, external_callback_url) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)");
+        $insert->bind_param("siiss ss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR, $ext_id, $ext_cb);
         
         if($insert->execute()) {
              echo json_encode([
                 "success" => true,
-                "transaction" => [
-                    "id" => $trx_id,
-                    "amount" => $data->amount,
-                    "qrString" => $dynamicQR,
-                    "status" => "pending",
-                    "description" => $desc,
-                    "createdAt" => date('Y-m-d H:i:s')
-                ]
+                "trx_id" => $trx_id,
+                "qr_string" => $dynamicQR,
+                "amount" => $data->amount
             ]);
         } else {
              echo json_encode(["success" => false, "message" => "DB Insert Failed"]);
         }
+    } else {
+        echo json_encode(["success" => false, "message" => "Merchant Not Found"]);
     }
+} else {
+    echo json_encode(["success" => false, "message" => "Invalid Input"]);
 }
 ?>
 
 --------------------------------------------------------------------------------
-FILE 7: /api/update_config.php
+FILE 7: /api/update_config.php (UPDATED: Fix Save Logic)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
 $data = json_decode(file_get_contents("php://input"));
 
+// Menerima JSON lengkap dari frontend dan menyimpannya mentah-mentah ke kolom merchant_config
 if(isset($data->user_id) && isset($data->config)) {
     $configStr = json_encode($data->config);
     $stmt = $conn->prepare("UPDATE users SET merchant_config = ? WHERE id = ?");
     $stmt->bind_param("si", $configStr, $data->user_id);
-    if($stmt->execute()) echo json_encode(["success" => true]);
-    else echo json_encode(["success" => false, "message" => "Update failed"]);
+    if($stmt->execute()) {
+        echo json_encode(["success" => true, "message" => "Config Updated"]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Update failed: " . $conn->error]);
+    }
+} else {
+    echo json_encode(["success" => false, "message" => "Invalid Payload"]);
 }
 ?>
 
@@ -279,5 +292,81 @@ function generateDynamicQR($staticQr, $amount) {
     $payload = $rawQr . $amountField . '6304';
     $crc = crc16($payload);
     return $payload . $crc;
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 9: /callback.php (Letakkan di root public_html)
+--------------------------------------------------------------------------------
+<?php
+// Menerima Webhook dari Qiospay/Nobu
+$input = file_get_contents("php://input");
+$data = json_decode($input);
+
+require 'api/db_connect.php'; // Sesuaikan path jika perlu
+
+// Log data masuk
+file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Input: " . $input . "\n", FILE_APPEND);
+
+if(isset($data->status) && $data->status == 'success') {
+    $amount_paid = $data->amount;
+    
+    // Cari transaksi pending dengan nominal yg sama
+    $sql = "SELECT id, trx_id, external_callback_url, external_ref_id, merchant_id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1";
+    
+    if($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $amount_paid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $internal_id = $row['id'];
+            
+            // Update Status Internal
+            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+            $update->bind_param("i", $internal_id);
+            $update->execute();
+            
+            // SMTP NOTIFICATION CHECK
+            $m_stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
+            $m_stmt->bind_param("i", $row['merchant_id']);
+            $m_stmt->execute();
+            $m_res = $m_stmt->get_result();
+            if ($m_res->num_rows > 0) {
+                 $m_user = $m_res->fetch_assoc();
+                 $m_conf = json_decode($m_user['merchant_config'], true);
+                 if (isset($m_conf['smtp']) && $m_conf['smtp']['enableNotifications']) {
+                     // Trigger SMTP Send (Code logic here, requires PHPMailer setup)
+                     // include 'api/send_email.php';
+                 }
+            }
+            
+            // EXTERNAL FORWARDING (WHMCS/WOO)
+            if (!empty($row['external_callback_url'])) {
+                $forward_data = [
+                    'status' => 'paid',
+                    'trx_id' => $row['trx_id'],
+                    'external_id' => $row['external_ref_id'],
+                    'amount' => $amount_paid
+                ];
+                
+                $ch = curl_init($row['external_callback_url']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($forward_data));
+                $response = curl_exec($ch);
+                curl_close($ch);
+                
+                file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Forwarded: " . $row['external_callback_url'] . " | Resp: $response\n", FILE_APPEND);
+            }
+            
+            echo json_encode(["status" => "success", "message" => "Transaction PAID"]);
+        } else {
+            echo json_encode(["status" => "ignored", "message" => "No pending trx match"]);
+        }
+    }
+} else {
+    echo json_encode(["status" => "failed", "message" => "Invalid status"]);
 }
 ?>
