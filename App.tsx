@@ -45,10 +45,9 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "2.5.1 (Production Fix)";
-// Set this to TRUE if you want to test UI without PHP backend
-// Set this to FALSE for real production (Connects to /api/...)
-const IS_DEMO_MODE = false; 
+const APP_VERSION = "2.6.0 (Demo Feature Update)";
+// Set this to TRUE to fix "Server connection failed" on localhost
+const IS_DEMO_MODE = true; 
 const API_BASE = './api'; 
 
 // --- Components ---
@@ -793,6 +792,20 @@ export default function App() {
                      <div className="mt-6 flex flex-col items-center animate-in fade-in">
                         <QRCodeDisplay data={generatedQR} />
                         <p className="mt-2 text-sm text-gray-500">Scan to simulate payment</p>
+                        
+                        {/* BUTTON COPY LINK ADDED HERE */}
+                        <div className="mt-4 w-full">
+                           <button 
+                             onClick={() => generatePaymentLink(null, Number(tempAmount))}
+                             className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium transition-colors border border-indigo-200"
+                           >
+                             <LinkIcon size={18} />
+                             <span>Copy Payment Link</span>
+                           </button>
+                           <p className="text-xs text-center text-indigo-400 mt-2">
+                             Share this link to accept payment from anywhere (Ratapay Style)
+                           </p>
+                        </div>
                      </div>
                   )}
                </Card>
