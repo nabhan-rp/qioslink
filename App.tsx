@@ -41,7 +41,9 @@ import {
   Check,
   User as UserIcon,
   Palette,
-  CreditCard
+  CreditCard,
+  Mail,
+  Send
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -52,12 +54,12 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { MerchantConfig, ViewState, Transaction, User, UserRole } from './types';
+import { MerchantConfig, ViewState, Transaction, User, UserRole, SmtpConfig } from './types';
 import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.2.0 (Whitelabel & Fixes)";
+const APP_VERSION = "3.3.0 (SMTP Support)";
 
 const getEnv = () => {
   try {
@@ -113,17 +115,17 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold mb-6 border border-indigo-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Zap size={12} fill="currentColor" /> v3.2 Whitelabel Ready
+              <Zap size={12} fill="currentColor" /> v3.3 SMTP Enabled
             </div>
             {/* Primary Heading for SEO */}
             <h1 id="hero-heading" className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
               Accept QRIS Payments <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
-                On Your Own Domain.
+                With Email Notifications.
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-              Transform your static QRIS into a dynamic payment engine. Full whitelabel support, CNAME integration, and seamless billing automation.
+              Transform your static QRIS into a dynamic payment engine. Full whitelabel support, SMTP integration, and seamless billing automation.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
@@ -151,9 +153,9 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                   desc: "Convert static QRIS codes into dynamic amounts automatically. Reduce payment errors to zero."
                 },
                 {
-                  icon: <Globe className="text-blue-600" size={24} />,
-                  title: "Whitelabel CNAME",
-                  desc: "Use your own domain (e.g., pay.yourstore.com). Remove QiosLink branding completely."
+                  icon: <Mail className="text-blue-600" size={24} />,
+                  title: "SMTP Notifications",
+                  desc: "Receive instant email alerts when a payment is successful. Configure your own SMTP server."
                 },
                 {
                   icon: <BarChart3 className="text-purple-600" size={24} />,
@@ -242,6 +244,16 @@ const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   branding: {
     brandColor: '#4f46e5',
     customDomain: ''
+  },
+  smtp: {
+      host: 'smtp.gmail.com',
+      port: '587',
+      user: 'your-email@gmail.com',
+      pass: 'app-password',
+      secure: 'tls',
+      fromName: 'QiosLink Notification',
+      fromEmail: 'no-reply@qioslink.com',
+      enableNotifications: false
   }
 };
 
@@ -264,7 +276,7 @@ export default function App() {
   
   // App State
   const [view, setView] = useState<ViewState>('dashboard');
-  const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding'>('config');
+  const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding' | 'smtp'>('config');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [integrationTab, setIntegrationTab] = useState<'php' | 'node' | 'whmcs' | 'woo' | 'shopify'>('php');
   
@@ -362,6 +374,34 @@ export default function App() {
           sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
           alert('Configuration Saved');
       }
+  };
+
+  const handleTestEmail = async () => {
+     if (!config.smtp) return alert("Please configure SMTP settings first");
+     setApiLoading(true);
+     if (IS_DEMO_MODE) {
+         setTimeout(() => {
+             alert(`[DEMO] Test Email Sent to ${config.smtp?.fromEmail} using ${config.smtp?.host}`);
+             setApiLoading(false);
+         }, 1500);
+     } else {
+         try {
+             const res = await fetch(`${API_BASE}/test_smtp.php`, {
+                 method: 'POST',
+                 headers: {'Content-Type': 'application/json'},
+                 body: JSON.stringify({
+                     config: config.smtp,
+                     recipient: currentUser?.email || config.smtp.fromEmail
+                 })
+             });
+             const data = await res.json();
+             alert(data.message);
+         } catch(e) {
+             alert("Failed to send test email");
+         } finally {
+             setApiLoading(false);
+         }
+     }
   };
 
   const handleUpdateAccount = () => {
@@ -908,15 +948,18 @@ export default function App() {
             </Card>
           )}
 
-          {/* SETTINGS VIEW (NEW: WITH EDIT PROFILE & WHITELABEL) */}
+          {/* SETTINGS VIEW (NEW: WITH SMTP) */}
           {view === 'settings' && (
              <div className="max-w-4xl mx-auto">
                  {/* Tabs */}
-                 <div className="flex space-x-4 mb-6 border-b border-gray-200">
-                     <button onClick={() => setSettingsTab('config')} className={`pb-3 px-2 font-medium transition-colors ${settingsTab === 'config' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Merchant Config</button>
-                     <button onClick={() => setSettingsTab('account')} className={`pb-3 px-2 font-medium transition-colors ${settingsTab === 'account' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Account Profile</button>
+                 <div className="flex space-x-4 mb-6 border-b border-gray-200 overflow-x-auto">
+                     <button onClick={() => setSettingsTab('config')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'config' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Merchant Config</button>
+                     <button onClick={() => setSettingsTab('account')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'account' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Account Profile</button>
                      {['merchant', 'superadmin'].includes(currentUser.role) && (
-                        <button onClick={() => setSettingsTab('branding')} className={`pb-3 px-2 font-medium transition-colors ${settingsTab === 'branding' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Whitelabel / Branding</button>
+                        <>
+                           <button onClick={() => setSettingsTab('branding')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'branding' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Branding</button>
+                           <button onClick={() => setSettingsTab('smtp')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'smtp' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>SMTP / Email</button>
+                        </>
                      )}
                  </div>
 
@@ -946,7 +989,7 @@ export default function App() {
                      </Card>
                  )}
 
-                 {/* TAB 2: Account Profile (NEW) */}
+                 {/* TAB 2: Account Profile */}
                  {settingsTab === 'account' && (
                      <Card>
                          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><UserIcon size={20}/> Edit Profile</h3>
@@ -968,7 +1011,7 @@ export default function App() {
                      </Card>
                  )}
 
-                 {/* TAB 3: Branding / Whitelabel (NEW) */}
+                 {/* TAB 3: Branding */}
                  {settingsTab === 'branding' && (
                      <Card>
                          <div className="flex justify-between items-start mb-6">
@@ -1014,6 +1057,60 @@ export default function App() {
                                      <div className="h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-300">QR CODE</div>
                                      <div style={{color: config.branding?.brandColor || '#4f46e5'}} className="font-bold text-xl">Rp 50.000</div>
                                  </div>
+                             </div>
+                         </div>
+                     </Card>
+                 )}
+
+                 {/* TAB 4: SMTP (NEW) */}
+                 {settingsTab === 'smtp' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Mail size={20}/> SMTP Configuration</h3>
+                         <div className="space-y-4">
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">SMTP Host</label>
+                                     <input type="text" placeholder="smtp.gmail.com" className="w-full border p-2 rounded" value={config.smtp?.host || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})} />
+                                 </div>
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">SMTP Port</label>
+                                     <input type="text" placeholder="587" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} />
+                                 </div>
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Username</label>
+                                     <input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} />
+                                 </div>
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Password</label>
+                                     <input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} />
+                                 </div>
+                             </div>
+                             
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Encryption</label>
+                                     <select className="w-full border p-2 rounded" value={config.smtp?.secure || 'tls'} onChange={e => setConfig({...config, smtp: {...config.smtp!, secure: e.target.value as any}})}>
+                                         <option value="tls">TLS</option>
+                                         <option value="ssl">SSL</option>
+                                         <option value="none">None</option>
+                                     </select>
+                                 </div>
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">From Email</label>
+                                     <input type="email" placeholder="no-reply@domain.com" className="w-full border p-2 rounded" value={config.smtp?.fromEmail || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromEmail: e.target.value}})} />
+                                 </div>
+                             </div>
+
+                             <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2">
+                                 <input type="checkbox" id="enableNotif" className="h-4 w-4 text-indigo-600 rounded" checked={config.smtp?.enableNotifications || false} onChange={e => setConfig({...config, smtp: {...config.smtp!, enableNotifications: e.target.checked}})} />
+                                 <label htmlFor="enableNotif" className="text-sm font-medium text-gray-700">Send me an email notification when a payment is received.</label>
+                             </div>
+
+                             <div className="flex gap-4 pt-4 border-t border-gray-100">
+                                 <button onClick={handleUpdateConfig} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2"><Save size={18}/> Save Settings</button>
+                                 <button onClick={handleTestEmail} disabled={apiLoading} className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2 border border-gray-200">
+                                    {apiLoading ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Test Email
+                                 </button>
                              </div>
                          </div>
                      </Card>

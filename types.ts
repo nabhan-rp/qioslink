@@ -18,6 +18,17 @@ export interface WhitelabelConfig {
   footerText?: string;
 }
 
+export interface SmtpConfig {
+  host: string;
+  port: string;
+  user: string;
+  pass: string;
+  secure: 'tls' | 'ssl' | 'none';
+  fromName: string;
+  fromEmail: string;
+  enableNotifications: boolean;
+}
+
 export interface MerchantConfig {
   merchantName: string;
   merchantCode: string; // e.g., QP040887
@@ -25,6 +36,7 @@ export interface MerchantConfig {
   qrisString: string; // The long string starting with 000201...
   callbackUrl?: string;
   branding?: WhitelabelConfig; // Added branding config
+  smtp?: SmtpConfig; // Added SMTP config
 }
 
 export interface Transaction {
