@@ -1,6 +1,10 @@
 
 ================================================================================
-KITAB LENGKAP BACKEND API (PRODUCTION READY) - V4.1
+KITAB LENGKAP BACKEND API (PRODUCTION READY) - V4.2 (FULL SET)
+================================================================================
+Instruksi:
+1. Buat folder 'api' di public_html.
+2. Buat file-file di bawah ini di dalam folder 'api' tersebut.
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -11,6 +15,7 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
+// Konfigurasi Database (Sesuaikan dengan cPanel Anda)
 $host = "localhost";
 $username = "root";     
 $password = "";         
@@ -44,14 +49,22 @@ function formatField($tag, $value) {
 
 function generateDynamicQR($staticQr, $amount) {
     $rawQr = $staticQr;
+    // Hapus CRC lama jika ada (biasanya di akhir)
     $crcPos = strrpos($rawQr, '6304');
     if ($crcPos !== false) {
         $rawQr = substr($rawQr, 0, $crcPos);
     }
+    
+    // Tambahkan Tag 54 (Transaction Amount)
     $amountStr = floor($amount);
     $amountField = formatField('54', $amountStr);
+    
+    // Susun payload baru
     $payload = $rawQr . $amountField . '6304';
+    
+    // Hitung CRC baru
     $crc = crc16($payload);
+    
     return $payload . $crc;
 }
 ?>
@@ -68,6 +81,7 @@ if(isset($input['username']) && isset($input['password'])) {
     $user = $input['username'];
     $pass = $input['password'];
     
+    // Self-join untuk mendapatkan email creator (induk) sebagai support contact
     $stmt = $conn->prepare("
         SELECT u.id, u.username, u.email, u.role, u.merchant_config, u.is_verified, u.creator_id, c.email as creator_email 
         FROM users u 
@@ -80,10 +94,14 @@ if(isset($input['username']) && isset($input['password'])) {
     
     if($result->num_rows > 0) {
         $row = $result->fetch_assoc();
+        
         $row['merchantConfig'] = json_decode($row['merchant_config']);
         unset($row['merchant_config']);
+        
+        // Pastikan boolean dikirim dengan benar ke frontend
         $row['isVerified'] = $row['is_verified'] == 1;
         $row['supportEmail'] = $row['creator_email'] ? $row['creator_email'] : 'admin@qioslink.com';
+        
         echo json_encode(['success' => true, 'user' => $row]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid Credentials']);
@@ -98,6 +116,7 @@ FILE 4: /api/register.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
+// Load PHPMailer classes manual (karena hosting biasa jarang ada Composer)
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -120,15 +139,18 @@ if(isset($input['username']) && isset($input['password'])) {
         exit;
     }
 
-    $role = 'user'; 
-    $creator_id = 1; 
+    $role = 'user'; // Default role public
+    $creator_id = 1; // Default creator is Superadmin (ID 1)
 
+    // Cek duplikat
     $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
     if($check->num_rows > 0) {
         echo json_encode(['success' => false, 'message' => 'Username already exists']);
         exit;
     }
 
+    // --- LOGIKA VERIFIKASI ---
+    // Cek apakah Admin mewajibkan verifikasi email
     $stmtConfig = $conn->prepare("SELECT merchant_config, email FROM users WHERE id = ?");
     $stmtConfig->bind_param("i", $creator_id);
     $stmtConfig->execute();
@@ -144,6 +166,7 @@ if(isset($input['username']) && isset($input['password'])) {
         $smtpConfig = $creatorConf['smtp'];
     }
 
+    // Jika butuh verifikasi, status awal = 0 (unverified), generate kode OTP
     $is_verified = $requireVerification ? 0 : 1;
     $otp_code = $requireVerification ? rand(100000, 999999) : null;
 
@@ -152,6 +175,7 @@ if(isset($input['username']) && isset($input['password'])) {
     
     if($stmt->execute()) {
         $sendError = null;
+        // Kirim Email OTP
         if ($requireVerification && $smtpConfig) {
             if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
                 $mail = new PHPMailer(true);
@@ -166,8 +190,8 @@ if(isset($input['username']) && isset($input['password'])) {
                     $mail->setFrom($smtpConfig['fromEmail'], $smtpConfig['fromName']);
                     $mail->addAddress($email);
                     $mail->isHTML(true);
-                    $mail->Subject = 'Verify your Account';
-                    $mail->Body    = "<h3>Welcome to QiosLink</h3><p>Your verification code is: <b>$otp_code</b></p>";
+                    $mail->Subject = 'Verify your QiosLink Account';
+                    $mail->Body    = "<h3>Welcome to QiosLink</h3><p>Your verification code is: <b style='font-size: 24px;'>$otp_code</b></p><p>Please enter this code in your account settings.</p>";
                     $mail->send();
                 } catch (Exception $e) {
                     $sendError = "Account created but failed to send email: " . $mail->ErrorInfo;
@@ -176,7 +200,12 @@ if(isset($input['username']) && isset($input['password'])) {
                 $sendError = "SMTP Library missing.";
             }
         }
-        echo json_encode(['success' => true, 'message' => $sendError ? $sendError : 'Registration successful']);
+
+        echo json_encode([
+            'success' => true, 
+            'message' => $sendError ? $sendError : 'Registration successful',
+            'warning' => $sendError
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Database error']);
     }
@@ -187,7 +216,6 @@ if(isset($input['username']) && isset($input['password'])) {
 
 --------------------------------------------------------------------------------
 FILE 5: /api/manage_users.php
-(Updated: Added 'verify' action)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -196,6 +224,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 $action = isset($_GET['action']) ? $_GET['action'] : ($input['action'] ?? '');
 
 if ($action === 'list') {
+    // Di real production, filter WHERE creator_id = session_id
     $sql = "SELECT id, username, email, role, merchant_config, is_verified, creator_id FROM users ORDER BY id ASC";
     $result = $conn->query($sql);
     $users = [];
@@ -209,7 +238,7 @@ if ($action === 'list') {
     exit;
 }
 
-// NEW: Manual Verification by Admin/Merchant
+// Verifikasi Manual oleh Admin
 if ($action === 'verify') {
     if (!isset($input['id'])) {
         echo json_encode(['success' => false, 'message' => 'User ID required']);
@@ -234,12 +263,13 @@ if ($action === 'create' || $action === 'update') {
     $password = $input['password'];
     $role = $input['role'];
     $config = isset($input['config']) ? json_encode($input['config']) : null;
-    $creator_id = isset($input['creator_id']) ? $input['creator_id'] : 1; 
+    $creator_id = isset($input['creator_id']) ? $input['creator_id'] : 1; // Default to admin
 
     if ($action === 'create') {
         $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
         if($check->num_rows > 0) { echo json_encode(['success'=>false, 'message'=>'Username exists']); exit; }
 
+        // User dibuat oleh admin otomatis verified
         $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, merchant_config, creator_id, is_verified) VALUES (?, ?, ?, ?, ?, ?, 1)");
         $stmt->bind_param("sssssi", $username, $email, $password, $role, $config, $creator_id);
         if ($stmt->execute()) echo json_encode(['success' => true]);
@@ -266,20 +296,27 @@ FILE 6: /api/verify_email.php
 <?php
 require 'db_connect.php';
 $input = json_decode(file_get_contents("php://input"), true);
+
 if (isset($input['user_id']) && isset($input['code'])) {
     $user_id = $input['user_id'];
     $code = $input['code'];
+    
     $stmt = $conn->prepare("SELECT id FROM users WHERE id = ? AND verification_code = ?");
     $stmt->bind_param("is", $user_id, $code);
     $stmt->execute();
     $result = $stmt->get_result();
+    
     if ($result->num_rows > 0) {
         $update = $conn->prepare("UPDATE users SET is_verified = 1, verification_code = NULL WHERE id = ?");
         $update->bind_param("i", $user_id);
         $update->execute();
         echo json_encode(['success' => true, 'message' => 'Email verified successfully']);
-    } else { echo json_encode(['success' => false, 'message' => 'Invalid OTP Code']); }
-} else { echo json_encode(['success' => false, 'message' => 'Invalid Input']); }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid OTP Code']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid Input']);
+}
 ?>
 
 --------------------------------------------------------------------------------
@@ -289,27 +326,39 @@ FILE 7: /api/resend_otp.php
 require 'db_connect.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+
 if (file_exists('PHPMailer/PHPMailer.php')) {
     require 'PHPMailer/Exception.php';
     require 'PHPMailer/PHPMailer.php';
     require 'PHPMailer/SMTP.php';
 }
+
 $input = json_decode(file_get_contents("php://input"), true);
+
 if (isset($input['user_id'])) {
     $user_id = $input['user_id'];
-    $sql = "SELECT u.email, u.creator_id, c.merchant_config FROM users u LEFT JOIN users c ON u.creator_id = c.id WHERE u.id = ?";
+    
+    // Ambil Config Creator (Induk) untuk kirim email
+    $sql = "SELECT u.email, u.creator_id, c.merchant_config 
+            FROM users u 
+            LEFT JOIN users c ON u.creator_id = c.id 
+            WHERE u.id = ?";
+            
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $res = $stmt->get_result();
+    
     if ($res->num_rows > 0) {
         $data = $res->fetch_assoc();
         $email = $data['email'];
         $creatorConf = json_decode($data['merchant_config'], true);
+        
         $new_code = rand(100000, 999999);
         $upd = $conn->prepare("UPDATE users SET verification_code = ? WHERE id = ?");
         $upd->bind_param("si", $new_code, $user_id);
         $upd->execute();
+        
         if (isset($creatorConf['smtp'])) {
             $smtpConfig = $creatorConf['smtp'];
             $mail = new PHPMailer(true);
@@ -328,12 +377,269 @@ if (isset($input['user_id'])) {
                 $mail->Body    = "<h3>Verification Code</h3><p>Your new code is: <b>$new_code</b></p>";
                 $mail->send();
                 echo json_encode(['success' => true, 'message' => 'OTP Resent']);
-            } catch (Exception $e) { echo json_encode(['success' => false, 'message' => 'Failed to send email: ' . $mail->ErrorInfo]); }
-        } else { echo json_encode(['success' => false, 'message' => 'Creator SMTP not configured']); }
-    } else { echo json_encode(['success' => false, 'message' => 'User not found']); }
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'message' => 'Failed to send email: ' . $mail->ErrorInfo]);
+            }
+        } else {
+             echo json_encode(['success' => false, 'message' => 'Creator SMTP not configured']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'User not found']);
+    }
 }
 ?>
 
 --------------------------------------------------------------------------------
-FILE 8, 9, 10: (Sama seperti sebelumnya)
+FILE 8: /api/update_config.php
 --------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['user_id']) && isset($input['config'])) {
+    $user_id = $input['user_id'];
+    $config_json = json_encode($input['config']);
+    
+    $stmt = $conn->prepare("UPDATE users SET merchant_config = ? WHERE id = ?");
+    $stmt->bind_param("si", $config_json, $user_id);
+    
+    if($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Config updated']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'DB Error']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid Data']);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 9: /api/create_payment.php
+--------------------------------------------------------------------------------
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+require 'db_connect.php';
+require 'qris_utils.php';
+
+$input = json_decode(file_get_contents("php://input"));
+
+if(isset($input->amount) && isset($input->merchant_id)) {
+    $stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
+    $stmt->bind_param("i", $input->merchant_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if($res->num_rows > 0) {
+        $user = $res->fetch_assoc();
+        $config = json_decode($user['merchant_config']);
+        
+        $dynamicQR = generateDynamicQR($config->qrisString, $input->amount);
+        
+        $trx_id = "TRX-" . time() . rand(100,999);
+        $payment_token = md5($trx_id . $config->appSecretKey); 
+        
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+        $host = $_SERVER['HTTP_HOST'];
+        $payment_url = $protocol . "://" . $host . "/?pay=" . $payment_token;
+        
+        $expires_at = null;
+        if(isset($input->expiry_minutes) && $input->expiry_minutes > 0) {
+            $expires_at = date('Y-m-d H:i:s', strtotime("+{$input->expiry_minutes} minutes"));
+        }
+        
+        $desc = isset($input->description) ? $input->description : 'Payment';
+        $single_use = isset($input->single_use) && $input->single_use ? 1 : 0;
+        
+        // External callback support (WHMCS/Woo)
+        $ext_id = isset($input->external_id) ? $input->external_id : null;
+        $ext_cb = isset($input->callback_url) ? $input->callback_url : null;
+
+        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string, payment_token, payment_url, expires_at, is_single_use, external_ref_id, external_callback_url) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)");
+        $insert->bind_param("siisssssiss", $trx_id, $input->merchant_id, $input->amount, $desc, $dynamicQR, $payment_token, $payment_url, $expires_at, $single_use, $ext_id, $ext_cb);
+        
+        if($insert->execute()) {
+            echo json_encode([
+                "success" => true, 
+                "trx_id" => $trx_id, 
+                "qr_string" => $dynamicQR, 
+                "payment_url" => $payment_url
+            ]);
+        } else {
+            echo json_encode(["success" => false, "message" => "DB Insert Error: " . $conn->error]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "Merchant not found"]);
+    }
+} else {
+    echo json_encode(["success" => false, "message" => "Invalid Input"]);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 10: /api/get_data.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
+$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : 0;
+$role = isset($_GET['role']) ? $_GET['role'] : 'user';
+
+if ($role === 'superadmin') {
+    $sql = "SELECT id, trx_id as id_trx, amount, description, status, created_at, qr_string, payment_url FROM transactions ORDER BY created_at DESC LIMIT 100";
+    $stmt = $conn->prepare($sql);
+} else {
+    $sql = "SELECT id, trx_id as id_trx, amount, description, status, created_at, qr_string, payment_url FROM transactions WHERE merchant_id = ? ORDER BY created_at DESC LIMIT 100";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $user_id);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+$transactions = [];
+
+while($row = $result->fetch_assoc()) {
+    $transactions[] = [
+        'id' => $row['id_trx'], 
+        'merchantId' => (string)$user_id,
+        'amount' => $row['amount'],
+        'description' => $row['description'],
+        'status' => $row['status'],
+        'createdAt' => $row['created_at'],
+        'qrString' => $row['qr_string'],
+        'paymentUrl' => $row['payment_url']
+    ];
+}
+
+echo json_encode(['success' => true, 'transactions' => $transactions]);
+?>
+
+--------------------------------------------------------------------------------
+FILE 11: /api/get_payment_details.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
+$token = isset($_GET['token']) ? $_GET['token'] : '';
+
+if($token) {
+    // Get transaction details joined with merchant config for branding
+    $stmt = $conn->prepare("
+        SELECT t.*, u.merchant_config 
+        FROM transactions t
+        JOIN users u ON t.merchant_id = u.id
+        WHERE t.payment_token = ?
+    ");
+    $stmt->bind_param("s", $token);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if($res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        
+        // Check Expiry
+        if($row['expires_at'] && strtotime($row['expires_at']) < time() && $row['status'] == 'pending') {
+             // Optional: Auto expire in DB
+             $upd = $conn->query("UPDATE transactions SET status='expired' WHERE id={$row['id']}");
+             $row['status'] = 'expired';
+        }
+
+        $config = json_decode($row['merchant_config'], true);
+        
+        $response = [
+            'amount' => $row['amount'],
+            'description' => $row['description'],
+            'status' => $row['status'],
+            'qr_string' => $row['qr_string'],
+            'expires_at' => $row['expires_at'],
+            'merchant_name' => $config['merchantName'],
+            'branding' => isset($config['branding']) ? $config['branding'] : null
+        ];
+        
+        echo json_encode(['success' => true, 'data' => $response]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid Payment Token']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Token missing']);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 12: /api/revoke_link.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['trx_id'])) {
+    $trx_id = $input['trx_id'];
+    
+    $stmt = $conn->prepare("UPDATE transactions SET status = 'cancelled' WHERE trx_id = ? AND status = 'pending'");
+    $stmt->bind_param("s", $trx_id);
+    
+    if($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Transaction cancelled']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'DB Error']);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 13: /api/test_smtp.php
+--------------------------------------------------------------------------------
+<?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+if (file_exists('PHPMailer/PHPMailer.php')) {
+    require 'PHPMailer/Exception.php';
+    require 'PHPMailer/PHPMailer.php';
+    require 'PHPMailer/SMTP.php';
+}
+
+header("Content-Type: application/json");
+$input = json_decode(file_get_contents("php://input"), true);
+
+if (!isset($input['config']) || !isset($input['recipient'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing config']);
+    exit;
+}
+
+$conf = $input['config'];
+
+if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+    echo json_encode(['success' => false, 'message' => 'PHPMailer library not found. Please upload it to /api/PHPMailer/']);
+    exit;
+}
+
+$mail = new PHPMailer(true);
+
+try {
+    // Server settings
+    $mail->isSMTP();
+    $mail->Host       = $conf['host'];
+    $mail->SMTPAuth   = true;
+    $mail->Username   = $conf['user'];
+    $mail->Password   = $conf['pass'];
+    $mail->SMTPSecure = $conf['secure'] === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port       = $conf['port'];
+
+    // Recipients
+    $mail->setFrom($conf['fromEmail'], $conf['fromName'] ?: 'QiosLink');
+    $mail->addAddress($input['recipient']);
+
+    // Content
+    $mail->isHTML(true);
+    $mail->Subject = 'QiosLink SMTP Test';
+    $mail->Body    = '<h1>It Works!</h1><p>Your SMTP configuration is correct.</p>';
+
+    $mail->send();
+    echo json_encode(['success' => true, 'message' => 'Test email sent successfully']);
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => "Message could not be sent. Mailer Error: {$mail->ErrorInfo}"]);
+}
+?>
