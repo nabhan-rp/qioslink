@@ -2,8 +2,19 @@
 PANDUAN PENGATURAN ENVIRONMENT (MODE LOCAL VS PRODUCTION)
 ================================================================================
 
-Sekarang aplikasi ini sudah mendukung konfigurasi otomatis berbasis file .env (mirip Laravel).
-Anda TIDAK PERLU lagi mengedit file App.tsx secara manual untuk mengubah mode Demo/Live.
+Aplikasi ini menggunakan konfigurasi otomatis berbasis file .env (mirip Laravel).
+
+PENTING:
+Karena batasan sistem saat pembuatan file, file environment disajikan dalam format .txt.
+Mohon LAKUKAN RENAME berikut sebelum menjalankan aplikasi:
+
+1. Rename `dot_env.txt`             menjadi `.env`
+2. Rename `dot_env_development.txt` menjadi `.env.development`
+3. Rename `dot_env_production.txt`  menjadi `.env.production`
+
+--------------------------------------------------------------------------------
+CARA KERJA OTOMATIS
+--------------------------------------------------------------------------------
 
 1. SAAT CODING DI LAPTOP (npm run dev)
    - Vite otomatis membaca file: `.env.development`

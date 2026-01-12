@@ -45,12 +45,25 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "2.7.0 (Env Configured)";
+const APP_VERSION = "2.7.1 (Safe Env Access)";
 
-// Menggunakan Environment Variable (Vite Feature)
-// Cek file .env.development dan .env.production
-const IS_DEMO_MODE = (import.meta as any).env.VITE_USE_DEMO_DATA === 'true';
-const API_BASE = (import.meta as any).env.VITE_API_BASE_URL || './api';
+// Helper function to safely access environment variables
+// This prevents crashes if import.meta.env is undefined (e.g. in some preview environments)
+const getEnv = () => {
+  try {
+    // @ts-ignore
+    return import.meta.env || {};
+  } catch {
+    return {};
+  }
+};
+
+const env = getEnv();
+
+// Logika: Jika VITE_USE_DEMO_DATA tidak ada (undefined), default ke 'true' (Demo Mode)
+// agar user yang baru download dan belum setup .env tidak mengalami error "Connection Failed".
+const IS_DEMO_MODE = env.VITE_USE_DEMO_DATA !== 'false'; // Default to true if undefined or 'true'
+const API_BASE = env.VITE_API_BASE_URL || './api';
 
 // Debug log untuk memastikan mode yang berjalan
 console.log(`[App Config] Version: ${APP_VERSION}`);
