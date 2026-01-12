@@ -1,12 +1,16 @@
+
 ================================================================================
-QiosLink - PHP Backend for Shared Hosting
+QiosLink - PHP Backend (Enhanced for Integration)
 ================================================================================
 
-This file contains the PHP code needed to run the backend on a shared hosting environment (cPanel, etc).
-Separate the content below into individual files as indicated.
+UPDATE DATABASE DULU (PENTING):
+Jalankan perintah SQL ini di phpMyAdmin untuk menambah kolom callback eksternal:
+
+ALTER TABLE `transactions` ADD `external_ref_id` VARCHAR(100) NULL AFTER `trx_id`;
+ALTER TABLE `transactions` ADD `external_callback_url` TEXT NULL AFTER `status`;
 
 --------------------------------------------------------------------------------
-FILE: db_connect.php
+FILE: db_connect.php (Sama seperti sebelumnya)
 --------------------------------------------------------------------------------
 <?php
 $host = "localhost";
@@ -22,7 +26,7 @@ if ($conn->connect_error) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE: qris_utils.php
+FILE: qris_utils.php (Sama seperti sebelumnya)
 --------------------------------------------------------------------------------
 <?php
 function crc16($data) {
@@ -41,63 +45,21 @@ function formatField($tag, $value) {
 }
 
 function generateDynamicQR($staticQr, $amount) {
-    // 1. Strip CRC (last 4 chars) and Tag 6304 if present
     $rawQr = $staticQr;
     $crcPos = strrpos($rawQr, '6304');
     if ($crcPos !== false) {
         $rawQr = substr($rawQr, 0, $crcPos);
     }
-
-    // 2. We should ideally parse TLV to remove existing Tag 54 (Amount) if present
-    // For simplicity in this snippet, we assume Static QR doesn't have amount
-    // or we append amount at the end (before CRC).
-    
-    // 3. Create Amount Tag (54)
-    $amountStr = floor($amount); // Integer string
+    $amountStr = floor($amount);
     $amountField = formatField('54', $amountStr);
-
-    // 4. Construct Payload
     $payload = $rawQr . $amountField . '6304';
-    
-    // 5. Calculate CRC
     $crc = crc16($payload);
-    
     return $payload . $crc;
 }
 ?>
 
 --------------------------------------------------------------------------------
-FILE: login.php
---------------------------------------------------------------------------------
-<?php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-require 'db_connect.php';
-
-$data = json_decode(file_get_contents("php://input"));
-
-if(isset($data->username) && isset($data->password)) {
-    $user = $data->username;
-    $pass = md5($data->password); // NOTE: Use password_hash() in production!
-
-    $stmt = $conn->prepare("SELECT id, username, role, merchant_config FROM users WHERE username = ? AND password = ?");
-    $stmt->bind_param("ss", $user, $pass);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        echo json_encode(["success" => true, "user" => $row]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Invalid credentials"]);
-    }
-} else {
-    echo json_encode(["success" => false, "message" => "Missing input"]);
-}
-?>
-
---------------------------------------------------------------------------------
-FILE: create_payment.php
+FILE: create_payment.php (Updated: Menerima callback_url dari WHMCS)
 --------------------------------------------------------------------------------
 <?php
 header("Access-Control-Allow-Origin: *");
@@ -107,8 +69,10 @@ require 'qris_utils.php';
 
 $data = json_decode(file_get_contents("php://input"));
 
+// Menerima parameter tambahan: callback_url dan external_id
 if(isset($data->amount) && isset($data->merchant_id)) {
-    // Fetch merchant QR string
+    
+    // 1. Ambil Config Merchant
     $stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
     $stmt->bind_param("i", $data->merchant_id);
     $stmt->execute();
@@ -118,96 +82,91 @@ if(isset($data->amount) && isset($data->merchant_id)) {
         $user = $res->fetch_assoc();
         $config = json_decode($user['merchant_config']);
         
-        $dynamicQR = generateDynamicQR($config->qris_string, $data->amount);
+        // 2. Generate QR
+        $dynamicQR = generateDynamicQR($config->qrisString, $data->amount); // Pastikan key json sesuai 'qrisString'
         
-        // Save transaction to DB
+        // 3. Siapkan Data Transaksi
         $trx_id = "TRX-" . time() . rand(100,999);
-        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string) VALUES (?, ?, ?, ?, 'pending', ?)");
         $desc = isset($data->description) ? $data->description : 'Payment';
-        $insert->bind_param("siiss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR);
+        $ext_id = isset($data->external_id) ? $data->external_id : null; // ID Invoice WHMCS
+        $ext_cb = isset($data->callback_url) ? $data->callback_url : null; // URL Callback WHMCS
+        
+        // 4. Simpan ke Database
+        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string, external_ref_id, external_callback_url) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)");
+        $insert->bind_param("siissss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR, $ext_id, $ext_cb);
         $insert->execute();
 
         echo json_encode([
             "success" => true,
             "trx_id" => $trx_id,
-            "qr_string" => $dynamicQR
+            "qr_string" => $dynamicQR,
+            "amount" => $data->amount
         ]);
     } else {
         echo json_encode(["success" => false, "message" => "Merchant not found"]);
     }
+} else {
+    echo json_encode(["success" => false, "message" => "Invalid Input"]);
 }
 ?>
 
 --------------------------------------------------------------------------------
-FILE: callback.php (Webhook for Qiospay)
+FILE: callback.php (Updated: Forwarding ke WHMCS)
 --------------------------------------------------------------------------------
 <?php
-// Receive JSON from Qiospay
+// Ini adalah file PUSAT yang menerima notifikasi dari Qiospay
 $input = file_get_contents("php://input");
 $data = json_decode($input);
 
 require 'db_connect.php';
 
-// Qiospay usually sends: { "status": "success", "amount": 10000, "ref_id": "..." }
-// Note: You need to verify the exact payload structure from Qiospay docs.
+// Log incoming request
+file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Qiospay Hit: " . $input . "\n", FILE_APPEND);
 
 if(isset($data->status) && $data->status == 'success') {
-    // Logic to find transaction. 
-    // Since static QRIS pools payments, matching exact amount + approximate time is tricky.
-    // However, if Qiospay sends a unique Reference ID (RRN) that appears in your mutation,
-    // you might need to scrape/check mutation via H2H if the callback doesn't provide unique ID.
+    $amount_paid = $data->amount;
     
-    // For this example, we assume we can match loosely or Qiospay passes a unique ID we generated 
-    // (Note: Static QR usually doesn't allow passing custom RefID to the bank, so we rely on Amount).
+    // 1. Cari Transaksi PENDING dengan nominal yg sama
+    $sql = "SELECT id, trx_id, external_callback_url, external_ref_id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1";
     
-    $amount = $data->amount;
-    
-    // Find oldest PENDING transaction with this amount
-    $stmt = $conn->prepare("SELECT id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at ASC LIMIT 1");
-    $stmt->bind_param("i", $amount);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $id = $row['id'];
+    if($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $amount_paid);
+        $stmt->execute();
+        $result = $stmt->get_result();
         
-        // Update status
-        $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
-        $update->bind_param("i", $id);
-        $update->execute();
-        
-        echo json_encode(["status" => "ok", "message" => "Transaction $id matched"]);
-    } else {
-        echo json_encode(["status" => "ignored", "message" => "No matching pending trx found"]);
+        if($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $internal_id = $row['id'];
+            
+            // 2. Update Status jadi PAID di database sendiri
+            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+            $update->bind_param("i", $internal_id);
+            $update->execute();
+            
+            // 3. FORWARDING (RELAY) KE WHMCS/WooCommerce
+            // Jika transaksi ini punya URL Callback eksternal, kita tembak balik.
+            if (!empty($row['external_callback_url'])) {
+                
+                $forward_data = [
+                    'status' => 'paid',
+                    'trx_id' => $row['trx_id'],
+                    'external_id' => $row['external_ref_id'], // Invoice ID WHMCS
+                    'amount' => $amount_paid
+                ];
+                
+                $ch = curl_init($row['external_callback_url']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($forward_data)); // Kirim sebagai POST form data
+                $response = curl_exec($ch);
+                curl_close($ch);
+                
+                file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Forwarded to " . $row['external_callback_url'] . " | Resp: " . $response . "\n", FILE_APPEND);
+            }
+            
+            echo json_encode(["status" => "success", "message" => "Transaction updated and forwarded"]);
+        } else {
+            echo json_encode(["status" => "ignored", "message" => "No pending transaction match"]);
+        }
     }
 }
 ?>
-
---------------------------------------------------------------------------------
-FILE: database_schema.sql
---------------------------------------------------------------------------------
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `role` enum('admin','merchant') DEFAULT 'merchant',
-  `merchant_config` text,
-  PRIMARY KEY (`id`)
-);
-
-CREATE TABLE `transactions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `trx_id` varchar(50) NOT NULL,
-  `merchant_id` int(11) NOT NULL,
-  `amount` int(11) NOT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `status` enum('pending','paid','expired') DEFAULT 'pending',
-  `qr_string` text,
-  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-);
-
-INSERT INTO `users` (`username`, `password`, `role`, `merchant_config`) VALUES 
-('admin', MD5('admin'), 'admin', '{"merchantName":"Admin Shop","qris_string":"..."}'),
-('demo', MD5('demo'), 'merchant', '{"merchantName":"Demo Shop","qris_string":"..."}');
