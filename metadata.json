@@ -1,0 +1,5 @@
+{
+  "name": "QiosLink - Dynamic QRIS Engine",
+  "description": "A multi-tenant QRIS management dashboard allowing users to convert static Qiospay/Nobu QR strings into dynamic payment amounts with integration tools for WHMCS and WooCommerce.",
+  "requestFramePermissions": []
+}
