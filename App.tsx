@@ -45,7 +45,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "2.5.0 (Production)";
+const APP_VERSION = "2.5.1 (Production Fix)";
 // Set this to TRUE if you want to test UI without PHP backend
 // Set this to FALSE for real production (Connects to /api/...)
 const IS_DEMO_MODE = false; 
@@ -805,12 +805,40 @@ export default function App() {
                <Card>
                  <h3 className="font-bold mb-4">Merchant Settings</h3>
                  <div className="space-y-4">
-                    <div><label className="block text-sm font-medium mb-1">Merchant Name</label><input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e=>setConfig({...config, merchantName:e.target.value})} /></div>
+                    {/* Merchant Name */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Merchant Name</label>
+                      <input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e=>setConfig({...config, merchantName:e.target.value})} />
+                    </div>
+
+                    {/* RESTORED: Merchant Code (QRIS Merchant ID) & API Key */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                          <label className="block text-sm font-medium mb-1">Merchant Code (ID)</label>
+                          <input type="text" className="w-full border p-2 rounded" value={config.merchantCode} onChange={e=>setConfig({...config, merchantCode:e.target.value})} placeholder="e.g. QP040887" />
+                      </div>
+                      <div>
+                          <label className="block text-sm font-medium mb-1">API Key</label>
+                          <div className="relative">
+                              <input type="password" className="w-full border p-2 rounded" value={config.apiKey} onChange={e=>setConfig({...config, apiKey:e.target.value})} placeholder="Secret Key" />
+                          </div>
+                      </div>
+                    </div>
+
+                    {/* QR String */}
                     <div>
                        <label className="block text-sm font-medium mb-1">Static QR String (From Nobu/Qiospay)</label>
                        <textarea className="w-full border p-2 rounded text-xs font-mono bg-gray-50" rows={4} value={config.qrisString} onChange={e=>setConfig({...config, qrisString:e.target.value})} />
                        <p className="text-xs text-gray-400 mt-1">Starts with 000201...</p>
                     </div>
+                    
+                    {/* Callback URL (Optional but useful to see) */}
+                    <div>
+                       <label className="block text-sm font-medium mb-1">Callback URL (Read Only)</label>
+                       <input type="text" readOnly className="w-full border p-2 rounded bg-gray-100 text-gray-500 text-sm" value={window.location.origin + '/api/callback.php'} />
+                       <p className="text-xs text-gray-400 mt-1">Copy this to your Qiospay Dashboard</p>
+                    </div>
+
                     <button onClick={handleSaveConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-4 py-2 rounded flex items-center">
                        {apiLoading && <Loader2 className="animate-spin mr-2" size={16}/>} Save Configuration
                     </button>
