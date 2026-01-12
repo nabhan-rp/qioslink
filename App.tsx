@@ -24,7 +24,9 @@ import {
   Headphones,
   ShoppingBag,
   Server,
-  FileCode
+  FileCode,
+  AlertCircle,
+  HelpCircle
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -40,7 +42,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- Constants ---
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.2.2";
 
 // --- Components ---
 
@@ -220,6 +222,7 @@ export default function App() {
   const [generatedQR, setGeneratedQR] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [amountError, setAmountError] = useState('');
   
   // Login Form State
   const [loginUser, setLoginUser] = useState('');
@@ -325,14 +328,24 @@ export default function App() {
   };
 
   const handleGenerateQR = () => {
-    if (!tempAmount || isNaN(Number(tempAmount))) return;
-    const dynamicString = generateDynamicQR(config.qrisString, Number(tempAmount));
+    setAmountError('');
+    if (!tempAmount) {
+      setAmountError('Please enter an amount.');
+      return;
+    }
+    const amountNum = Number(tempAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setAmountError('Please enter a valid amount greater than 0.');
+      return;
+    }
+
+    const dynamicString = generateDynamicQR(config.qrisString, amountNum);
     setGeneratedQR(dynamicString);
     
     const newTrx: Transaction = {
       id: `TRX-${Math.floor(Math.random() * 10000)}`,
       merchantId: currentUser?.id || 'unknown',
-      amount: Number(tempAmount),
+      amount: amountNum,
       description: 'Manual Generation',
       status: 'pending',
       createdAt: new Date().toLocaleString(),
@@ -811,17 +824,29 @@ export default function App() {
                     />
                   </div>
 
-                   <div>
+                   <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Callback URL (Webhook)</label>
-                    <input 
-                      type="text" 
-                      disabled={currentUser.role === 'cs'}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 text-gray-500"
-                      value={config.callbackUrl}
-                      onChange={(e) => setConfig({...config, callbackUrl: e.target.value})}
-                    />
-                     <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
-                        <strong>Important:</strong> Ensure this URL matches the "Callback URL" field in your Qiospay Dashboard. This field here is only for your reference.
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        readOnly
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-500 focus:outline-none"
+                        value={config.callbackUrl}
+                        onChange={(e) => setConfig({...config, callbackUrl: e.target.value})}
+                      />
+                      <button 
+                        onClick={() => copyToClipboard(config.callbackUrl || '')}
+                        className="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:text-indigo-600 transition-colors"
+                      >
+                        <Copy size={20} />
+                      </button>
+                    </div>
+                     <p className="mt-3 text-xs text-blue-700 flex items-start">
+                        <AlertCircle size={14} className="mr-1 mt-0.5 flex-shrink-0" />
+                        <span>
+                          <strong>IMPORTANT:</strong> This field is for reference only. Changing it here does NOT affect the server. 
+                          You must copy this URL and paste it into your <strong>Qiospay Dashboard &gt; Integration</strong> menu to receive payment notifications.
+                        </span>
                       </p>
                   </div>
 
@@ -891,22 +916,29 @@ export default function App() {
 
                 <Card>
                   <label className="block text-sm font-medium text-gray-700 mb-3">Amount (Rp)</label>
-                  <div className="relative mb-6">
+                  <div className="relative mb-2">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rp</span>
                     <input 
                       type="number" 
-                      className="w-full pl-12 pr-4 py-4 text-2xl font-bold text-gray-800 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-0 outline-none transition-all placeholder-gray-300"
+                      className={`w-full pl-12 pr-4 py-4 text-2xl font-bold text-gray-800 border-2 rounded-xl focus:ring-0 outline-none transition-all placeholder-gray-300 ${amountError ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-indigo-500'}`}
                       placeholder="0"
                       value={tempAmount}
-                      onChange={(e) => setTempAmount(e.target.value)}
+                      onChange={(e) => {
+                         setTempAmount(e.target.value);
+                         if (e.target.value) setAmountError('');
+                      }}
                     />
                   </div>
+                  {amountError && <p className="text-red-500 text-xs mb-4 ml-1">{amountError}</p>}
 
                   <div className="grid grid-cols-3 gap-3 mb-6">
                      {[10000, 25000, 50000, 100000].map(amt => (
                        <button 
                         key={amt}
-                        onClick={() => setTempAmount(amt.toString())}
+                        onClick={() => {
+                          setTempAmount(amt.toString());
+                          setAmountError('');
+                        }}
                         className="py-2 px-3 bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 rounded-lg text-sm font-medium transition-colors border border-gray-200 hover:border-indigo-200"
                        >
                          {amt / 1000}k
@@ -981,6 +1013,19 @@ export default function App() {
                    </p>
                  </div>
                  <Code2 className="absolute right-0 bottom-0 text-indigo-800 opacity-20 -mr-6 -mb-6" size={200} />
+               </div>
+
+                {/* INFO BANNER */}
+               <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start space-x-3">
+                  <HelpCircle className="text-blue-600 mt-0.5" size={20} />
+                  <div>
+                    <h4 className="font-bold text-blue-800 text-sm">FAQ: Do I need the CPulsa Module?</h4>
+                    <p className="text-blue-700 text-xs mt-1">
+                      No. The "Modul Payment Qiospay" often sold online is typically for OtomaX/IRS server software. 
+                      Since you are building a custom web app (this project), you do not need it. 
+                      This web application <strong>IS</strong> your custom module, giving you full control over the source code.
+                    </p>
+                  </div>
                </div>
 
                {/* Tabs */}

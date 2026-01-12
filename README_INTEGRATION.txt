@@ -26,3 +26,16 @@ PANDUAN INTEGRASI QIOSLINK (HOSTING)
    - Jika ingin login benar-benar konek ke database (bukan simulasi localStorage),
    - Anda perlu mengupload file `login.php` dan `create_payment.php` dari `backend_php.txt` sebelumnya.
    - Lalu edit kode React (`App.tsx`) bagian `handleLogin` untuk menggunakan `fetch('https://domain-anda.com/login.php'...)` daripada logika mock yang ada sekarang.
+
+--------------------------------------------------------------------------------
+F.A.Q (PERTANYAAN UMUM)
+--------------------------------------------------------------------------------
+
+Q: Apakah saya perlu modul tambahan (misal dari CPulsa/OtomaX)?
+A: TIDAK PERLU. Aplikasi ini adalah "Custom Integration". Kode backend PHP yang kita buat
+   sudah menangani semua logika komunikasi dengan Qiospay. Modul luar biasanya hanya untuk
+   software server pulsa spesifik (OtomaX/IRS) dan tidak kompatibel dengan web custom ini.
+
+Q: Bagaimana cara integrasi ke WHMCS?
+A: Untuk WHMCS, Anda perlu membuat "Gateway Module" sederhana di WHMCS yang mengirim request
+   ke API `create_payment.php` di aplikasi ini, atau langsung generate QR string.
