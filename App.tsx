@@ -62,7 +62,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.6.0 (Secure Key Edition)";
+const APP_VERSION = "3.6.1 (Stable Admin)";
 
 const getEnv = () => {
   try {
@@ -361,6 +361,10 @@ export default function App() {
     const sessionUser = sessionStorage.getItem('qios_user');
     if (sessionUser) {
       const user = JSON.parse(sessionUser);
+      // FORCE FIX: Ensure 'admin' always has 'superadmin' role in demo/session
+      if (user.username === 'admin' && user.role !== 'superadmin') {
+          user.role = 'superadmin';
+      }
       loginSuccess(user, false); 
       setShowLanding(false);
     }
@@ -531,7 +535,10 @@ export default function App() {
   const fetchUsers = async () => {
     if (IS_DEMO_MODE) {
       const savedUsers = localStorage.getItem('qios_users');
-      if (savedUsers) setUsers(JSON.parse(savedUsers));
+      const parsedSaved = savedUsers ? JSON.parse(savedUsers) : [];
+      // CORRECTLY MERGE MOCK DATA WITH LOCAL STORAGE SO ADMIN NEVER DISAPPEARS
+      const combined = [...MOCK_USERS, ...parsedSaved.filter((u: User) => !MOCK_USERS.find(m => m.id === u.id))];
+      setUsers(combined);
       return;
     }
     try {
@@ -542,6 +549,11 @@ export default function App() {
   };
 
   const loginSuccess = (user: User, redirect = true) => {
+    // FORCE FIX: Ensure 'admin' is superadmin
+    if (user.username === 'admin' && user.role !== 'superadmin') {
+       user.role = 'superadmin';
+    }
+    
     setCurrentUser(user);
     sessionStorage.setItem('qios_user', JSON.stringify(user));
     if (user.merchantConfig) setConfig(user.merchantConfig);
@@ -564,6 +576,7 @@ export default function App() {
     if (redirect) setShowLanding(false);
 
     fetchTransactions(user);
+    // Fetch users only if allowed
     if (['superadmin', 'merchant', 'cs'].includes(user.role)) fetchUsers();
   };
 
@@ -575,10 +588,19 @@ export default function App() {
     if (IS_DEMO_MODE) {
       let allUsers = [...users];
       const savedUsers = localStorage.getItem('qios_users');
-      if (savedUsers) allUsers = [...allUsers, ...JSON.parse(savedUsers)];
+      if (savedUsers) {
+          const parsed = JSON.parse(savedUsers);
+          // Merge avoiding dupes
+          allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))];
+      }
 
       const foundUser = allUsers.find(u => u.username === loginUser);
-      if (foundUser && loginPass === foundUser.username) {
+      
+      // Override for Admin Demo Login to ensure success even if local data is weird
+      if (loginUser === 'admin' && loginPass === 'admin') {
+          loginSuccess(MOCK_USERS[0]); // Force login as the Clean Mock Admin
+      } 
+      else if (foundUser && loginPass === foundUser.username) {
          loginSuccess(foundUser);
       } else {
          setLoginError('Invalid username or password (Demo: use same pass as username)');
@@ -659,7 +681,7 @@ export default function App() {
          updatedUsers.push({ id: Date.now().toString(), username: userFormData.username, role: userFormData.role, merchantConfig: payloadConfig || undefined });
        }
        setUsers(updatedUsers);
-       localStorage.setItem('qios_users', JSON.stringify(updatedUsers));
+       localStorage.setItem('qios_users', JSON.stringify(updatedUsers.filter(u => !MOCK_USERS.find(m => m.id === u.id)))); // Only save non-mock users to storage
        alert('Saved (Demo)');
     } else {
        try {
