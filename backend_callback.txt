@@ -1,0 +1,79 @@
+
+================================================================================
+FILE CALLBACK (FOLDER: /public_html/)
+================================================================================
+Instruksi:
+1. Masuk ke folder 'public_html' (Root).
+2. Buat file bernama 'callback.php'.
+3. Copy-paste kode di bawah ini.
+4. JANGAN LUPA EDIT BAGIAN KONEKSI DATABASE DI FILE INI JUGA.
+================================================================================
+
+<?php
+// 1. KONEKSI DATABASE
+$host = "localhost";
+$username = "USERNAME_DB_ANDA"; // <--- EDIT INI
+$password = "PASSWORD_DB_ANDA"; // <--- EDIT INI
+$dbname = "NAMA_DB_ANDA";       // <--- EDIT INI
+
+$conn = new mysqli($host, $username, $password, $dbname);
+if ($conn->connect_error) {
+    error_log("Connection failed: " . $conn->connect_error);
+    die("Connection failed");
+}
+
+// 2. TERIMA DATA
+$input = file_get_contents("php://input");
+$data = json_decode($input);
+
+// Log incoming request untuk debug
+file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Received: " . $input . "\n", FILE_APPEND);
+
+// 3. PROSES DATA
+if(isset($data->status) && $data->status == 'success') {
+    $amount_paid = $data->amount;
+    
+    // Cari transaksi PENDING dengan nominal yang sama
+    $sql = "SELECT id, trx_id, external_callback_url, external_ref_id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1";
+    
+    if($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $amount_paid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $internal_id = $row['id'];
+            
+            // Update Status jadi PAID
+            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+            $update->bind_param("i", $internal_id);
+            $update->execute();
+            
+            // FORWARDING KE WHMCS/WOOCOMMERCE (JIKA ADA)
+            if (!empty($row['external_callback_url'])) {
+                $forward_data = [
+                    'status' => 'paid',
+                    'trx_id' => $row['trx_id'],
+                    'external_id' => $row['external_ref_id'],
+                    'amount' => $amount_paid
+                ];
+                
+                $ch = curl_init($row['external_callback_url']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($forward_data));
+                $response = curl_exec($ch);
+                curl_close($ch);
+                
+                file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Forwarded to Ext: " . $response . "\n", FILE_APPEND);
+            }
+            
+            echo json_encode(["status" => "success", "message" => "Transaction updated"]);
+        } else {
+            echo json_encode(["status" => "ignored", "message" => "No pending transaction found"]);
+        }
+    }
+} else {
+    echo json_encode(["status" => "failed", "message" => "Invalid status"]);
+}
+?>

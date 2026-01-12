@@ -1,0 +1,20 @@
+
+# INSTRUKSI:
+# 1. Buat file bernama ".htaccess" (ada titik di depan) di dalam folder /public_html/
+# 2. Copy isi kode di bawah ini.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  
+  # Hilangkan trailing slash
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+  # Routing React (SPA)
+  # Jika bukan file atau folder nyata, arahkan ke index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+Options -Indexes
