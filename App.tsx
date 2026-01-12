@@ -130,11 +130,11 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-              Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Install on your own server (cPanel/VPS), use your own domain, and control your data.
+              Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Try it here as a SaaS or install on your own server (cPanel/VPS) for full control.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
-                Install Now <ArrowRight size={18} />
+                Try Now <ArrowRight size={18} />
               </button>
               <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
                 <Github size={20} /> View on GitHub
