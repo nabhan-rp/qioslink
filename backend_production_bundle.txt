@@ -1,0 +1,197 @@
+================================================================================
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API)
+================================================================================
+Buat folder bernama `api` di dalam `public_html` hosting Anda.
+Lalu buat file-file berikut di dalam folder `api` tersebut.
+
+Struktur folder hosting nanti:
+/public_html
+  /index.html (dari React build)
+  /assets/    (dari React build)
+  /api/
+     ├── db_connect.php
+     ├── login.php
+     ├── get_data.php
+     ├── create_payment.php
+     ├── update_config.php
+     └── qris_utils.php
+
+--------------------------------------------------------------------------------
+FILE 1: /api/db_connect.php
+--------------------------------------------------------------------------------
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+
+$host = "localhost";
+$username = "USER_DB_ANDA"; // Ganti
+$password = "PASS_DB_ANDA"; // Ganti
+$dbname = "NAMA_DB_ANDA";   // Ganti
+
+$conn = new mysqli($host, $username, $password, $dbname);
+if ($conn->connect_error) { die(json_encode(["success"=>false, "message"=>"DB Connection Error"])); }
+?>
+
+--------------------------------------------------------------------------------
+FILE 2: /api/login.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+$data = json_decode(file_get_contents("php://input"));
+
+if(isset($data->username) && isset($data->password)) {
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->bind_param("s", $data->username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        // Cek password sederhana (di real production gunakan password_verify)
+        if($data->password == $user['password']) {
+             // Parse merchant config dari JSON string ke Object
+             $user['merchantConfig'] = json_decode($user['merchant_config']);
+             unset($user['password']); // Jangan kirim password balik
+             unset($user['merchant_config']);
+             
+             echo json_encode(["success" => true, "user" => $user]);
+        } else {
+             echo json_encode(["success" => false, "message" => "Wrong password"]);
+        }
+    } else {
+        echo json_encode(["success" => false, "message" => "User not found"]);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 3: /api/get_data.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
+// Ambil Transaksi user tertentu
+if(isset($_GET['user_id']) && isset($_GET['role'])) {
+    $uid = $_GET['user_id'];
+    $role = $_GET['role'];
+    
+    $sql = "SELECT * FROM transactions ORDER BY created_at DESC LIMIT 50";
+    
+    if($role == 'merchant') {
+        $sql = "SELECT * FROM transactions WHERE merchant_id = $uid ORDER BY created_at DESC LIMIT 50";
+    }
+    
+    $result = $conn->query($sql);
+    $transactions = [];
+    while($row = $result->fetch_assoc()) {
+        // Format ulang field agar sesuai frontend
+        $row['id'] = $row['trx_id']; 
+        $row['merchantId'] = $row['merchant_id'];
+        $row['qrString'] = $row['qr_string'];
+        $row['createdAt'] = $row['created_at'];
+        $transactions[] = $row;
+    }
+    
+    echo json_encode(["success" => true, "transactions" => $transactions]);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 4: /api/create_payment.php (Update lokasi qris_utils)
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+require 'qris_utils.php'; // Pastikan file qris_utils ada di folder yg sama
+
+$data = json_decode(file_get_contents("php://input"));
+
+if(isset($data->amount) && isset($data->merchant_id)) {
+    // Ambil Config Merchant dari DB
+    $stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
+    $stmt->bind_param("i", $data->merchant_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if($res->num_rows > 0) {
+        $user = $res->fetch_assoc();
+        $config = json_decode($user['merchant_config']);
+        
+        $dynamicQR = generateDynamicQR($config->qrisString, $data->amount);
+        $trx_id = "TRX-" . time() . rand(100,999);
+        $desc = isset($data->description) ? $data->description : 'Payment';
+        
+        // Simpan ke DB
+        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string) VALUES (?, ?, ?, ?, 'pending', ?)");
+        $insert->bind_param("siiss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR);
+        
+        if($insert->execute()) {
+             // Return format object Transaction React
+             echo json_encode([
+                "success" => true,
+                "transaction" => [
+                    "id" => $trx_id,
+                    "amount" => $data->amount,
+                    "qrString" => $dynamicQR,
+                    "status" => "pending",
+                    "description" => $desc,
+                    "createdAt" => date('Y-m-d H:i:s')
+                ]
+            ]);
+        } else {
+             echo json_encode(["success" => false, "message" => "DB Insert Failed"]);
+        }
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 5: /api/update_config.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+$data = json_decode(file_get_contents("php://input"));
+
+if(isset($data->user_id) && isset($data->config)) {
+    $configStr = json_encode($data->config);
+    $stmt = $conn->prepare("UPDATE users SET merchant_config = ? WHERE id = ?");
+    $stmt->bind_param("si", $configStr, $data->user_id);
+    
+    if($stmt->execute()) {
+        echo json_encode(["success" => true]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Update failed"]);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 6: /api/qris_utils.php (Sama dengan sebelumnya)
+--------------------------------------------------------------------------------
+<?php
+function crc16($data) {
+    $crc = 0xFFFF;
+    for ($i = 0; $i < strlen($data); $i++) {
+        $x = (($crc >> 8) ^ ord($data[$i])) & 0xFF;
+        $x ^= $x >> 4;
+        $crc = (($crc << 8) ^ ($x << 12) ^ ($x << 5) ^ $x) & 0xFFFF;
+    }
+    return strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+}
+function formatField($tag, $value) {
+    $length = str_pad(strlen($value), 2, '0', STR_PAD_LEFT);
+    return $tag . $length . $value;
+}
+function generateDynamicQR($staticQr, $amount) {
+    $rawQr = $staticQr;
+    $crcPos = strrpos($rawQr, '6304');
+    if ($crcPos !== false) {
+        $rawQr = substr($rawQr, 0, $crcPos);
+    }
+    $amountStr = floor($amount);
+    $amountField = formatField('54', $amountStr);
+    $payload = $rawQr . $amountField . '6304';
+    $crc = crc16($payload);
+    return $payload . $crc;
+}
+?>

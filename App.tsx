@@ -28,7 +28,8 @@ import {
   AlertCircle,
   HelpCircle,
   Package,
-  ShoppingCart
+  ShoppingCart,
+  Loader2
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -43,8 +44,12 @@ import { MerchantConfig, ViewState, Transaction, User, UserRole } from './types'
 import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
-// --- Constants ---
-const APP_VERSION = "2.4.0";
+// --- CONFIGURATION ---
+const APP_VERSION = "2.5.0 (Production)";
+// Set this to TRUE if you want to test UI without PHP backend
+// Set this to FALSE for real production (Connects to /api/...)
+const IS_DEMO_MODE = false; 
+const API_BASE = './api'; 
 
 // --- Components ---
 
@@ -163,7 +168,7 @@ const TransactionModal = ({
   );
 };
 
-// --- Default Data ---
+// --- Default Data for Fallback ---
 const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   merchantName: "Narpra Digital",
   merchantCode: "QP040887",
@@ -172,32 +177,9 @@ const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   callbackUrl: "https://your-domain.com/callback.php"
 };
 
-// --- Mock Users for 4 Roles ---
 const MOCK_USERS: User[] = [
-  {
-    id: 'super-01',
-    username: 'dev_admin',
-    role: 'superadmin',
-    merchantConfig: DEFAULT_MERCHANT_CONFIG
-  },
-  {
-    id: 'merchant-01',
-    username: 'merchant_user',
-    role: 'merchant',
-    merchantConfig: { ...DEFAULT_MERCHANT_CONFIG, merchantName: "Warung Kopi Digital" }
-  },
-  {
-    id: 'cs-01',
-    username: 'cs_support',
-    role: 'cs',
-    // CS sees data but doesn't have their own payment config usually
-  },
-  {
-    id: 'user-01',
-    username: 'member_budi',
-    role: 'user',
-    // End user doesn't have config, they only have transaction history
-  }
+  { id: '1', username: 'admin', role: 'superadmin', merchantConfig: DEFAULT_MERCHANT_CONFIG },
+  { id: '2', username: 'merchant', role: 'merchant', merchantConfig: { ...DEFAULT_MERCHANT_CONFIG, merchantName: "Warung Demo" } }
 ];
 
 // --- Main App ---
@@ -206,6 +188,7 @@ export default function App() {
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [apiLoading, setApiLoading] = useState(false);
   
   // App State
   const [view, setView] = useState<ViewState>('dashboard');
@@ -235,9 +218,15 @@ export default function App() {
   const [isPublicMode, setIsPublicMode] = useState(false);
   const [publicData, setPublicData] = useState<{amount: number, note: string} | null>(null);
 
-  // --- Initialization ---
+  // --- INITIALIZATION ---
   useEffect(() => {
-    // 1. Check Public Payment Link URL Params first
+    initialize();
+  }, []);
+
+  const initialize = async () => {
+    setAuthLoading(true);
+
+    // 1. Check Public Payment Link URL Params
     const params = new URLSearchParams(window.location.search);
     const amountParam = params.get('amount');
     const noteParam = params.get('note');
@@ -248,88 +237,146 @@ export default function App() {
       const qr = generateDynamicQR(DEFAULT_MERCHANT_CONFIG.qrisString, amount);
       setGeneratedQR(qr);
       setTempAmount(amount.toString());
-      setPublicData({
-        amount: amount,
-        note: noteParam || 'Payment'
-      });
+      setPublicData({ amount, note: noteParam || 'Payment' });
       setAuthLoading(false);
       return; 
     }
 
-    // 2. Load LocalStorage Data (Mock DB)
-    const savedConfig = localStorage.getItem('qios_config');
-    if (savedConfig) setConfig(JSON.parse(savedConfig));
-
-    const savedTx = localStorage.getItem('qios_transactions');
-    if (savedTx) {
-      setTransactions(JSON.parse(savedTx));
-    } else {
-      // Init Mock Transactions
-      setTransactions([
-        { id: 'TRX-101', merchantId: 'super-01', amount: 50000, description: 'Server Maintenance', status: 'paid', createdAt: '2023-10-25 14:30', qrString: '' },
-        { id: 'TRX-102', merchantId: 'merchant-01', customerId: 'user-01', amount: 25000, description: 'Kopi Susu Gula Aren', status: 'paid', createdAt: '2023-10-25 15:15', qrString: '' },
-        { id: 'TRX-103', merchantId: 'merchant-01', amount: 150000, description: 'Paket Catering', status: 'pending', createdAt: '2023-10-26 09:00', qrString: '' },
-      ]);
-    }
-
-    // 3. Check Session
+    // 2. Check Session Persistence
     const sessionUser = sessionStorage.getItem('qios_user');
     if (sessionUser) {
       const user = JSON.parse(sessionUser);
       setCurrentUser(user);
-      // Determine default view based on role
+      if (user.merchantConfig) setConfig(user.merchantConfig);
+      
       if (user.role === 'user') setView('my_orders');
       else setView('dashboard');
+
+      // Fetch fresh data if connected to API
+      if (!IS_DEMO_MODE) {
+        fetchTransactions(user);
+      } else {
+        // Load mock transactions
+        const savedTx = localStorage.getItem('qios_transactions');
+        if (savedTx) setTransactions(JSON.parse(savedTx));
+      }
     }
 
     setAuthLoading(false);
-  }, []);
+  };
 
-  // --- Handlers ---
-  // (Same as before)
-  const handleLogin = (e: React.FormEvent) => {
+  // --- API HELPER ---
+  const fetchTransactions = async (user: User) => {
+    try {
+      const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`);
+      const data = await res.json();
+      if (data.success && data.transactions) {
+        setTransactions(data.transactions);
+      }
+    } catch (e) {
+      console.error("Failed to fetch transactions", e);
+    }
+  };
+
+  // --- HANDLERS ---
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    setApiLoading(true);
 
-    // Mock Login Logic
-    // In real app, this hits PHP backend
-    const foundUser = users.find(u => u.username === loginUser);
-    
-    // Simple password check (demo: password same as username)
-    if (foundUser && loginPass === foundUser.username) {
-      setCurrentUser(foundUser);
-      sessionStorage.setItem('qios_user', JSON.stringify(foundUser));
-      
-      if (foundUser.merchantConfig) {
-        setConfig(foundUser.merchantConfig);
+    if (IS_DEMO_MODE) {
+      // MOCK LOGIN
+      const foundUser = users.find(u => u.username === loginUser);
+      if (foundUser && loginPass === foundUser.username) {
+         loginSuccess(foundUser);
+      } else {
+         setLoginError('Invalid username or password');
       }
-
-      // Redirect logic based on role
-      if (foundUser.role === 'user') setView('my_orders');
-      else setView('dashboard');
-
+      setApiLoading(false);
     } else {
-      setLoginError('Invalid username or password');
+      // REAL API LOGIN
+      try {
+        const res = await fetch(`${API_BASE}/login.php`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ username: loginUser, password: loginPass })
+        });
+        
+        // Handle if response is not JSON (e.g., PHP error HTML)
+        const text = await res.text();
+        let data;
+        try {
+           data = JSON.parse(text);
+        } catch(e) {
+           throw new Error("Server Error: " + text.substring(0, 100));
+        }
+
+        if (data.success) {
+           loginSuccess(data.user);
+        } else {
+           setLoginError(data.message || 'Login failed');
+        }
+      } catch (err: any) {
+        setLoginError('Connection Error: ' + err.message);
+      } finally {
+        setApiLoading(false);
+      }
     }
+  };
+
+  const loginSuccess = (user: User) => {
+    setCurrentUser(user);
+    sessionStorage.setItem('qios_user', JSON.stringify(user));
+    if (user.merchantConfig) {
+      setConfig(user.merchantConfig);
+    }
+    if (user.role === 'user') setView('my_orders');
+    else setView('dashboard');
+    
+    if(!IS_DEMO_MODE) fetchTransactions(user);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     sessionStorage.removeItem('qios_user');
     setView('dashboard');
+    setTransactions([]);
   };
 
-  const handleSaveConfig = () => {
-    // Only Superadmin and Merchant can save config
-    if (currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'merchant')) {
+  const handleSaveConfig = async () => {
+    if (!currentUser) return;
+    setApiLoading(true);
+
+    if (IS_DEMO_MODE) {
       const updatedUser = { ...currentUser, merchantConfig: config };
       setCurrentUser(updatedUser);
       sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
-      alert('Configuration saved successfully!');
+      alert('Config Saved (Local Demo)');
+      setApiLoading(false);
+    } else {
+      try {
+        const res = await fetch(`${API_BASE}/update_config.php`, {
+           method: 'POST',
+           body: JSON.stringify({ user_id: currentUser.id, config: config })
+        });
+        const data = await res.json();
+        if(data.success) {
+           const updatedUser = { ...currentUser, merchantConfig: config };
+           setCurrentUser(updatedUser);
+           sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
+           alert('Configuration saved to Database!');
+        } else {
+           alert('Failed to save: ' + data.message);
+        }
+      } catch (e) {
+        alert('Connection failed');
+      } finally {
+        setApiLoading(false);
+      }
     }
   };
 
-  const handleGenerateQR = () => {
+  const handleGenerateQR = async () => {
     setAmountError('');
     if (!tempAmount) {
       setAmountError('Please enter an amount.');
@@ -337,26 +384,51 @@ export default function App() {
     }
     const amountNum = Number(tempAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setAmountError('Please enter a valid amount greater than 0.');
+      setAmountError('Please enter a valid amount.');
       return;
     }
 
-    const dynamicString = generateDynamicQR(config.qrisString, amountNum);
-    setGeneratedQR(dynamicString);
-    
-    const newTrx: Transaction = {
-      id: `TRX-${Math.floor(Math.random() * 10000)}`,
-      merchantId: currentUser?.id || 'unknown',
-      amount: amountNum,
-      description: 'Manual Generation',
-      status: 'pending',
-      createdAt: new Date().toLocaleString(),
-      qrString: dynamicString
-    };
-    
-    const newTxList = [newTrx, ...transactions];
-    setTransactions(newTxList);
-    localStorage.setItem('qios_transactions', JSON.stringify(newTxList));
+    if (IS_DEMO_MODE) {
+       // Demo Logic
+       const dynamicString = generateDynamicQR(config.qrisString, amountNum);
+       setGeneratedQR(dynamicString);
+       const newTrx: Transaction = {
+         id: `TRX-${Math.floor(Math.random() * 10000)}`,
+         merchantId: currentUser?.id || 'unknown',
+         amount: amountNum,
+         description: 'Manual Generation',
+         status: 'pending',
+         createdAt: new Date().toLocaleString(),
+         qrString: dynamicString
+       };
+       const newTxList = [newTrx, ...transactions];
+       setTransactions(newTxList);
+       localStorage.setItem('qios_transactions', JSON.stringify(newTxList));
+    } else {
+       // Production Logic
+       setApiLoading(true);
+       try {
+         const res = await fetch(`${API_BASE}/create_payment.php`, {
+           method: 'POST',
+           body: JSON.stringify({
+             merchant_id: currentUser?.id,
+             amount: amountNum,
+             description: 'Manual Terminal Gen'
+           })
+         });
+         const data = await res.json();
+         if(data.success && data.transaction) {
+            setGeneratedQR(data.transaction.qrString);
+            setTransactions([data.transaction, ...transactions]);
+         } else {
+            setAmountError(data.message || 'Generation failed');
+         }
+       } catch (e) {
+         setAmountError('Server connection failed');
+       } finally {
+         setApiLoading(false);
+       }
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -377,37 +449,26 @@ export default function App() {
   };
 
   // --- Logic: Who sees what? ---
-  // (Same logic)
   const visibleTransactions = transactions.filter(t => {
     if (!currentUser) return false;
     if (currentUser.role === 'superadmin') return true;
     if (currentUser.role === 'cs') return true;
-    if (currentUser.role === 'merchant') return t.merchantId === currentUser.id;
-    if (currentUser.role === 'user') return t.customerId === currentUser.id;
+    if (currentUser.role === 'merchant') return t.merchantId == currentUser.id; // loose equality for string/int mix
+    if (currentUser.role === 'user') return t.customerId == currentUser.id;
     return false;
   });
 
   const filteredTransactions = visibleTransactions.filter(t => 
-    t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (t.id && t.id.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
     t.amount.toString().includes(searchQuery)
   );
 
-  const chartData = [
-    { name: 'Mon', amt: 400000 },
-    { name: 'Tue', amt: 300000 },
-    { name: 'Wed', amt: 200000 },
-    { name: 'Thu', amt: 278000 },
-    { name: 'Fri', amt: 189000 },
-    { name: 'Sat', amt: 239000 },
-    { name: 'Sun', amt: 349000 },
-  ];
-
   // ---------------- RENDER ----------------
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
-  // 1. PUBLIC PAYMENT PAGE (Same)
+  // 1. PUBLIC PAYMENT PAGE
   if (isPublicMode && generatedQR) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -440,7 +501,7 @@ export default function App() {
     );
   }
 
-  // 2. LOGIN PAGE (Same)
+  // 2. LOGIN PAGE
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -485,18 +546,17 @@ export default function App() {
 
               <button 
                 type="submit" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-indigo-500/30"
+                disabled={apiLoading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-indigo-500/30 flex justify-center items-center"
               >
-                Login
+                {apiLoading ? <Loader2 className="animate-spin" /> : 'Login'}
               </button>
 
               <div className="text-center text-xs text-gray-400 mt-4 border-t pt-4">
-                <p className="mb-1 font-semibold">Demo Accounts (Pass = Username):</p>
+                <p className="mb-1 font-semibold">{IS_DEMO_MODE ? 'Demo Accounts:' : 'Default Production Accounts:'}</p>
                 <div className="grid grid-cols-2 gap-2 text-left px-2">
-                  <span>• dev_admin (Super)</span>
-                  <span>• merchant_user</span>
-                  <span>• cs_support</span>
-                  <span>• member_budi (User)</span>
+                  <span>• admin (Pass: admin)</span>
+                  <span>• merchant (Pass: merchant)</span>
                 </div>
               </div>
             </form>
@@ -525,7 +585,7 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar (Same) */}
+      {/* Sidebar */}
       <aside 
         className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-20 xl:w-72'
@@ -540,11 +600,8 @@ export default function App() {
               </div>
               <div className={`lg:hidden xl:block overflow-hidden transition-all duration-300`}>
                 <h1 className="text-xl font-bold text-gray-800">QiosLink</h1>
-                <p className="text-xs text-gray-500">
-                   {currentUser.role === 'superadmin' && 'Dev Mode'}
-                   {currentUser.role === 'merchant' && 'Merchant'}
-                   {currentUser.role === 'cs' && 'Support'}
-                   {currentUser.role === 'user' && 'Member'}
+                <p className="text-xs text-gray-500 truncate">
+                   {currentUser.username} ({currentUser.role})
                 </p>
               </div>
             </div>
@@ -630,7 +687,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Header (Same) */}
+        {/* Header */}
         <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-10">
           <div className="flex items-center space-x-4">
             <button 
@@ -645,6 +702,11 @@ export default function App() {
           </div>
           
           <div className="flex items-center space-x-4">
+            {!IS_DEMO_MODE && (
+               <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center">
+                  <Server size={12} className="mr-1"/> LIVE
+               </span>
+            )}
             <div className="flex flex-col items-end hidden md:block">
               <span className="text-sm font-semibold text-gray-800">{currentUser.username}</span>
               <span className="text-xs text-gray-500 uppercase">{currentUser.role}</span>
@@ -662,7 +724,7 @@ export default function App() {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 lg:p-10">
           
-          {/* VIEW: DASHBOARD (Condensed) */}
+          {/* VIEW: DASHBOARD */}
           {view === 'dashboard' && (
              <div className="space-y-6">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -671,7 +733,7 @@ export default function App() {
                       <div className="p-2 bg-white/20 rounded-lg"><Wallet className="text-white" size={24} /></div>
                       <span className="text-indigo-100 text-sm font-medium">Total Revenue</span>
                     </div>
-                    <div className="text-3xl font-bold">Rp {visibleTransactions.reduce((acc, t) => acc + t.amount, 0).toLocaleString()}</div>
+                    <div className="text-3xl font-bold">Rp {visibleTransactions.reduce((acc, t) => acc + Number(t.amount), 0).toLocaleString()}</div>
                  </Card>
                  <Card>
                     <div className="flex items-center justify-between mb-4">
@@ -691,19 +753,23 @@ export default function App() {
              </div>
           )}
 
-          {/* VIEW: HISTORY (Condensed) */}
+          {/* VIEW: HISTORY */}
           {view === 'history' && (
              <Card>
-                <div className="flex justify-between mb-4"><h3 className="font-bold">Transaction History</h3></div>
+                <div className="flex justify-between items-center mb-4">
+                   <h3 className="font-bold">Transaction History</h3>
+                   <button onClick={() => fetchTransactions(currentUser)} className="text-sm text-indigo-600 hover:underline">Refresh Data</button>
+                </div>
                 <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead><tr className="border-b"><th className="pb-2">ID</th><th className="pb-2">Desc</th><th className="pb-2">Amount</th><th className="pb-2">Status</th></tr></thead>
-                  <tbody>{filteredTransactions.map(t => (
-                     <tr key={t.id} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="py-3 text-sm">{t.id}</td>
+                  <thead><tr className="border-b"><th className="pb-2">ID</th><th className="pb-2">Desc</th><th className="pb-2">Amount</th><th className="pb-2">Status</th><th className="pb-2">Date</th></tr></thead>
+                  <tbody>{filteredTransactions.length === 0 ? <tr><td colSpan={5} className="py-4 text-center text-gray-500">No transactions found</td></tr> : filteredTransactions.map(t => (
+                     <tr key={t.id} onClick={()=>setSelectedTransaction(t)} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <td className="py-3 text-sm font-mono text-gray-500">{t.id}</td>
                         <td className="py-3 text-sm">{t.description}</td>
-                        <td className="py-3 font-bold">{formatRupiah(t.amount)}</td>
-                        <td className="py-3"><span className={`px-2 py-1 rounded text-xs ${t.status==='paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{t.status}</span></td>
+                        <td className="py-3 font-bold">{formatRupiah(Number(t.amount))}</td>
+                        <td className="py-3"><span className={`px-2 py-1 rounded text-xs uppercase font-bold ${t.status==='paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{t.status}</span></td>
+                        <td className="py-3 text-xs text-gray-400">{t.createdAt}</td>
                      </tr>
                   ))}</tbody>
                 </table>
@@ -711,36 +777,53 @@ export default function App() {
              </Card>
           )}
 
-          {/* VIEW: TERMINAL (Condensed) */}
+          {/* VIEW: TERMINAL */}
           {view === 'terminal' && (
              <div className="max-w-md mx-auto">
                <Card>
                   <h3 className="font-bold mb-4">Manual QR Generation</h3>
-                  <input type="number" value={tempAmount} onChange={e=>setTempAmount(e.target.value)} className="w-full border p-2 rounded mb-4" placeholder="Amount" />
-                  <button onClick={handleGenerateQR} className="w-full bg-indigo-600 text-white py-2 rounded">Generate</button>
-                  {generatedQR && <div className="mt-4 flex justify-center"><QRCodeDisplay data={generatedQR} /></div>}
+                  <input type="number" value={tempAmount} onChange={e=>setTempAmount(e.target.value)} className="w-full border p-2 rounded mb-4" placeholder="Amount (e.g., 10000)" />
+                  {amountError && <p className="text-red-500 text-sm mb-2">{amountError}</p>}
+                  
+                  <button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded flex justify-center">
+                     {apiLoading ? <Loader2 className="animate-spin" /> : 'Generate Dynamic QR'}
+                  </button>
+                  
+                  {generatedQR && (
+                     <div className="mt-6 flex flex-col items-center animate-in fade-in">
+                        <QRCodeDisplay data={generatedQR} />
+                        <p className="mt-2 text-sm text-gray-500">Scan to simulate payment</p>
+                     </div>
+                  )}
                </Card>
              </div>
           )}
           
-          {/* VIEW: SETTINGS (Condensed) */}
+          {/* VIEW: SETTINGS */}
           {view === 'settings' && (
              <div className="max-w-2xl mx-auto">
                <Card>
-                 <h3 className="font-bold mb-4">Settings</h3>
+                 <h3 className="font-bold mb-4">Merchant Settings</h3>
                  <div className="space-y-4">
-                    <div><label className="block text-sm">Merchant Name</label><input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e=>setConfig({...config, merchantName:e.target.value})} /></div>
-                    <div><label className="block text-sm">Static QR String</label><textarea className="w-full border p-2 rounded text-xs font-mono" rows={3} value={config.qrisString} onChange={e=>setConfig({...config, qrisString:e.target.value})} /></div>
-                    <button onClick={handleSaveConfig} className="bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
+                    <div><label className="block text-sm font-medium mb-1">Merchant Name</label><input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e=>setConfig({...config, merchantName:e.target.value})} /></div>
+                    <div>
+                       <label className="block text-sm font-medium mb-1">Static QR String (From Nobu/Qiospay)</label>
+                       <textarea className="w-full border p-2 rounded text-xs font-mono bg-gray-50" rows={4} value={config.qrisString} onChange={e=>setConfig({...config, qrisString:e.target.value})} />
+                       <p className="text-xs text-gray-400 mt-1">Starts with 000201...</p>
+                    </div>
+                    <button onClick={handleSaveConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-4 py-2 rounded flex items-center">
+                       {apiLoading && <Loader2 className="animate-spin mr-2" size={16}/>} Save Configuration
+                    </button>
                  </div>
                </Card>
              </div>
           )}
 
-          {/* VIEW: USERS (Condensed) */}
+          {/* VIEW: USERS */}
           {view === 'users' && currentUser.role === 'superadmin' && (
             <Card>
-              <h3 className="font-bold mb-4">User List</h3>
+              <h3 className="font-bold mb-4">User Management (Read-Only Demo)</h3>
+              <p className="text-sm text-gray-500 mb-4">To manage users, please use phpMyAdmin on your hosting directly.</p>
               <ul>{users.map(u => <li key={u.id} className="border-b py-2 flex justify-between"><span>{u.username}</span><span className="text-gray-500">{u.role}</span></li>)}</ul>
             </Card>
           )}
@@ -752,7 +835,7 @@ export default function App() {
                  <div className="relative z-10">
                    <h2 className="text-3xl font-bold mb-4">Developer Integration</h2>
                    <p className="text-indigo-200 max-w-xl">
-                     Download ready-to-use modules for WHMCS, WooCommerce, and Shopify.
+                     Connect your WHMCS, WooCommerce, or Custom Apps to this QiosLink Server.
                    </p>
                  </div>
                  <Code2 className="absolute right-0 bottom-0 text-indigo-800 opacity-20 -mr-6 -mb-6" size={200} />
@@ -769,11 +852,22 @@ export default function App() {
                <div className="min-h-[300px]">
                  {integrationTab === 'php' && (
                     <Card>
-                      <h3 className="font-bold text-gray-800 mb-2">Backend API Code</h3>
-                      <p className="text-sm text-gray-500 mb-4">Core files for your cPanel/Shared Hosting.</p>
-                      <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto text-white text-xs font-mono">
-                         See `backend_php.txt` for the updated code supporting external callbacks.
-                      </div>
+                      <h3 className="font-bold text-gray-800 mb-2">Backend API Status</h3>
+                      {IS_DEMO_MODE ? (
+                         <div className="p-3 bg-yellow-50 text-yellow-800 rounded border border-yellow-200 text-sm">
+                            ⚠️ You are running in DEMO MODE (LocalStorage).<br/>
+                            To enable real API integration, set <code>IS_DEMO_MODE = false</code> in <code>App.tsx</code> and upload the PHP files.
+                         </div>
+                      ) : (
+                         <div className="p-3 bg-green-50 text-green-800 rounded border border-green-200 text-sm">
+                            ✅ PRODUCTION MODE ACTIVE. App is trying to connect to <code>{API_BASE}</code>.
+                         </div>
+                      )}
+                      
+                      <p className="text-sm text-gray-500 mt-4 mb-2">API Endpoint for External Apps:</p>
+                      <code className="block bg-gray-900 text-white p-3 rounded text-xs font-mono">
+                         POST {window.location.origin}/api/create_payment.php
+                      </code>
                     </Card>
                  )}
 

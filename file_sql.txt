@@ -1,0 +1,32 @@
+-- 1. Buat Tabel Users
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL, -- Simpan hash password di production
+  `role` enum('superadmin','merchant','cs','user') NOT NULL DEFAULT 'user',
+  `merchant_config` text, -- JSON String berisi config merchant
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. Buat Tabel Transactions
+CREATE TABLE IF NOT EXISTS `transactions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `trx_id` varchar(50) NOT NULL,
+  `merchant_id` int(11) NOT NULL,
+  `customer_id` int(11) DEFAULT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `status` enum('pending','paid','expired') NOT NULL DEFAULT 'pending',
+  `qr_string` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `external_ref_id` varchar(100) DEFAULT NULL,
+  `external_callback_url` text DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. Data Awal (Default User)
+-- Password default: "admin" (sebaiknya diganti nanti)
+INSERT INTO `users` (`username`, `password`, `role`, `merchant_config`) VALUES
+('admin', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","apiKey":"KEY123","qrisString":"00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424"}'),
+('merchant', 'merchant', 'merchant', '{"merchantName":"Toko Demo","merchantCode":"QP_DEMO","apiKey":"KEY_DEMO","qrisString":"00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424"}');
