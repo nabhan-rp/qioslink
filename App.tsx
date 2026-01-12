@@ -29,7 +29,11 @@ import {
   HelpCircle,
   Package,
   ShoppingCart,
-  Loader2
+  Loader2,
+  Plus,
+  Trash2,
+  Pencil,
+  Save
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -45,10 +49,8 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "2.7.1 (Safe Env Access)";
+const APP_VERSION = "2.8.0 (User Management GUI)";
 
-// Helper function to safely access environment variables
-// This prevents crashes if import.meta.env is undefined (e.g. in some preview environments)
 const getEnv = () => {
   try {
     // @ts-ignore
@@ -59,16 +61,11 @@ const getEnv = () => {
 };
 
 const env = getEnv();
-
-// Logika: Jika VITE_USE_DEMO_DATA tidak ada (undefined), default ke 'true' (Demo Mode)
-// agar user yang baru download dan belum setup .env tidak mengalami error "Connection Failed".
-const IS_DEMO_MODE = env.VITE_USE_DEMO_DATA !== 'false'; // Default to true if undefined or 'true'
+const IS_DEMO_MODE = env.VITE_USE_DEMO_DATA !== 'false';
 const API_BASE = env.VITE_API_BASE_URL || './api';
 
-// Debug log untuk memastikan mode yang berjalan
 console.log(`[App Config] Version: ${APP_VERSION}`);
 console.log(`[App Config] Mode: ${IS_DEMO_MODE ? 'DEMO (Local Storage)' : 'PRODUCTION (PHP API)'}`);
-console.log(`[App Config] API Base: ${API_BASE}`);
 
 // --- Components ---
 
@@ -228,6 +225,19 @@ export default function App() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [amountError, setAmountError] = useState('');
   
+  // User Management UI State
+  const [isUserModalOpen, setUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userFormData, setUserFormData] = useState({
+    username: '',
+    password: '',
+    role: 'merchant' as UserRole,
+    merchantName: '',
+    merchantCode: '',
+    apiKey: '',
+    qrisString: ''
+  });
+  
   // Login Form State
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
@@ -245,7 +255,6 @@ export default function App() {
   const initialize = async () => {
     setAuthLoading(true);
 
-    // 1. Check Public Payment Link URL Params
     const params = new URLSearchParams(window.location.search);
     const amountParam = params.get('amount');
     const noteParam = params.get('note');
@@ -261,7 +270,6 @@ export default function App() {
       return; 
     }
 
-    // 2. Check Session Persistence
     const sessionUser = sessionStorage.getItem('qios_user');
     if (sessionUser) {
       const user = JSON.parse(sessionUser);
@@ -271,20 +279,21 @@ export default function App() {
       if (user.role === 'user') setView('my_orders');
       else setView('dashboard');
 
-      // Fetch fresh data if connected to API
       if (!IS_DEMO_MODE) {
         fetchTransactions(user);
+        if (user.role === 'superadmin') fetchUsers(); // Fetch users if superadmin
       } else {
-        // Load mock transactions
         const savedTx = localStorage.getItem('qios_transactions');
+        const savedUsers = localStorage.getItem('qios_users');
         if (savedTx) setTransactions(JSON.parse(savedTx));
+        if (savedUsers) setUsers(JSON.parse(savedUsers));
       }
     }
 
     setAuthLoading(false);
   };
 
-  // --- API HELPER ---
+  // --- API HELPERS ---
   const fetchTransactions = async (user: User) => {
     try {
       const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`);
@@ -297,15 +306,152 @@ export default function App() {
     }
   };
 
-  // --- HANDLERS ---
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/manage_users.php?action=list`);
+      const data = await res.json();
+      if (data.success && data.users) {
+        setUsers(data.users);
+      }
+    } catch (e) {
+      console.error("Failed to fetch users", e);
+    }
+  };
+
+  // --- USER MANAGEMENT HANDLERS ---
+  const handleOpenUserModal = (user: User | null = null) => {
+    if (user) {
+      setEditingUser(user);
+      setUserFormData({
+        username: user.username,
+        password: '', // Leave blank to keep unchanged
+        role: user.role,
+        merchantName: user.merchantConfig?.merchantName || '',
+        merchantCode: user.merchantConfig?.merchantCode || '',
+        apiKey: user.merchantConfig?.apiKey || '',
+        qrisString: user.merchantConfig?.qrisString || ''
+      });
+    } else {
+      setEditingUser(null);
+      setUserFormData({
+        username: '',
+        password: '',
+        role: 'merchant',
+        merchantName: '',
+        merchantCode: '',
+        apiKey: '',
+        qrisString: ''
+      });
+    }
+    setUserModalOpen(true);
+  };
+
+  const handleUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiLoading(true);
+
+    const configPayload = userFormData.role === 'merchant' || userFormData.role === 'superadmin' ? {
+      merchantName: userFormData.merchantName,
+      merchantCode: userFormData.merchantCode,
+      apiKey: userFormData.apiKey,
+      qrisString: userFormData.qrisString
+    } : null;
+
+    if (IS_DEMO_MODE) {
+      // Demo Logic (LocalStorage)
+      let updatedUsers = [...users];
+      if (editingUser) {
+        updatedUsers = updatedUsers.map(u => u.id === editingUser.id ? {
+          ...u,
+          username: userFormData.username,
+          role: userFormData.role,
+          merchantConfig: configPayload || undefined
+        } : u);
+      } else {
+        const newUser: User = {
+          id: Date.now().toString(),
+          username: userFormData.username,
+          role: userFormData.role,
+          merchantConfig: configPayload || undefined
+        };
+        updatedUsers.push(newUser);
+      }
+      setUsers(updatedUsers);
+      localStorage.setItem('qios_users', JSON.stringify(updatedUsers));
+      alert(editingUser ? 'User updated (Demo)' : 'User created (Demo)');
+    } else {
+      // Production Logic (PHP API)
+      try {
+        const payload = {
+          action: editingUser ? 'update' : 'create',
+          id: editingUser?.id,
+          username: userFormData.username,
+          password: userFormData.password, // Optional for update
+          role: userFormData.role,
+          config: configPayload
+        };
+        
+        const res = await fetch(`${API_BASE}/manage_users.php`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          fetchUsers(); // Refresh list
+          alert('User saved successfully');
+        } else {
+          alert('Error: ' + data.message);
+        }
+      } catch (e) {
+        alert('Server connection failed');
+      }
+    }
+    
+    setApiLoading(false);
+    setUserModalOpen(false);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    setApiLoading(true);
+
+    if (IS_DEMO_MODE) {
+      const updatedUsers = users.filter(u => u.id !== userId);
+      setUsers(updatedUsers);
+      localStorage.setItem('qios_users', JSON.stringify(updatedUsers));
+      setApiLoading(false);
+    } else {
+      try {
+        const res = await fetch(`${API_BASE}/manage_users.php`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'delete', id: userId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          fetchUsers();
+        } else {
+          alert('Failed to delete: ' + data.message);
+        }
+      } catch (e) {
+        alert('Connection error');
+      } finally {
+        setApiLoading(false);
+      }
+    }
+  };
+
+  // --- HANDLERS (Existing) ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setApiLoading(true);
 
     if (IS_DEMO_MODE) {
-      // MOCK LOGIN
       const foundUser = users.find(u => u.username === loginUser);
+      // Simple pass check for demo
       if (foundUser && loginPass === foundUser.username) {
          loginSuccess(foundUser);
       } else {
@@ -313,22 +459,15 @@ export default function App() {
       }
       setApiLoading(false);
     } else {
-      // REAL API LOGIN
       try {
         const res = await fetch(`${API_BASE}/login.php`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ username: loginUser, password: loginPass })
         });
-        
-        // Handle if response is not JSON (e.g., PHP error HTML)
         const text = await res.text();
         let data;
-        try {
-           data = JSON.parse(text);
-        } catch(e) {
-           throw new Error("Server Error: " + text.substring(0, 100));
-        }
+        try { data = JSON.parse(text); } catch(e) { throw new Error("Server Error"); }
 
         if (data.success) {
            loginSuccess(data.user);
@@ -352,7 +491,10 @@ export default function App() {
     if (user.role === 'user') setView('my_orders');
     else setView('dashboard');
     
-    if(!IS_DEMO_MODE) fetchTransactions(user);
+    if(!IS_DEMO_MODE) {
+      fetchTransactions(user);
+      if (user.role === 'superadmin') fetchUsers();
+    }
   };
 
   const handleLogout = () => {
@@ -408,7 +550,6 @@ export default function App() {
     }
 
     if (IS_DEMO_MODE) {
-       // Demo Logic
        const dynamicString = generateDynamicQR(config.qrisString, amountNum);
        setGeneratedQR(dynamicString);
        const newTrx: Transaction = {
@@ -424,7 +565,6 @@ export default function App() {
        setTransactions(newTxList);
        localStorage.setItem('qios_transactions', JSON.stringify(newTxList));
     } else {
-       // Production Logic
        setApiLoading(true);
        try {
          const res = await fetch(`${API_BASE}/create_payment.php`, {
@@ -450,11 +590,6 @@ export default function App() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Copied to clipboard');
-  };
-
   const generatePaymentLink = (t: Transaction | null, amt?: number) => {
     const amount = t ? t.amount : amt;
     const note = t ? t.description : 'Payment';
@@ -467,12 +602,11 @@ export default function App() {
     alert('Public Payment Link copied to clipboard!\nShare this URL with your customer.');
   };
 
-  // --- Logic: Who sees what? ---
   const visibleTransactions = transactions.filter(t => {
     if (!currentUser) return false;
     if (currentUser.role === 'superadmin') return true;
     if (currentUser.role === 'cs') return true;
-    if (currentUser.role === 'merchant') return t.merchantId == currentUser.id; // loose equality for string/int mix
+    if (currentUser.role === 'merchant') return t.merchantId == currentUser.id;
     if (currentUser.role === 'user') return t.customerId == currentUser.id;
     return false;
   });
@@ -487,11 +621,12 @@ export default function App() {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
-  // 1. PUBLIC PAYMENT PAGE
+  // 1. PUBLIC PAYMENT PAGE (Same as before)
   if (isPublicMode && generatedQR) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6">
+        {/* ... (Existing public page code) ... */}
+         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6">
           <div className="flex justify-center mb-2">
              <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
                 <QrCode size={32} />
@@ -520,11 +655,11 @@ export default function App() {
     );
   }
 
-  // 2. LOGIN PAGE
+  // 2. LOGIN PAGE (Same as before)
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
           <div className="bg-indigo-600 p-8 text-center">
              <div className="inline-flex p-3 bg-white/20 rounded-xl mb-4 text-white">
               <Shield size={32} />
@@ -596,6 +731,68 @@ export default function App() {
         onCopyLink={(t) => generatePaymentLink(t)}
       />
 
+      {/* NEW: USER MODAL */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
+             <div className="bg-indigo-600 p-4 text-white flex justify-between items-center">
+                <h3 className="font-bold">{editingUser ? 'Edit User' : 'Create New User'}</h3>
+                <button onClick={() => setUserModalOpen(false)}><X size={20}/></button>
+             </div>
+             <form onSubmit={handleUserSubmit} className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                   <div>
+                      <label className="block text-sm font-medium mb-1">Username</label>
+                      <input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData, username: e.target.value})} />
+                   </div>
+                   <div>
+                      <label className="block text-sm font-medium mb-1">Role</label>
+                      <select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData, role: e.target.value as UserRole})}>
+                         <option value="merchant">Merchant</option>
+                         <option value="superadmin">Super Admin</option>
+                         <option value="cs">Customer Service</option>
+                         <option value="user">User/Buyer</option>
+                      </select>
+                   </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">{editingUser ? 'New Password (leave blank to keep)' : 'Password'}</label>
+                    <input type={editingUser ? "text" : "password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData, password: e.target.value})} placeholder={editingUser ? "******" : "Secret Password"} />
+                </div>
+
+                {/* Specific Fields for Merchant */}
+                {userFormData.role === 'merchant' && (
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+                     <p className="text-xs font-bold text-gray-500 uppercase">Merchant Configuration</p>
+                     <div>
+                        <label className="block text-xs mb-1">Business Name</label>
+                        <input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData, merchantName: e.target.value})} placeholder="e.g. Warung Kopi" />
+                     </div>
+                     <div className="grid grid-cols-2 gap-2">
+                        <div>
+                           <label className="block text-xs mb-1">Merchant ID</label>
+                           <input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantCode} onChange={e=>setUserFormData({...userFormData, merchantCode: e.target.value})} placeholder="QP..." />
+                        </div>
+                         <div>
+                           <label className="block text-xs mb-1">API Key</label>
+                           <input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.apiKey} onChange={e=>setUserFormData({...userFormData, apiKey: e.target.value})} placeholder="Random Key" />
+                        </div>
+                     </div>
+                     <div>
+                        <label className="block text-xs mb-1">QRIS String (000201...)</label>
+                        <textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData, qrisString: e.target.value})} placeholder="Paste QR Code String here" />
+                     </div>
+                  </div>
+                )}
+
+                <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700 flex justify-center">
+                   {apiLoading ? <Loader2 className="animate-spin"/> : 'Save User'}
+                </button>
+             </form>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -604,7 +801,7 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar (Same as before) */}
       <aside 
         className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-20 xl:w-72'
@@ -880,12 +1077,64 @@ export default function App() {
              </div>
           )}
 
-          {/* VIEW: USERS */}
+          {/* VIEW: USERS (UPDATED TO FULL GUI) */}
           {view === 'users' && currentUser.role === 'superadmin' && (
             <Card>
-              <h3 className="font-bold mb-4">User Management (Read-Only Demo)</h3>
-              <p className="text-sm text-gray-500 mb-4">To manage users, please use phpMyAdmin on your hosting directly.</p>
-              <ul>{users.map(u => <li key={u.id} className="border-b py-2 flex justify-between"><span>{u.username}</span><span className="text-gray-500">{u.role}</span></li>)}</ul>
+              <div className="flex justify-between items-center mb-6">
+                 <div>
+                    <h3 className="font-bold text-lg">User Management</h3>
+                    <p className="text-sm text-gray-500">{IS_DEMO_MODE ? 'Demo Mode (Local)' : 'Production Mode (MySQL)'}</p>
+                 </div>
+                 <button 
+                  onClick={() => handleOpenUserModal()}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
+                 >
+                    <Plus size={18} /> <span>Add User</span>
+                 </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                 <table className="w-full text-left">
+                    <thead className="bg-gray-50">
+                       <tr>
+                          <th className="px-4 py-3 rounded-l-lg">Username</th>
+                          <th className="px-4 py-3">Role</th>
+                          <th className="px-4 py-3">Merchant Name</th>
+                          <th className="px-4 py-3 rounded-r-lg text-right">Actions</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                       {users.map(u => (
+                          <tr key={u.id} className="hover:bg-gray-50">
+                             <td className="px-4 py-3 font-medium">{u.username}</td>
+                             <td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full uppercase font-bold">{u.role}</span></td>
+                             <td className="px-4 py-3 text-sm text-gray-500">{u.merchantConfig?.merchantName || '-'}</td>
+                             <td className="px-4 py-3 text-right">
+                                <div className="flex justify-end space-x-2">
+                                   <button 
+                                      onClick={() => handleOpenUserModal(u)}
+                                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                      title="Edit User"
+                                   >
+                                      <Pencil size={18} />
+                                   </button>
+                                   <button 
+                                      onClick={() => handleDeleteUser(u.id)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Delete User"
+                                   >
+                                      <Trash2 size={18} />
+                                   </button>
+                                </div>
+                             </td>
+                          </tr>
+                       ))}
+                       {users.length === 0 && (
+                          <tr><td colSpan={4} className="text-center py-6 text-gray-500">No users found</td></tr>
+                       )}
+                    </tbody>
+                 </table>
+              </div>
             </Card>
           )}
 
