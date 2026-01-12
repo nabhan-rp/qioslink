@@ -59,7 +59,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.3.1 (Fix Config Save)";
+const APP_VERSION = "3.4.0 (Self-Hosted Release)";
 
 const getEnv = () => {
   try {
@@ -115,17 +115,17 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold mb-6 border border-indigo-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Zap size={12} fill="currentColor" /> v3.3 SMTP Enabled
+              <Zap size={12} fill="currentColor" /> v3.4 Open Source Edition
             </div>
             {/* Primary Heading for SEO */}
             <h1 id="hero-heading" className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
               Accept QRIS Payments <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
-                With Email Notifications.
+                Self-Hosted & Whitelabel.
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-              Transform your static QRIS into a dynamic payment engine. Full whitelabel support, SMTP integration, and seamless billing automation.
+              Transform your static QRIS into a dynamic payment engine. Install on your own server, use your own domain, 100% control.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
@@ -440,22 +440,63 @@ export default function App() {
       setAccountForm({...accountForm, password: '', newPassword: ''});
   };
 
-  const handleGenerateQR = () => {
+  const handleGenerateQR = async () => {
     if (!tempAmount || isNaN(Number(tempAmount))) return;
-    const qr = generateDynamicQR(config.qrisString, Number(tempAmount));
-    setGeneratedQR(qr);
     
-    // Save to history (Simulation)
-    const newTrx: Transaction = {
-        id: `TRX-${Date.now()}`,
-        merchantId: currentUser?.id || '0',
-        amount: Number(tempAmount),
-        description: 'Manual Generation',
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        qrString: qr
-    };
-    setTransactions([newTrx, ...transactions]);
+    setApiLoading(true);
+
+    if (IS_DEMO_MODE) {
+        // DEMO MODE (Client Side Only)
+        const qr = generateDynamicQR(config.qrisString, Number(tempAmount));
+        setGeneratedQR(qr);
+        const newTrx: Transaction = {
+            id: `TRX-${Date.now()}`,
+            merchantId: currentUser?.id || '0',
+            amount: Number(tempAmount),
+            description: 'Manual Generation',
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            qrString: qr
+        };
+        setTransactions([newTrx, ...transactions]);
+        setApiLoading(false);
+    } else {
+        // PRODUCTION MODE (Connect to Backend to ensure Callback works)
+        try {
+            const res = await fetch(`${API_BASE}/create_payment.php`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    merchant_id: currentUser?.id,
+                    amount: Number(tempAmount),
+                    description: 'Dashboard Manual Gen',
+                    // No external_id or callback needed for manual generation
+                })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                setGeneratedQR(data.qr_string);
+                // Also add to local list immediately for UI feedback
+                const newTrx: Transaction = {
+                    id: data.trx_id,
+                    merchantId: currentUser?.id || '0',
+                    amount: Number(tempAmount),
+                    description: 'Dashboard Manual Gen',
+                    status: 'pending',
+                    createdAt: new Date().toISOString(),
+                    qrString: data.qr_string
+                };
+                setTransactions([newTrx, ...transactions]);
+            } else {
+                alert("Failed: " + (data.message || "Unknown error"));
+            }
+        } catch (e) {
+            alert("Connection Error. Check your API.");
+        } finally {
+            setApiLoading(false);
+        }
+    }
   };
 
   const fetchTransactions = async (user: User) => {
@@ -876,8 +917,8 @@ export default function App() {
                        <input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} />
                      </div>
                    </div>
-                   <button onClick={handleGenerateQR} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">
-                     <QrCode size={20} /><span>Generate QRIS</span>
+                   <button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">
+                     {apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate QRIS</span></>}
                    </button>
                  </div>
                </Card>
@@ -1064,7 +1105,7 @@ export default function App() {
                                  <div>
                                      <label className="block text-sm font-medium mb-1">Custom Domain (CNAME)</label>
                                      <input type="text" placeholder="e.g. pay.mystore.com" className="w-full border p-2 rounded" value={config.branding?.customDomain || ''} onChange={e => setConfig({...config, branding: {...config.branding, customDomain: e.target.value}})} />
-                                     <p className="text-xs text-gray-400 mt-1">Point your domain CNAME to <code>app.qioslink.com</code></p>
+                                     <p className="text-xs text-gray-400 mt-1">Point your domain CNAME to <code>{window.location.host}</code></p>
                                  </div>
                                  <div>
                                      <label className="block text-sm font-medium mb-1">Brand Color</label>
