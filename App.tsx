@@ -22,7 +22,9 @@ import {
   Shield,
   Lock,
   Headphones,
-  ShoppingBag
+  ShoppingBag,
+  Server,
+  FileCode
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -38,7 +40,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- Constants ---
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.2.0";
 
 // --- Components ---
 
@@ -163,7 +165,7 @@ const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   merchantCode: "QP040887",
   apiKey: "**********",
   qrisString: "00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424",
-  callbackUrl: "https://your-domain.com/hooks/qiospay"
+  callbackUrl: "https://your-domain.com/callback.php"
 };
 
 // --- Mock Users for 4 Roles ---
@@ -204,7 +206,9 @@ export default function App() {
   // App State
   const [view, setView] = useState<ViewState>('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [multiMerchantMode, setMultiMerchantMode] = useState(true); // Default on for dev
+  
+  // Integration Tab State
+  const [integrationTab, setIntegrationTab] = useState<'php' | 'node'>('php');
   
   // Data State
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
@@ -812,10 +816,13 @@ export default function App() {
                     <input 
                       type="text" 
                       disabled={currentUser.role === 'cs'}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 text-gray-500"
                       value={config.callbackUrl}
                       onChange={(e) => setConfig({...config, callbackUrl: e.target.value})}
                     />
+                     <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
+                        <strong>Important:</strong> Ensure this URL matches the "Callback URL" field in your Qiospay Dashboard. This field here is only for your reference.
+                      </p>
                   </div>
 
                   {currentUser.role !== 'cs' && (
@@ -976,15 +983,76 @@ export default function App() {
                  <Code2 className="absolute right-0 bottom-0 text-indigo-800 opacity-20 -mr-6 -mb-6" size={200} />
                </div>
 
-               <Card>
-                 <h3 className="font-bold text-gray-800 mb-4">PHP Backend API (Shared Hosting)</h3>
-                 <p className="text-sm text-gray-600 mb-4">
-                   Since you are using Shared Hosting, download the `php_backend.zip` (simulated) or use the code below to set up your backend.
-                 </p>
-                 <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto text-white text-xs font-mono">
-                   See the generated `callback_php.txt` file for the unified Callback code.
-                 </div>
-               </Card>
+               {/* Tabs */}
+               <div className="flex space-x-4 border-b border-gray-200">
+                  <button 
+                    onClick={() => setIntegrationTab('php')}
+                    className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${integrationTab === 'php' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  >
+                    PHP / Shared Hosting
+                  </button>
+                  <button 
+                    onClick={() => setIntegrationTab('node')}
+                     className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${integrationTab === 'node' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Node.js / JS
+                  </button>
+               </div>
+
+               {integrationTab === 'php' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    <Card>
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="bg-indigo-100 p-2 rounded-lg text-indigo-700"><Server size={20}/></div>
+                        <div>
+                           <h3 className="font-bold text-gray-800">PHP Backend API</h3>
+                           <p className="text-xs text-gray-500">For cPanel, WHMCS, or traditional hosting.</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Since you are using Shared Hosting, download the code below to set up your backend.
+                      </p>
+                      <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto text-white text-xs font-mono">
+                        See the generated `callback_php.txt` file for the unified Callback code.
+                      </div>
+                    </Card>
+                  </div>
+               )}
+
+               {integrationTab === 'node' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    <Card>
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="bg-green-100 p-2 rounded-lg text-green-700"><FileCode size={20}/></div>
+                        <div>
+                           <h3 className="font-bold text-gray-800">Node.js Integration</h3>
+                           <p className="text-xs text-gray-500">For Modern Fullstack Apps (Next.js, Express)</p>
+                        </div>
+                      </div>
+                      <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                     <pre className="text-xs text-green-400 font-mono">
+{`import { generateDynamicQR } from './qios-sdk';
+
+// 1. Backend API Route (Express Example)
+app.post('/create-payment', (req, res) => {
+  const { amount } = req.body;
+  const staticString = process.env.QIOS_STATIC_QR;
+  
+  // Generate using the CRC16 logic
+  const qrData = generateDynamicQR(staticString, amount);
+  
+  res.json({
+    success: true,
+    qr_string: qrData
+  });
+});
+
+// 2. See utils/qrisUtils.ts in this project for the source code`}
+                     </pre>
+                   </div>
+                  </Card>
+                  </div>
+               )}
              </div>
           )}
 
