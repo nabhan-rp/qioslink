@@ -67,7 +67,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.2.0 (Stable UI + Verification)";
+const APP_VERSION = "4.2.1 (Debug Mode)";
 
 const getEnv = () => {
   try {
@@ -674,12 +674,55 @@ export default function App() {
   };
   
   const handleLogin = async (e: React.FormEvent) => { 
-      e.preventDefault(); setLoginError(''); setApiLoading(true); 
+      e.preventDefault(); 
+      setLoginError(''); 
+      setApiLoading(true); 
+      
       if (IS_DEMO_MODE) { 
-          let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); 
-          if (loginUser === 'admin' && loginPass === 'admin') { loginSuccess(MOCK_USERS[0]); } else if (foundUser && loginPass === foundUser.username) { loginSuccess(foundUser); } else { setLoginError('Invalid username or password (Demo: use same pass as username)'); } setApiLoading(false); 
+          let allUsers = [...users]; 
+          const savedUsers = localStorage.getItem('qios_users'); 
+          if (savedUsers) { 
+              const parsed = JSON.parse(savedUsers); 
+              allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; 
+          } 
+          const foundUser = allUsers.find(u => u.username === loginUser); 
+          if (loginUser === 'admin' && loginPass === 'admin') { loginSuccess(MOCK_USERS[0]); } 
+          else if (foundUser && loginPass === foundUser.username) { loginSuccess(foundUser); } 
+          else { setLoginError('Invalid username or password (Demo: use same pass as username)'); } 
+          setApiLoading(false); 
       } else { 
-          try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const data = await res.json(); if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError('Connection Error'); } finally { setApiLoading(false); } 
+          try { 
+              const res = await fetch(`${API_BASE}/login.php`, { 
+                  method: 'POST', 
+                  headers: {'Content-Type': 'application/json'}, 
+                  body: JSON.stringify({ username: loginUser, password: loginPass }) 
+              });
+              
+              // CRITICAL FIX: Handle non-JSON responses (HTML errors)
+              const text = await res.text();
+              let data;
+              try {
+                  data = JSON.parse(text);
+              } catch (e) {
+                  // If JSON parse fails, it means server returned HTML error (404, 500, etc.)
+                  console.error("Server Raw Response:", text);
+                  if (text.includes("<!DOCTYPE html>")) {
+                      throw new Error("Server returned HTML instead of JSON. Check .htaccess or file path. (See Console)");
+                  }
+                  throw new Error(`Invalid JSON response: ${text.substring(0, 100)}...`);
+              }
+
+              if (data.success) {
+                  loginSuccess(data.user); 
+              } else {
+                  setLoginError(data.message || 'Login failed'); 
+              }
+          } catch (err: any) { 
+              console.error("Login Error Details:", err);
+              setLoginError(err.message || 'Connection Error'); 
+          } finally { 
+              setApiLoading(false); 
+          } 
       } 
   };
   
@@ -691,7 +734,30 @@ export default function App() {
           const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; 
           const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Registration Successful (Demo Mode)'); setApiLoading(false); 
       } else { 
-          try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const data = await res.json(); if (data.success) { alert('Registration successful! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else { setRegError(data.message || 'Registration failed'); } } catch (err) { setRegError('Connection Error'); } finally { setApiLoading(false); } 
+          try { 
+              const res = await fetch(`${API_BASE}/register.php`, { 
+                  method: 'POST', 
+                  headers: {'Content-Type': 'application/json'}, 
+                  body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) 
+              }); 
+              
+              const text = await res.text();
+              let data;
+              try { data = JSON.parse(text); } 
+              catch(e) { throw new Error(`Invalid Response: ${text.substring(0, 50)}`); }
+
+              if (data.success) { 
+                  alert('Registration successful! ' + (data.warning || 'Please login.')); 
+                  setShowRegister(false); 
+                  setLoginUser(regUser); 
+              } else { 
+                  setRegError(data.message || 'Registration failed'); 
+              } 
+          } catch (err: any) { 
+              setRegError(err.message || 'Connection Error'); 
+          } finally { 
+              setApiLoading(false); 
+          } 
       } 
   };
   

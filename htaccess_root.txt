@@ -1,7 +1,7 @@
 
 # INSTRUKSI:
-# 1. Buat file bernama ".htaccess" (ada titik di depan) di dalam folder /public_html/
-# 2. Copy isi kode di bawah ini.
+# 1. Buat/Update file ".htaccess" di root folder /public_html/
+# 2. Copy kode di bawah ini. Kode ini MENCEGAH React mengambil alih request ke API.
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -9,6 +9,9 @@
   # Hilangkan trailing slash
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+  # PENTING: Jangan rewrite folder API
+  RewriteRule ^api/ - [L]
 
   # Routing React (SPA)
   # Jika bukan file atau folder nyata, arahkan ke index.html
