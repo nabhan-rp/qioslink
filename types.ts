@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export type UserRole = 'superadmin' | 'merchant' | 'cs' | 'user';
@@ -8,6 +9,9 @@ export interface User {
   email?: string;
   role: UserRole;
   merchantConfig?: MerchantConfig;
+  creatorId?: string;       // NEW: Grouping logic
+  isVerified?: boolean;     // NEW: Email Verification Status
+  supportEmail?: string;    // NEW: Contact person (Creator's email)
 }
 
 export interface WhitelabelConfig {
@@ -27,14 +31,15 @@ export interface SmtpConfig {
   fromName: string;
   fromEmail: string;
   enableNotifications: boolean;
-  useSystemSmtp?: boolean; // NEW: Option to use Superadmin's SMTP
+  useSystemSmtp?: boolean; 
+  requireEmailVerification?: boolean; // NEW: Toggle for Email Verification Requirement
 }
 
 export interface MerchantConfig {
   merchantName: string;
-  merchantCode: string; // From Qiospay Dashboard (e.g., QP040887)
-  qiospayApiKey: string; // From Qiospay Dashboard (for Callback Validation)
-  appSecretKey: string; // Internal Key for WHMCS/Woo Integration
+  merchantCode: string; 
+  qiospayApiKey: string; 
+  appSecretKey: string; 
   qrisString: string; 
   callbackUrl?: string;
   branding?: WhitelabelConfig;
@@ -50,8 +55,8 @@ export interface Transaction {
   status: 'pending' | 'paid' | 'expired' | 'cancelled';
   createdAt: string;
   qrString: string;
-  paymentUrl?: string; // NEW: The shareable link
-  expiresAt?: string;  // NEW: When the link expires
+  paymentUrl?: string; 
+  expiresAt?: string; 
 }
 
 export interface MenuItem {

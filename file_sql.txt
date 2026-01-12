@@ -1,9 +1,10 @@
+
 -- =============================================================================
--- DATABASE SCHEMA (UPDATE V3.7 - PAYMENT LINKS)
+-- DATABASE SCHEMA (UPDATE V4.0 - VERIFICATION & GROUPS)
 -- Rename file ini menjadi "database.sql" sebelum import.
 -- =============================================================================
 
--- 1. Buat Tabel Users
+-- 1. Buat Tabel Users (Updated)
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
@@ -11,6 +12,9 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password` varchar(255) NOT NULL,
   `role` enum('superadmin','merchant','cs','user') NOT NULL DEFAULT 'user',
   `merchant_config` text, -- Disini data Branding disimpan (JSON)
+  `creator_id` int(11) DEFAULT 1, -- ID User yang membuat akun ini (Grouping)
+  `is_verified` tinyint(1) DEFAULT 1, -- 1=Verified, 0=Unverified
+  `verification_code` varchar(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -36,6 +40,6 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   UNIQUE KEY `payment_token` (`payment_token`) -- Index biar akses link cepat
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. Data Awal
-INSERT INTO `users` (`username`, `email`, `password`, `role`, `merchant_config`) VALUES
-('admin', 'admin@qioslink.com', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","apiKey":"KEY123","qrisString":"00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424"}');
+-- 3. Data Awal (Default Superadmin Verified)
+INSERT INTO `users` (`username`, `email`, `password`, `role`, `merchant_config`, `creator_id`, `is_verified`) VALUES
+('admin', 'admin@qioslink.com', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","apiKey":"KEY123","qrisString":"00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424"}', 0, 1);
