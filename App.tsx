@@ -62,7 +62,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.6.1 (Stable Admin)";
+const APP_VERSION = "3.6.2 (Email Integration)";
 
 const getEnv = () => {
   try {
@@ -314,6 +314,7 @@ export default function App() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userFormData, setUserFormData] = useState({
     username: '',
+    email: '',
     password: '',
     role: 'user' as UserRole,
     merchantName: '',
@@ -328,6 +329,7 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   
   const [regUser, setRegUser] = useState('');
+  const [regEmail, setRegEmail] = useState('');
   const [regPass, setRegPass] = useState('');
   const [regError, setRegError] = useState('');
 
@@ -630,7 +632,7 @@ export default function App() {
     setApiLoading(true);
 
     if (IS_DEMO_MODE) {
-      const newUser: User = { id: Date.now().toString(), username: regUser, role: 'user', email: '' };
+      const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user' };
       const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]');
       currentUsers.push(newUser);
       localStorage.setItem('qios_users', JSON.stringify(currentUsers));
@@ -643,7 +645,7 @@ export default function App() {
         const res = await fetch(`${API_BASE}/register.php`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ username: regUser, password: regPass })
+          body: JSON.stringify({ username: regUser, email: regEmail, password: regPass })
         });
         const data = await res.json();
         if (data.success) {
@@ -676,9 +678,9 @@ export default function App() {
     if (IS_DEMO_MODE) {
        let updatedUsers = [...users];
        if (editingUser) {
-         updatedUsers = updatedUsers.map(u => u.id === editingUser.id ? { ...u, username: userFormData.username, role: userFormData.role, merchantConfig: payloadConfig || undefined } : u);
+         updatedUsers = updatedUsers.map(u => u.id === editingUser.id ? { ...u, username: userFormData.username, email: userFormData.email, role: userFormData.role, merchantConfig: payloadConfig || undefined } : u);
        } else {
-         updatedUsers.push({ id: Date.now().toString(), username: userFormData.username, role: userFormData.role, merchantConfig: payloadConfig || undefined });
+         updatedUsers.push({ id: Date.now().toString(), username: userFormData.username, email: userFormData.email, role: userFormData.role, merchantConfig: payloadConfig || undefined });
        }
        setUsers(updatedUsers);
        localStorage.setItem('qios_users', JSON.stringify(updatedUsers.filter(u => !MOCK_USERS.find(m => m.id === u.id)))); // Only save non-mock users to storage
@@ -692,6 +694,7 @@ export default function App() {
              action: editingUser ? 'update' : 'create',
              id: editingUser?.id,
              username: userFormData.username,
+             email: userFormData.email,
              password: userFormData.password,
              role: userFormData.role,
              config: payloadConfig,
@@ -772,6 +775,10 @@ export default function App() {
                     <input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)} placeholder="Choose a username" />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)} placeholder="your@email.com" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                     <input type="password" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regPass} onChange={e=>setRegPass(e.target.value)} placeholder="Choose a password" />
                   </div>
@@ -844,6 +851,10 @@ export default function App() {
                       <label className="block text-sm font-medium mb-1">Password</label>
                       <input type={editingUser ? "text" : "password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData, password: e.target.value})} placeholder={editingUser ? "Blank to keep" : "Password"} />
                    </div>
+                </div>
+                <div>
+                   <label className="block text-sm font-medium mb-1">Email Address</label>
+                   <input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData, email: e.target.value})} placeholder="user@example.com" />
                 </div>
                 {(userFormData.role === 'merchant' || userFormData.role === 'superadmin') && (
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
@@ -1014,19 +1025,20 @@ export default function App() {
             <Card>
               <div className="flex justify-between items-center mb-6">
                  <h3 className="font-bold text-lg">User Management</h3>
-                 <button onClick={() => { setEditingUser(null); setUserFormData({username:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button>
+                 <button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button>
               </div>
               <table className="w-full text-left">
-                 <thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Actions</th></tr></thead>
+                 <thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Actions</th></tr></thead>
                  <tbody>
                     {users.map(u => (
                       <tr key={u.id} className="hover:bg-gray-50">
                          <td className="px-4 py-3 font-medium">{u.username}</td>
+                         <td className="px-4 py-3 text-gray-500 text-sm">{u.email || '-'}</td>
                          <td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-xs rounded-full uppercase font-bold">{u.role}</span></td>
                          <td className="px-4 py-3">
                            {(currentUser.role === 'superadmin' || (currentUser.role === 'merchant' && ['cs','user'].includes(u.role))) && (
                              <div className="flex space-x-2">
-                               <button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, role: u.role}); setUserModalOpen(true); }} className="text-indigo-600"><Pencil size={18} /></button>
+                               <button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600"><Pencil size={18} /></button>
                              </div>
                            )}
                          </td>
@@ -1180,6 +1192,13 @@ export default function App() {
                  {settingsTab === 'smtp' && (
                      <Card>
                          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Mail size={20}/> SMTP Configuration</h3>
+                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 flex gap-3">
+                             <div className="text-blue-600"><AlertCircle size={20}/></div>
+                             <div className="text-sm text-blue-800">
+                                 <strong>Why configure SMTP?</strong><br/>
+                                 This allows the system to send automatic payment receipts, invoices, and notifications to your customers' email ({currentUser.email || 'user@email.com'}) when a transaction is successful.
+                             </div>
+                         </div>
                          <div className="space-y-4">
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
