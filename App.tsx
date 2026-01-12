@@ -20,7 +20,9 @@ import {
   X,
   Users,
   Shield,
-  Lock
+  Lock,
+  Headphones,
+  ShoppingBag
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -31,13 +33,12 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { MerchantConfig, ViewState, Transaction, User } from './types';
+import { MerchantConfig, ViewState, Transaction, User, UserRole } from './types';
 import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- Constants ---
-const APP_VERSION = "2.0.0";
-const IS_DEMO_MODE = true; // Set to false when connecting to real PHP backend
+const APP_VERSION = "2.1.0";
 
 // --- Components ---
 
@@ -165,19 +166,33 @@ const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   callbackUrl: "https://your-domain.com/hooks/qiospay"
 };
 
-const MOCK_ADMIN: User = {
-  id: 'admin-01',
-  username: 'admin',
-  role: 'admin',
-  merchantConfig: DEFAULT_MERCHANT_CONFIG
-};
-
-const MOCK_USER: User = {
-  id: 'user-01',
-  username: 'merchant_demo',
-  role: 'merchant',
-  merchantConfig: { ...DEFAULT_MERCHANT_CONFIG, merchantName: "Demo Shop" }
-};
+// --- Mock Users for 4 Roles ---
+const MOCK_USERS: User[] = [
+  {
+    id: 'super-01',
+    username: 'dev_admin',
+    role: 'superadmin',
+    merchantConfig: DEFAULT_MERCHANT_CONFIG
+  },
+  {
+    id: 'merchant-01',
+    username: 'merchant_user',
+    role: 'merchant',
+    merchantConfig: { ...DEFAULT_MERCHANT_CONFIG, merchantName: "Warung Kopi Digital" }
+  },
+  {
+    id: 'cs-01',
+    username: 'cs_support',
+    role: 'cs',
+    // CS sees data but doesn't have their own payment config usually
+  },
+  {
+    id: 'user-01',
+    username: 'member_budi',
+    role: 'user',
+    // End user doesn't have config, they only have transaction history
+  }
+];
 
 // --- Main App ---
 
@@ -189,12 +204,12 @@ export default function App() {
   // App State
   const [view, setView] = useState<ViewState>('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [multiMerchantMode, setMultiMerchantMode] = useState(false);
+  const [multiMerchantMode, setMultiMerchantMode] = useState(true); // Default on for dev
   
   // Data State
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [users, setUsers] = useState<User[]>([MOCK_ADMIN, MOCK_USER]);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
   
   // UI State
   const [tempAmount, setTempAmount] = useState<string>('');
@@ -221,8 +236,6 @@ export default function App() {
     if (amountParam) {
       setIsPublicMode(true);
       const amount = parseInt(amountParam, 10);
-      // In a real app, we would fetch the merchant config based on a merchant_id param
-      // For demo, we use default config
       const qr = generateDynamicQR(DEFAULT_MERCHANT_CONFIG.qrisString, amount);
       setGeneratedQR(qr);
       setTempAmount(amount.toString());
@@ -238,24 +251,26 @@ export default function App() {
     const savedConfig = localStorage.getItem('qios_config');
     if (savedConfig) setConfig(JSON.parse(savedConfig));
 
-    const savedMode = localStorage.getItem('qios_multimerchant');
-    if (savedMode) setMultiMerchantMode(JSON.parse(savedMode));
-
     const savedTx = localStorage.getItem('qios_transactions');
     if (savedTx) {
       setTransactions(JSON.parse(savedTx));
     } else {
       // Init Mock Transactions
       setTransactions([
-        { id: 'TRX-9981', merchantId: 'admin-01', amount: 50000, description: 'Web Hosting - Paket A', status: 'paid', createdAt: '2023-10-25 14:30', qrString: generateDynamicQR(DEFAULT_MERCHANT_CONFIG.qrisString, 50000) },
-        { id: 'TRX-9982', merchantId: 'user-01', amount: 150000, description: 'Topup Game', status: 'pending', createdAt: '2023-10-25 15:15', qrString: generateDynamicQR(DEFAULT_MERCHANT_CONFIG.qrisString, 150000) },
+        { id: 'TRX-101', merchantId: 'super-01', amount: 50000, description: 'Server Maintenance', status: 'paid', createdAt: '2023-10-25 14:30', qrString: '' },
+        { id: 'TRX-102', merchantId: 'merchant-01', customerId: 'user-01', amount: 25000, description: 'Kopi Susu Gula Aren', status: 'paid', createdAt: '2023-10-25 15:15', qrString: '' },
+        { id: 'TRX-103', merchantId: 'merchant-01', amount: 150000, description: 'Paket Catering', status: 'pending', createdAt: '2023-10-26 09:00', qrString: '' },
       ]);
     }
 
     // 3. Check Session
     const sessionUser = sessionStorage.getItem('qios_user');
     if (sessionUser) {
-      setCurrentUser(JSON.parse(sessionUser));
+      const user = JSON.parse(sessionUser);
+      setCurrentUser(user);
+      // Determine default view based on role
+      if (user.role === 'user') setView('my_orders');
+      else setView('dashboard');
     }
 
     setAuthLoading(false);
@@ -276,10 +291,14 @@ export default function App() {
       setCurrentUser(foundUser);
       sessionStorage.setItem('qios_user', JSON.stringify(foundUser));
       
-      // Load user config if exists
       if (foundUser.merchantConfig) {
         setConfig(foundUser.merchantConfig);
       }
+
+      // Redirect logic based on role
+      if (foundUser.role === 'user') setView('my_orders');
+      else setView('dashboard');
+
     } else {
       setLoginError('Invalid username or password');
     }
@@ -292,26 +311,13 @@ export default function App() {
   };
 
   const handleSaveConfig = () => {
-    // If multi-merchant, save to current user's profile
-    if (currentUser) {
+    // Only Superadmin and Merchant can save config
+    if (currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'merchant')) {
       const updatedUser = { ...currentUser, merchantConfig: config };
       setCurrentUser(updatedUser);
       sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
-      
-      // Update global user list
-      const updatedUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-      setUsers(updatedUsers);
-      
-      // Also save to generic local storage for persistence
-      localStorage.setItem('qios_config', JSON.stringify(config));
       alert('Configuration saved successfully!');
     }
-  };
-
-  const handleToggleMultiMerchant = () => {
-    const newVal = !multiMerchantMode;
-    setMultiMerchantMode(newVal);
-    localStorage.setItem('qios_multimerchant', JSON.stringify(newVal));
   };
 
   const handleGenerateQR = () => {
@@ -351,13 +357,22 @@ export default function App() {
     alert('Public Payment Link copied to clipboard!\nShare this URL with your customer.');
   };
 
-  // --- Filtering & Views ---
-
-  // Admin sees all transactions in Multi-Merchant Mode, otherwise only their own.
-  // Merchant only sees their own.
+  // --- Logic: Who sees what? ---
   const visibleTransactions = transactions.filter(t => {
-    if (currentUser?.role === 'admin' && multiMerchantMode) return true;
-    return t.merchantId === currentUser?.id;
+    if (!currentUser) return false;
+    // 1. Superadmin: Sees ALL transactions
+    if (currentUser.role === 'superadmin') return true;
+    
+    // 2. CS: Sees ALL transactions (Support role)
+    if (currentUser.role === 'cs') return true;
+
+    // 3. Merchant: Sees only their OWN SALES
+    if (currentUser.role === 'merchant') return t.merchantId === currentUser.id;
+
+    // 4. User: Sees only their OWN PURCHASES
+    if (currentUser.role === 'user') return t.customerId === currentUser.id;
+
+    return false;
   });
 
   const filteredTransactions = visibleTransactions.filter(t => 
@@ -422,8 +437,8 @@ export default function App() {
             <div className="inline-flex p-3 bg-white/20 rounded-xl mb-4 text-white">
               <Shield size={32} />
             </div>
-            <h1 className="text-2xl font-bold text-white">QiosLink Admin</h1>
-            <p className="text-indigo-200 mt-2">Secure Payment Management</p>
+            <h1 className="text-2xl font-bold text-white">QiosLink Login</h1>
+            <p className="text-indigo-200 mt-2">Secure Payment Platform</p>
           </div>
           <div className="p-8">
             <form onSubmit={handleLogin} className="space-y-6">
@@ -435,7 +450,7 @@ export default function App() {
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                   value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
-                  placeholder="admin or merchant_demo"
+                  placeholder="Enter username"
                 />
               </div>
               <div>
@@ -446,7 +461,7 @@ export default function App() {
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                   value={loginPass}
                   onChange={(e) => setLoginPass(e.target.value)}
-                  placeholder="same as username"
+                  placeholder="Enter password"
                 />
               </div>
               
@@ -460,13 +475,17 @@ export default function App() {
                 type="submit" 
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-indigo-500/30"
               >
-                Login to Dashboard
+                Login
               </button>
 
-              <div className="text-center text-xs text-gray-400">
-                <p>Demo Credentials:</p>
-                <p>Admin: admin / admin</p>
-                <p>Merchant: merchant_demo / merchant_demo</p>
+              <div className="text-center text-xs text-gray-400 mt-4 border-t pt-4">
+                <p className="mb-1 font-semibold">Demo Accounts (Pass = Username):</p>
+                <div className="grid grid-cols-2 gap-2 text-left px-2">
+                  <span>• dev_admin (Super)</span>
+                  <span>• merchant_user</span>
+                  <span>• cs_support</span>
+                  <span>• member_budi (User)</span>
+                </div>
               </div>
             </form>
           </div>
@@ -509,52 +528,85 @@ export default function App() {
               </div>
               <div className={`lg:hidden xl:block overflow-hidden transition-all duration-300`}>
                 <h1 className="text-xl font-bold text-gray-800">QiosLink</h1>
-                <p className="text-xs text-gray-500">v{APP_VERSION} {currentUser.role === 'admin' ? '(Admin)' : ''}</p>
+                <p className="text-xs text-gray-500">
+                   {currentUser.role === 'superadmin' && 'Dev Mode'}
+                   {currentUser.role === 'merchant' && 'Merchant'}
+                   {currentUser.role === 'cs' && 'Support'}
+                   {currentUser.role === 'user' && 'Member'}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
-            <SidebarItem 
-              active={view === 'dashboard'} 
-              icon={<LayoutDashboard size={20} />} 
-              label="Dashboard" 
-              onClick={() => setView('dashboard')} 
-            />
-            <SidebarItem 
-              active={view === 'terminal'} 
-              icon={<Smartphone size={20} />} 
-              label="Payment Terminal" 
-              onClick={() => setView('terminal')} 
-            />
-            <SidebarItem 
-              active={view === 'history'} 
-              icon={<History size={20} />} 
-              label="Transactions" 
-              onClick={() => setView('history')} 
-            />
-             <SidebarItem 
-              active={view === 'integration'} 
-              icon={<Code2 size={20} />} 
-              label="Integration API" 
-              onClick={() => setView('integration')} 
-            />
-            {/* Admin Only Item */}
-            {currentUser.role === 'admin' && multiMerchantMode && (
-               <SidebarItem 
-                active={view === 'users'} 
-                icon={<Users size={20} />} 
-                label="Merchant Users" 
-                onClick={() => setView('users')} 
+            
+            {/* Common for Admin/Merchant/CS */}
+            {['superadmin', 'merchant', 'cs'].includes(currentUser.role) && (
+              <>
+                <SidebarItem 
+                  active={view === 'dashboard'} 
+                  icon={<LayoutDashboard size={20} />} 
+                  label="Dashboard" 
+                  onClick={() => setView('dashboard')} 
+                />
+                 <SidebarItem 
+                  active={view === 'history'} 
+                  icon={<History size={20} />} 
+                  label="Transactions" 
+                  onClick={() => setView('history')} 
+                />
+              </>
+            )}
+
+            {/* Merchant & Superadmin Only */}
+            {['superadmin', 'merchant'].includes(currentUser.role) && (
+              <SidebarItem 
+                active={view === 'terminal'} 
+                icon={<Smartphone size={20} />} 
+                label="Payment Terminal" 
+                onClick={() => setView('terminal')} 
               />
             )}
-            <SidebarItem 
-              active={view === 'settings'} 
-              icon={<Settings size={20} />} 
-              label="Settings" 
-              onClick={() => setView('settings')} 
-            />
+
+            {/* Superadmin Only */}
+            {currentUser.role === 'superadmin' && (
+              <>
+                <SidebarItem 
+                  active={view === 'users'} 
+                  icon={<Users size={20} />} 
+                  label="User Management" 
+                  onClick={() => setView('users')} 
+                />
+                <SidebarItem 
+                  active={view === 'integration'} 
+                  icon={<Code2 size={20} />} 
+                  label="Integration API" 
+                  onClick={() => setView('integration')} 
+                />
+              </>
+            )}
+            
+            {/* User Only */}
+            {currentUser.role === 'user' && (
+               <SidebarItem 
+                active={view === 'my_orders'} 
+                icon={<ShoppingBag size={20} />} 
+                label="My Orders" 
+                onClick={() => setView('my_orders')} 
+              />
+            )}
+
+            {/* Settings (Except User) */}
+            {currentUser.role !== 'user' && (
+              <SidebarItem 
+                active={view === 'settings'} 
+                icon={<Settings size={20} />} 
+                label="Settings" 
+                onClick={() => setView('settings')} 
+              />
+            )}
+
           </nav>
 
           {/* Footer */}
@@ -582,7 +634,7 @@ export default function App() {
               <Menu size={24} className="text-gray-600" />
             </button>
             <h2 className="text-2xl font-bold text-gray-800 capitalize">
-              {view === 'terminal' ? 'Payment Terminal' : view.replace('users', 'User Management')}
+              {view.replace('_', ' ')}
             </h2>
           </div>
           
@@ -591,7 +643,11 @@ export default function App() {
               <span className="text-sm font-semibold text-gray-800">{currentUser.username}</span>
               <span className="text-xs text-gray-500 uppercase">{currentUser.role}</span>
             </div>
-            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold uppercase">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold uppercase
+              ${currentUser.role === 'superadmin' ? 'bg-purple-600' : 
+                currentUser.role === 'merchant' ? 'bg-indigo-600' :
+                currentUser.role === 'cs' ? 'bg-orange-500' : 'bg-green-500'
+              }`}>
               {currentUser.username.charAt(0)}
             </div>
           </div>
@@ -678,7 +734,7 @@ export default function App() {
                           <div>
                             <div className="font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors">{trx.id}</div>
                             <div className="text-xs text-gray-500">
-                               {currentUser.role === 'admin' && multiMerchantMode ? `Merchant: ${trx.merchantId}` : trx.description}
+                               {currentUser.role === 'superadmin' ? `Merchant: ${trx.merchantId}` : trx.description}
                             </div>
                           </div>
                         </div>
@@ -697,30 +753,9 @@ export default function App() {
           {/* VIEW: SETTINGS */}
           {view === 'settings' && (
             <div className="max-w-3xl mx-auto space-y-6">
-              
-              {/* Admin Global Settings */}
-              {currentUser.role === 'admin' && (
-                 <Card className="bg-gradient-to-r from-gray-900 to-gray-800 text-white border-none">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-bold">Multi-Merchant Mode</h3>
-                        <p className="text-gray-400 text-sm">Enable support for multiple merchant accounts</p>
-                      </div>
-                      <div className="flex items-center">
-                         <button 
-                           onClick={handleToggleMultiMerchant}
-                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${multiMerchantMode ? 'bg-indigo-500' : 'bg-gray-600'}`}
-                         >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${multiMerchantMode ? 'translate-x-6' : 'translate-x-1'}`} />
-                         </button>
-                      </div>
-                    </div>
-                 </Card>
-              )}
-
               <Card>
                 <div className="border-b border-gray-100 pb-4 mb-6">
-                  <h3 className="text-xl font-bold text-gray-800">My Merchant Configuration</h3>
+                  <h3 className="text-xl font-bold text-gray-800">Merchant Configuration</h3>
                   <p className="text-sm text-gray-500">Configure your Qiospay / Nobu Bank credentials here.</p>
                 </div>
 
@@ -730,7 +765,8 @@ export default function App() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Merchant Name</label>
                       <input 
                         type="text" 
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        disabled={currentUser.role === 'cs'}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100"
                         value={config.merchantName}
                         onChange={(e) => setConfig({...config, merchantName: e.target.value})}
                       />
@@ -739,65 +775,69 @@ export default function App() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Merchant Code</label>
                       <input 
                         type="text" 
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        disabled={currentUser.role === 'cs'}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100"
                         value={config.merchantCode}
                         onChange={(e) => setConfig({...config, merchantCode: e.target.value})}
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-                    <input 
-                      type="password" 
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                      value={config.apiKey}
-                      onChange={(e) => setConfig({...config, apiKey: e.target.value})}
-                    />
-                  </div>
+                  {/* API Key only visible to Merchant and Superadmin */}
+                  {['superadmin', 'merchant'].includes(currentUser.role) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                      <input 
+                        type="password" 
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        value={config.apiKey}
+                        onChange={(e) => setConfig({...config, apiKey: e.target.value})}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Static QR String (Source)</label>
                     <textarea 
                       rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-mono text-xs text-gray-600"
+                      disabled={currentUser.role === 'cs'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-mono text-xs text-gray-600 disabled:bg-gray-100"
                       value={config.qrisString}
                       onChange={(e) => setConfig({...config, qrisString: e.target.value})}
-                      placeholder="00020101021126670016COM.NOBUBANK..."
                     />
-                    <p className="mt-2 text-xs text-gray-500">
-                      Copy the full string from your Qiospay dashboard. This will be used as the base for dynamic generation.
-                    </p>
                   </div>
 
                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Callback URL (Webhook)</label>
                     <input 
                       type="text" 
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      disabled={currentUser.role === 'cs'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100"
                       value={config.callbackUrl}
                       onChange={(e) => setConfig({...config, callbackUrl: e.target.value})}
                     />
                   </div>
 
-                  <div className="pt-4 flex justify-end">
-                    <button 
-                      onClick={handleSaveConfig}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/30"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
+                  {currentUser.role !== 'cs' && (
+                    <div className="pt-4 flex justify-end">
+                      <button 
+                        onClick={handleSaveConfig}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/30"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
           )}
 
           {/* VIEW: USERS (Admin Only) */}
-          {view === 'users' && currentUser.role === 'admin' && (
+          {view === 'users' && currentUser.role === 'superadmin' && (
              <Card>
                 <div className="flex justify-between items-center mb-6">
-                   <h3 className="text-lg font-bold text-gray-800">Registered Merchants</h3>
+                   <h3 className="text-lg font-bold text-gray-800">User Management</h3>
                    <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">Add User</button>
                 </div>
                 <table className="w-full text-left">
@@ -814,11 +854,15 @@ export default function App() {
                       <tr key={u.id} className="hover:bg-gray-50">
                         <td className="py-4 pl-2 font-medium text-gray-800">{u.username}</td>
                         <td className="py-4">
-                           <span className={`text-xs px-2 py-1 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                           <span className={`text-xs px-2 py-1 rounded-full uppercase font-bold
+                            ${u.role === 'superadmin' ? 'bg-purple-100 text-purple-700' : 
+                              u.role === 'merchant' ? 'bg-indigo-100 text-indigo-700' :
+                              u.role === 'cs' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                            }`}>
                               {u.role}
                            </span>
                         </td>
-                        <td className="py-4 text-sm text-gray-600">{u.merchantConfig?.merchantName}</td>
+                        <td className="py-4 text-sm text-gray-600">{u.merchantConfig?.merchantName || '-'}</td>
                         <td className="py-4 text-right">
                            <button className="text-gray-400 hover:text-indigo-600 text-sm">Edit</button>
                         </td>
@@ -829,7 +873,7 @@ export default function App() {
              </Card>
           )}
 
-          {/* VIEW: TERMINAL / PAYMENT GENERATOR */}
+          {/* VIEW: TERMINAL / PAYMENT GENERATOR (Merchant & Superadmin) */}
           {view === 'terminal' && (
             <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
@@ -938,17 +982,19 @@ export default function App() {
                    Since you are using Shared Hosting, download the `php_backend.zip` (simulated) or use the code below to set up your backend.
                  </p>
                  <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto text-white text-xs font-mono">
-                   See the generated `backend_php.txt` file for the full source code including `db_connect.php`, `login.php`, and `callback.php`.
+                   See the generated `callback_php.txt` file for the unified Callback code.
                  </div>
                </Card>
              </div>
           )}
 
-          {/* VIEW: HISTORY */}
-          {view === 'history' && (
+          {/* VIEW: HISTORY & MY ORDERS */}
+          {(view === 'history' || view === 'my_orders') && (
             <Card>
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                <h3 className="text-lg font-bold text-gray-800">Transaction History</h3>
+                <h3 className="text-lg font-bold text-gray-800">
+                  {view === 'my_orders' ? 'My Purchase History' : 'Transaction History'}
+                </h3>
                 <div className="relative w-full md:w-64">
                    <input 
                      type="text" 
@@ -967,7 +1013,7 @@ export default function App() {
                     <tr className="border-b border-gray-100 text-sm text-gray-500 uppercase tracking-wider">
                       <th className="pb-3 pl-2">ID</th>
                       <th className="pb-3">Description</th>
-                      {currentUser.role === 'admin' && multiMerchantMode && <th className="pb-3">Merchant</th>}
+                      {currentUser.role === 'superadmin' && <th className="pb-3">Merchant</th>}
                       <th className="pb-3">Date</th>
                       <th className="pb-3 text-right">Amount</th>
                       <th className="pb-3 text-center">Status</th>
@@ -983,7 +1029,7 @@ export default function App() {
                       >
                         <td className="py-4 pl-2 font-mono text-xs text-indigo-600 font-bold group-hover:underline">{trx.id}</td>
                         <td className="py-4 text-sm text-gray-700">{trx.description}</td>
-                        {currentUser.role === 'admin' && multiMerchantMode && <td className="py-4 text-xs text-gray-500">{trx.merchantId}</td>}
+                        {currentUser.role === 'superadmin' && <td className="py-4 text-xs text-gray-500">{trx.merchantId}</td>}
                         <td className="py-4 text-xs text-gray-500">{trx.createdAt}</td>
                         <td className="py-4 text-sm font-bold text-gray-800 text-right">{formatRupiah(trx.amount)}</td>
                         <td className="py-4 text-center">
@@ -1009,8 +1055,8 @@ export default function App() {
                     ))}
                     {filteredTransactions.length === 0 && (
                       <tr>
-                        <td colSpan={currentUser.role === 'admin' ? 7 : 6} className="py-8 text-center text-gray-400 text-sm">
-                          No transactions found matching "{searchQuery}"
+                        <td colSpan={currentUser.role === 'superadmin' ? 7 : 6} className="py-8 text-center text-gray-400 text-sm">
+                          No transactions found.
                         </td>
                       </tr>
                     )}

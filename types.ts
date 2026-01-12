@@ -1,12 +1,12 @@
 import React from 'react';
 
-export type UserRole = 'admin' | 'merchant';
+export type UserRole = 'superadmin' | 'merchant' | 'cs' | 'user';
 
 export interface User {
   id: string;
   username: string;
   role: UserRole;
-  merchantConfig?: MerchantConfig;
+  merchantConfig?: MerchantConfig; // Only for merchant & superadmin
 }
 
 export interface MerchantConfig {
@@ -19,7 +19,8 @@ export interface MerchantConfig {
 
 export interface Transaction {
   id: string;
-  merchantId: string; // To link transaction to specific user in multi-merchant mode
+  merchantId: string; // To link transaction to specific merchant
+  customerId?: string; // To link to specific registered end-user
   amount: number;
   description: string;
   status: 'pending' | 'paid' | 'expired';
@@ -33,4 +34,4 @@ export interface MenuItem {
   icon: React.ReactNode;
 }
 
-export type ViewState = 'dashboard' | 'terminal' | 'settings' | 'integration' | 'history' | 'users';
+export type ViewState = 'dashboard' | 'terminal' | 'settings' | 'integration' | 'history' | 'users' | 'my_orders';
