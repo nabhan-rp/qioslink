@@ -1,8 +1,7 @@
 
 ================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.3 (DUAL KEY SECURITY)
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.4 (EMAIL UPDATE)
 ================================================================================
-Update Terakhir: Split API Keys (Qiospay External Key vs QiosLink Internal Key)
 
 Struktur folder hosting:
 /public_html
@@ -65,7 +64,7 @@ if(isset($data->username) && isset($data->password)) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 3: /api/register.php
+FILE 3: /api/register.php (UPDATED: INSERT EMAIL)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -73,6 +72,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 
 if(isset($input['username']) && isset($input['password'])) {
     $username = $conn->real_escape_string($input['username']);
+    $email = isset($input['email']) ? $conn->real_escape_string($input['email']) : '';
     $password = $input['password']; 
     $role = 'user'; 
     
@@ -82,8 +82,8 @@ if(isset($input['username']) && isset($input['password'])) {
         exit;
     }
     
-    $stmt = $conn->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $username, $password, $role);
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $username, $email, $password, $role);
     
     if($stmt->execute()) {
         echo json_encode(['success' => true]);
@@ -96,7 +96,7 @@ if(isset($input['username']) && isset($input['password'])) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 4: /api/manage_users.php
+FILE 4: /api/manage_users.php (UPDATED: HANDLE EMAIL)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -105,7 +105,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 $action = isset($_GET['action']) ? $_GET['action'] : ($input['action'] ?? '');
 
 if ($action === 'list') {
-    $sql = "SELECT id, username, role, merchant_config FROM users ORDER BY id ASC";
+    $sql = "SELECT id, username, email, role, merchant_config FROM users ORDER BY id ASC";
     $result = $conn->query($sql);
     $users = [];
     while ($row = $result->fetch_assoc()) {
@@ -119,6 +119,7 @@ if ($action === 'list') {
 
 if ($action === 'create' || $action === 'update') {
     $username = $input['username'];
+    $email = isset($input['email']) ? $input['email'] : '';
     $password = $input['password'];
     $role = $input['role'];
     $config = isset($input['config']) ? json_encode($input['config']) : null;
@@ -137,19 +138,19 @@ if ($action === 'create' || $action === 'update') {
         $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
         if($check->num_rows > 0) { echo json_encode(['success'=>false, 'message'=>'Username exists']); exit; }
 
-        $stmt = $conn->prepare("INSERT INTO users (username, password, role, merchant_config) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $username, $password, $role, $config);
+        $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, merchant_config) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $username, $email, $password, $role, $config);
         if ($stmt->execute()) echo json_encode(['success' => true]);
         else echo json_encode(['success' => false, 'message' => 'DB Error']);
     } 
     else if ($action === 'update') {
         $id = $input['id'];
         if (!empty($password)) {
-            $stmt = $conn->prepare("UPDATE users SET username=?, password=?, role=?, merchant_config=? WHERE id=?");
-            $stmt->bind_param("ssssi", $username, $password, $role, $config, $id);
+            $stmt = $conn->prepare("UPDATE users SET username=?, email=?, password=?, role=?, merchant_config=? WHERE id=?");
+            $stmt->bind_param("sssssi", $username, $email, $password, $role, $config, $id);
         } else {
-            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, merchant_config=? WHERE id=?");
-            $stmt->bind_param("sssi", $username, $role, $config, $id);
+            $stmt = $conn->prepare("UPDATE users SET username=?, email=?, role=?, merchant_config=? WHERE id=?");
+            $stmt->bind_param("ssssi", $username, $email, $role, $config, $id);
         }
         if ($stmt->execute()) echo json_encode(['success' => true]);
         else echo json_encode(['success' => false, 'message' => 'Update failed']);
@@ -186,7 +187,7 @@ if(isset($_GET['user_id']) && isset($_GET['role'])) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 6: /api/create_payment.php (UPDATED: Uses appSecretKey)
+FILE 6: /api/create_payment.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -204,14 +205,11 @@ if(isset($data->amount) && isset($data->merchant_id)) {
         $user = $res->fetch_assoc();
         $config = json_decode($user['merchant_config']);
         
-        // 1. VALIDASI QRIS STRING
         if (!isset($config->qrisString) || empty($config->qrisString)) {
             echo json_encode(["success" => false, "message" => "Merchant QRIS Data Incomplete"]);
             exit;
         }
 
-        // 2. VALIDASI INTERNAL KEY (appSecretKey)
-        // Kunci ini dipakai oleh WHMCS/WooCommerce Anda.
         if (isset($config->appSecretKey) && !empty($config->appSecretKey)) {
             $requestKey = isset($data->api_key) ? $data->api_key : '';
             if ($requestKey !== $config->appSecretKey) {
@@ -300,10 +298,9 @@ function generateDynamicQR($staticQr, $amount) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 9: /callback.php (UPDATED: Validates Qiospay API Key if available)
+FILE 9: /callback.php
 --------------------------------------------------------------------------------
 <?php
-// Menerima Webhook dari Qiospay/Nobu
 $input = file_get_contents("php://input");
 $data = json_decode($input);
 
@@ -313,8 +310,6 @@ file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Input: " . $input
 
 if(isset($data->status) && $data->status == 'success') {
     $amount_paid = $data->amount;
-    
-    // Cari transaksi pending dengan nominal yg sama
     $sql = "SELECT id, trx_id, external_callback_url, external_ref_id, merchant_id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1";
     
     if($stmt = $conn->prepare($sql)) {
@@ -325,8 +320,6 @@ if(isset($data->status) && $data->status == 'success') {
         if($result->num_rows > 0) {
             $row = $result->fetch_assoc();
             
-            // SECURITY CHECK: VALIDATE QIOSPAY SIGNATURE / API KEY
-            // Mengambil config merchant dari database
             $m_stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
             $m_stmt->bind_param("i", $row['merchant_id']);
             $m_stmt->execute();
@@ -334,33 +327,19 @@ if(isset($data->status) && $data->status == 'success') {
             if ($m_res->num_rows > 0) {
                  $m_user = $m_res->fetch_assoc();
                  $m_conf = json_decode($m_user['merchant_config'], true);
-                 
-                 // Jika User sudah memasukkan "Qiospay API Key", kita pakai untuk validasi
-                 // Note: Logika validasi ini tergantung versi Qiospay Anda. 
-                 // Jika Qiospay mengirim hash di header (misal X-Signature), validasi di sini.
-                 // Jika tidak ada signature, setidaknya kita memastikan key tersimpan.
-                 $qiospayKey = isset($m_conf['qiospayApiKey']) ? $m_conf['qiospayApiKey'] : '';
-                 
-                 // Contoh Validasi Sederhana (Pseudo-code):
-                 // $signature = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
-                 // if ($qiospayKey && $signature !== md5($qiospayKey . $data->trx_id)) {
-                 //    die("Invalid Signature");
-                 // }
             }
 
             $internal_id = $row['id'];
-            
-            // Update Status Internal
             $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
             $update->bind_param("i", $internal_id);
             $update->execute();
             
-            // SMTP NOTIFICATION
+            // SMTP NOTIFICATION (PLACEHOLDER)
             if (isset($m_conf['smtp']) && $m_conf['smtp']['enableNotifications']) {
-                 // Trigger SMTP Send logic here
+                 // require_once 'api/PHPMailer...';
+                 // $mail->send();
             }
             
-            // EXTERNAL FORWARDING (WHMCS/WOO)
             if (!empty($row['external_callback_url'])) {
                 $forward_data = [
                     'status' => 'paid',
@@ -375,8 +354,6 @@ if(isset($data->status) && $data->status == 'success') {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($forward_data));
                 $response = curl_exec($ch);
                 curl_close($ch);
-                
-                file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Forwarded: " . $row['external_callback_url'] . " | Resp: $response\n", FILE_APPEND);
             }
             
             echo json_encode(["status" => "success", "message" => "Transaction PAID"]);

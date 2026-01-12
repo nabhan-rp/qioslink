@@ -62,7 +62,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.6.2 (Email Integration)";
+const APP_VERSION = "3.6.3 (Email Support)";
 
 const getEnv = () => {
   try {
@@ -1111,140 +1111,6 @@ export default function App() {
                                 <p className="text-xs text-gray-400 mt-1">Paste this in your Qiospay Dashboard.</p>
                              </div>
                              {currentUser.role !== 'user' && <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save Configuration</button>}
-                         </div>
-                     </Card>
-                 )}
-
-                 {/* TAB 2: Account Profile */}
-                 {settingsTab === 'account' && (
-                     <Card>
-                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><UserIcon size={20}/> Edit Profile</h3>
-                         <div className="space-y-4 max-w-lg">
-                             <div>
-                                 <label className="block text-sm font-medium mb-1">Username</label>
-                                 <input type="text" className="w-full border p-2 rounded bg-gray-50" value={accountForm.username} onChange={e => setAccountForm({...accountForm, username: e.target.value})} />
-                             </div>
-                             <div>
-                                 <label className="block text-sm font-medium mb-1">Email Address</label>
-                                 <input type="email" className="w-full border p-2 rounded" value={accountForm.email} onChange={e => setAccountForm({...accountForm, email: e.target.value})} />
-                             </div>
-                             <div className="pt-4 border-t border-gray-100">
-                                 <label className="block text-sm font-medium mb-1">Change Password</label>
-                                 <input type="password" placeholder="New Password (Optional)" className="w-full border p-2 rounded mb-2" value={accountForm.newPassword} onChange={e => setAccountForm({...accountForm, newPassword: e.target.value})} />
-                             </div>
-                             <button onClick={handleUpdateAccount} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700">Update Profile</button>
-                         </div>
-                     </Card>
-                 )}
-
-                 {/* TAB 3: Branding */}
-                 {settingsTab === 'branding' && (
-                     <Card>
-                         <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 className="text-lg font-bold flex items-center gap-2"><Palette size={20}/> Whitelabel Branding</h3>
-                                <p className="text-sm text-gray-500">Customize how your payment page looks.</p>
-                            </div>
-                            <div className="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200">Merchant Feature</div>
-                         </div>
-                         
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                             <div className="space-y-4">
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Custom Domain (CNAME)</label>
-                                     <input type="text" placeholder="e.g. pay.mystore.com" className="w-full border p-2 rounded" value={config.branding?.customDomain || ''} onChange={e => setConfig({...config, branding: {...config.branding, customDomain: e.target.value}})} />
-                                     <p className="text-xs text-gray-400 mt-1">Point your domain CNAME to <code>{window.location.host}</code></p>
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Brand Color</label>
-                                     <div className="flex items-center gap-2">
-                                        <input type="color" className="h-10 w-10 border p-1 rounded" value={config.branding?.brandColor || '#4f46e5'} onChange={e => setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})} />
-                                        <input type="text" className="border p-2 rounded w-full" value={config.branding?.brandColor || '#4f46e5'} onChange={e => setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})} />
-                                     </div>
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Logo URL</label>
-                                     <input type="text" placeholder="https://..." className="w-full border p-2 rounded" value={config.branding?.logoUrl || ''} onChange={e => setConfig({...config, branding: {...config.branding, logoUrl: e.target.value}})} />
-                                 </div>
-                                 <button onClick={handleUpdateConfig} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 mt-4">Save Branding</button>
-                             </div>
-
-                             {/* Preview */}
-                             <div className="bg-gray-100 p-4 rounded-xl border border-gray-200 flex flex-col items-center justify-center min-h-[300px]">
-                                 <p className="text-xs font-bold text-gray-400 uppercase mb-4">Payment Page Preview</p>
-                                 <div className="bg-white p-6 rounded-2xl shadow-lg w-64 text-center">
-                                     <div className="flex justify-center mb-3">
-                                         {config.branding?.logoUrl ? (
-                                            <img src={config.branding.logoUrl} className="h-8 w-auto" />
-                                         ) : (
-                                            <div style={{backgroundColor: config.branding?.brandColor || '#4f46e5'}} className="w-8 h-8 rounded-lg flex items-center justify-center text-white"><QrCode size={16}/></div>
-                                         )}
-                                     </div>
-                                     <div className="h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-300">QR CODE</div>
-                                     <div style={{color: config.branding?.brandColor || '#4f46e5'}} className="font-bold text-xl">Rp 50.000</div>
-                                 </div>
-                             </div>
-                         </div>
-                     </Card>
-                 )}
-
-                 {/* TAB 4: SMTP (NEW) */}
-                 {settingsTab === 'smtp' && (
-                     <Card>
-                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Mail size={20}/> SMTP Configuration</h3>
-                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 flex gap-3">
-                             <div className="text-blue-600"><AlertCircle size={20}/></div>
-                             <div className="text-sm text-blue-800">
-                                 <strong>Why configure SMTP?</strong><br/>
-                                 This allows the system to send automatic payment receipts, invoices, and notifications to your customers' email ({currentUser.email || 'user@email.com'}) when a transaction is successful.
-                             </div>
-                         </div>
-                         <div className="space-y-4">
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">SMTP Host</label>
-                                     <input type="text" placeholder="smtp.gmail.com" className="w-full border p-2 rounded" value={config.smtp?.host || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})} />
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">SMTP Port</label>
-                                     <input type="text" placeholder="587" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} />
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Username</label>
-                                     <input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} />
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Password</label>
-                                     <input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} />
-                                 </div>
-                             </div>
-                             
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Encryption</label>
-                                     <select className="w-full border p-2 rounded" value={config.smtp?.secure || 'tls'} onChange={e => setConfig({...config, smtp: {...config.smtp!, secure: e.target.value as any}})}>
-                                         <option value="tls">TLS</option>
-                                         <option value="ssl">SSL</option>
-                                         <option value="none">None</option>
-                                     </select>
-                                 </div>
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">From Email</label>
-                                     <input type="email" placeholder="no-reply@domain.com" className="w-full border p-2 rounded" value={config.smtp?.fromEmail || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromEmail: e.target.value}})} />
-                                 </div>
-                             </div>
-
-                             <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2">
-                                 <input type="checkbox" id="enableNotif" className="h-4 w-4 text-indigo-600 rounded" checked={config.smtp?.enableNotifications || false} onChange={e => setConfig({...config, smtp: {...config.smtp!, enableNotifications: e.target.checked}})} />
-                                 <label htmlFor="enableNotif" className="text-sm font-medium text-gray-700">Send me an email notification when a payment is received.</label>
-                             </div>
-
-                             <div className="flex gap-4 pt-4 border-t border-gray-100">
-                                 <button onClick={handleUpdateConfig} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2"><Save size={18}/> Save Settings</button>
-                                 <button onClick={handleTestEmail} disabled={apiLoading} className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2 border border-gray-200">
-                                    {apiLoading ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Test Email
-                                 </button>
-                             </div>
                          </div>
                      </Card>
                  )}
