@@ -1,6 +1,6 @@
 
 ================================================================================
-QiosLink - WooCommerce Payment Gateway Plugin
+QiosLink - WooCommerce Payment Gateway Plugin (Updated with API Key)
 ================================================================================
 
 INSTRUKSI:
@@ -15,7 +15,7 @@ FILE: /wp-content/plugins/woo-qioslink/woo-qioslink.php
 /*
 Plugin Name: QiosLink QRIS Payment
 Description: QRIS Payment Gateway for WooCommerce using QiosLink Engine
-Version: 1.0
+Version: 1.1
 Author: QiosLink Team
 */
 
@@ -46,6 +46,7 @@ function init_qioslink_gateway() {
             $this->description  = $this->get_option( 'description' );
             $this->api_url      = $this->get_option( 'api_url' );
             $this->merchant_id  = $this->get_option( 'merchant_id' );
+            $this->api_key      = $this->get_option( 'api_key' );
 
             add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
             
@@ -70,12 +71,17 @@ function init_qioslink_gateway() {
                 'api_url' => array(
                     'title'       => 'API URL',
                     'type'        => 'text',
-                    'default'     => 'https://domain-anda.com/create_payment.php',
+                    'default'     => 'https://domain-anda.com/api/create_payment.php',
                 ),
                 'merchant_id' => array(
                     'title'       => 'Merchant ID',
                     'type'        => 'text',
                     'default'     => '1',
+                ),
+                'api_key' => array(
+                    'title'       => 'API Key',
+                    'type'        => 'password',
+                    'default'     => '',
                 ),
             );
         }
@@ -87,6 +93,7 @@ function init_qioslink_gateway() {
             $response = wp_remote_post( $this->api_url, array(
                 'body'    => json_encode( array(
                     'merchant_id' => $this->merchant_id,
+                    'api_key'     => $this->api_key,
                     'amount'      => $order->get_total(),
                     'description' => 'Order #' . $order_id,
                     'external_id' => $order_id,
@@ -103,11 +110,7 @@ function init_qioslink_gateway() {
             $body = json_decode( wp_remote_retrieve_body( $response ) );
 
             if ( isset( $body->success ) && $body->success ) {
-                // Redirect to a custom "Pay" page, or show QR on Thank You page.
-                // For simplicity, we mark as on-hold and redirect to thank you, 
-                // but usually you want to show the QR.
-                // Here we store the QR string in post meta to display on Thank You page.
-                
+                // Store QR string
                 update_post_meta( $order_id, '_qioslink_qr_string', $body->qr_string );
                 $order->update_status( 'on-hold', 'Awaiting QRIS payment.' );
                 $order->reduce_order_stock();
@@ -118,7 +121,7 @@ function init_qioslink_gateway() {
                     'redirect' => $this->get_return_url( $order ),
                 );
             } else {
-                wc_add_notice( 'Payment error: ' . $body->message, 'error' );
+                wc_add_notice( 'Payment error: ' . ($body->message ?? 'Unknown'), 'error' );
                 return;
             }
         }

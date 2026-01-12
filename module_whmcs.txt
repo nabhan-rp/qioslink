@@ -1,6 +1,6 @@
 
 ================================================================================
-QiosLink - WHMCS Payment Gateway Module
+QiosLink - WHMCS Payment Gateway Module (Updated with API Key)
 ================================================================================
 
 INSTRUKSI INSTALASI WHMCS:
@@ -37,7 +37,7 @@ function qioslink_config()
             'FriendlyName' => 'API URL',
             'Type' => 'text',
             'Size' => '50',
-            'Default' => 'https://domain-anda.com/create_payment.php',
+            'Default' => 'https://domain-anda.com/api/create_payment.php',
             'Description' => 'URL ke file create_payment.php di server QiosLink Anda',
         ),
         'merchantId' => array(
@@ -45,6 +45,12 @@ function qioslink_config()
             'Type' => 'text',
             'Size' => '10',
             'Description' => 'ID User Anda di database QiosLink (misal: 1)',
+        ),
+        'apiKey' => array(
+            'FriendlyName' => 'API Key',
+            'Type' => 'password',
+            'Size' => '30',
+            'Description' => 'API Key Anda dari Dashboard QiosLink (Optional but Recommended)',
         ),
     );
 }
@@ -54,6 +60,7 @@ function qioslink_link($params)
     // Gateway Configuration Parameters
     $apiUrl = $params['apiUrl'];
     $merchantId = $params['merchantId'];
+    $apiKey = $params['apiKey'];
 
     // Invoice Parameters
     $invoiceId = $params['invoiceid'];
@@ -71,6 +78,7 @@ function qioslink_link($params)
     // 1. Request QR String ke API QiosLink
     $postData = json_encode([
         'merchant_id' => $merchantId,
+        'api_key' => $apiKey, // Sending API Key
         'amount' => $amount,
         'description' => 'Invoice #' . $invoiceId,
         'external_id' => $invoiceId,
@@ -90,8 +98,6 @@ function qioslink_link($params)
     if (isset($json->success) && $json->success == true) {
         $qrString = $json->qr_string;
         
-        // Tampilkan QR Code menggunakan library JS gratis (qrcode.js atau API external)
-        // Di sini kita pakai API qrserver.com untuk kemudahan
         $imgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($qrString);
         
         $htmlOutput = '<div style="text-align:center; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">';

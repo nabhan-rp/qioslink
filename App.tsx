@@ -43,7 +43,8 @@ import {
   Palette,
   CreditCard,
   Mail,
-  Send
+  Send,
+  Github
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -59,7 +60,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.4.0 (Self-Hosted Release)";
+const APP_VERSION = "3.5.0 (Open Source Edition)";
 
 const getEnv = () => {
   try {
@@ -91,7 +92,9 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
               <a href="#features" className="hover:text-indigo-600 transition-colors" title="View Key Features">Features</a>
               <a href="#integration" className="hover:text-indigo-600 transition-colors" title="Integration Guides">Integration</a>
-              <a href="#benefits" className="hover:text-indigo-600 transition-colors" title="Why Choose Us">Benefits</a>
+              <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+                <Github size={16} /> Open Source
+              </a>
             </div>
             <div className="flex items-center gap-3">
               <button onClick={onLogin} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors" aria-label="Login to Dashboard">
@@ -115,26 +118,29 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold mb-6 border border-indigo-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Zap size={12} fill="currentColor" /> v3.4 Open Source Edition
+              <Github size={12} fill="currentColor" /> 100% Free & Open Source
             </div>
             {/* Primary Heading for SEO */}
             <h1 id="hero-heading" className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-              Accept QRIS Payments <br/>
+              Dynamic QRIS Engine. <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
-                Self-Hosted & Whitelabel.
+                Self-Hosted & White Label.
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-              Transform your static QRIS into a dynamic payment engine. Install on your own server, use your own domain, 100% control.
+              Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Install on your own server (cPanel/VPS), use your own domain, and control your data.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
-                Start for Free <ArrowRight size={18} />
+                Install Now <ArrowRight size={18} />
               </button>
-              <button onClick={onLogin} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
-                View Demo
-              </button>
+              <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
+                <Github size={20} /> View on GitHub
+              </a>
             </div>
+            <p className="mt-6 text-sm text-gray-400">
+                Compatible with WHMCS, WooCommerce, and Custom PHP Apps.
+            </p>
           </div>
         </section>
 
@@ -143,24 +149,24 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 id="features-heading" className="text-3xl font-bold text-gray-900">Why QiosLink?</h2>
-              <p className="text-gray-500 mt-4">Everything you need to accept payments like a pro.</p>
+              <p className="text-gray-500 mt-4">The ultimate self-hosted payment solution.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 {
-                  icon: <Smartphone className="text-indigo-600" size={24} />,
-                  title: "Dynamic QRIS",
-                  desc: "Convert static QRIS codes into dynamic amounts automatically. Reduce payment errors to zero."
+                  icon: <Server className="text-indigo-600" size={24} />,
+                  title: "Self Hosted",
+                  desc: "Host it on your own server (cPanel, XAMPP, VPS). No monthly subscription fees to 3rd party SaaS."
                 },
                 {
-                  icon: <Mail className="text-blue-600" size={24} />,
-                  title: "SMTP Notifications",
-                  desc: "Receive instant email alerts when a payment is successful. Configure your own SMTP server."
+                  icon: <Palette className="text-blue-600" size={24} />,
+                  title: "White Label Branding",
+                  desc: "Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank."
                 },
                 {
-                  icon: <BarChart3 className="text-purple-600" size={24} />,
-                  title: "Instant Analytics",
-                  desc: "Monitor your revenue streams with beautiful, real-time dashboards and transaction history."
+                  icon: <Code2 className="text-purple-600" size={24} />,
+                  title: "Easy Integration",
+                  desc: "Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps."
                 }
               ].map((f, i) => (
                 <article key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -238,7 +244,7 @@ const TransactionModal = ({ transaction, onClose, onCopyLink, branding }: any) =
 const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   merchantName: "Narpra Digital",
   merchantCode: "QP040887",
-  apiKey: "**********",
+  apiKey: "",
   qrisString: "00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424",
   callbackUrl: "https://your-domain.com/callback.php",
   branding: {
@@ -337,10 +343,6 @@ export default function App() {
   const initialize = async () => {
     setAuthLoading(true);
 
-    // 1. Check for Whitelabel / Custom Domain logic
-    // In real app, we check if window.location.host is not the main domain
-    // For demo, we just simulate no overrides yet unless configured
-    
     const params = new URLSearchParams(window.location.search);
     if (params.get('amount')) {
       setIsPublicMode(true);
@@ -367,7 +369,6 @@ export default function App() {
 
   const handleUpdateConfig = async () => {
       setApiLoading(true);
-      // Logic to save merchant config
       if (currentUser) {
           const updatedUser = { ...currentUser, merchantConfig: config };
           
@@ -430,7 +431,6 @@ export default function App() {
   };
 
   const handleUpdateAccount = () => {
-      // Logic to update username/password
       if (!accountForm.username) return alert("Username required");
       
       const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email };
@@ -470,14 +470,13 @@ export default function App() {
                     merchant_id: currentUser?.id,
                     amount: Number(tempAmount),
                     description: 'Dashboard Manual Gen',
-                    // No external_id or callback needed for manual generation
+                    api_key: config.apiKey // SENDING API KEY FOR VALIDATION
                 })
             });
             const data = await res.json();
             
             if (data.success) {
                 setGeneratedQR(data.qr_string);
-                // Also add to local list immediately for UI feedback
                 const newTrx: Transaction = {
                     id: data.trx_id,
                     merchantId: currentUser?.id || '0',
@@ -552,7 +551,6 @@ export default function App() {
         newPassword: ''
     });
 
-    // Apply branding if exists
     if (user.merchantConfig?.branding?.brandColor) {
         document.documentElement.style.setProperty('--brand-color', user.merchantConfig.branding.brandColor);
     }
@@ -572,7 +570,6 @@ export default function App() {
     setApiLoading(true);
 
     if (IS_DEMO_MODE) {
-      // Mock Login logic
       let allUsers = [...users];
       const savedUsers = localStorage.getItem('qios_users');
       if (savedUsers) allUsers = [...allUsers, ...JSON.parse(savedUsers)];
@@ -1207,6 +1204,7 @@ export default function App() {
                     <p className="mb-4">Content-Type: application/json</p>
                     <pre>{`{
   "merchant_id": "${currentUser.id}",
+  "api_key": "${config.apiKey || 'YOUR_API_KEY'}",
   "amount": 10000,
   "description": "Order #123",
   "external_id": "INV-123",

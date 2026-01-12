@@ -1,8 +1,8 @@
 
 ================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.1
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.2 (SECURE)
 ================================================================================
-Update Terakhir: Fix Config Saving, Added Forwarding Logic in Callback
+Update Terakhir: Security Fix (API Key Validation), Self Hosted Info
 
 Struktur folder hosting:
 /public_html
@@ -191,7 +191,7 @@ if(isset($_GET['user_id']) && isset($_GET['role'])) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 6: /api/create_payment.php
+FILE 6: /api/create_payment.php (SECURE VERSION)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -209,10 +209,20 @@ if(isset($data->amount) && isset($data->merchant_id)) {
         $user = $res->fetch_assoc();
         $config = json_decode($user['merchant_config']);
         
-        // Pastikan qrisString ada di config database
+        // 1. VALIDASI QRIS STRING
         if (!isset($config->qrisString) || empty($config->qrisString)) {
             echo json_encode(["success" => false, "message" => "Merchant QRIS Data Incomplete"]);
             exit;
+        }
+
+        // 2. VALIDASI API KEY (JIKA MERCHANT MENGATURNYA)
+        // Ini memastikan request dari Module/API luar adalah sah
+        if (isset($config->apiKey) && !empty($config->apiKey)) {
+            $requestKey = isset($data->api_key) ? $data->api_key : '';
+            if ($requestKey !== $config->apiKey) {
+                echo json_encode(["success" => false, "message" => "Invalid API Key"]);
+                exit;
+            }
         }
 
         $dynamicQR = generateDynamicQR($config->qrisString, $data->amount);
@@ -243,13 +253,12 @@ if(isset($data->amount) && isset($data->merchant_id)) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 7: /api/update_config.php (UPDATED: Fix Save Logic)
+FILE 7: /api/update_config.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
 $data = json_decode(file_get_contents("php://input"));
 
-// Menerima JSON lengkap dari frontend dan menyimpannya mentah-mentah ke kolom merchant_config
 if(isset($data->user_id) && isset($data->config)) {
     $configStr = json_encode($data->config);
     $stmt = $conn->prepare("UPDATE users SET merchant_config = ? WHERE id = ?");
