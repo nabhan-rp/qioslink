@@ -6,17 +6,20 @@ import {
   Code2, 
   LogOut, 
   Menu, 
-  X, 
   Wallet, 
   History,
   Copy,
   CheckCircle2,
   ExternalLink,
-  Smartphone
+  Smartphone,
+  Search,
+  Eye,
+  Link as LinkIcon,
+  Download,
+  Share2,
+  X
 } from 'lucide-react';
 import { 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -63,6 +66,89 @@ const Card = ({ children, className = '' }: { children?: React.ReactNode; classN
   </div>
 );
 
+const TransactionModal = ({ 
+  transaction, 
+  onClose, 
+  onCopyLink 
+}: { 
+  transaction: Transaction | null; 
+  onClose: () => void; 
+  onCopyLink: (t: Transaction) => void; 
+}) => {
+  if (!transaction) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+        >
+          <X size={20} className="text-gray-600" />
+        </button>
+
+        <div className="bg-indigo-600 p-6 text-white text-center">
+          <h3 className="font-bold text-lg">Transaction Details</h3>
+          <p className="text-indigo-200 text-sm">{transaction.id}</p>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="flex flex-col items-center">
+             <div className="mb-4 transform scale-90">
+                <QRCodeDisplay data={transaction.qrString} width={200} />
+             </div>
+             <div className="text-2xl font-bold text-gray-800">{formatRupiah(transaction.amount)}</div>
+             <div className={`px-3 py-1 rounded-full text-xs font-medium mt-2 ${
+                transaction.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {transaction.status.toUpperCase()}
+              </div>
+          </div>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between border-b border-gray-100 pb-2">
+              <span className="text-gray-500">Date</span>
+              <span className="font-medium text-gray-800">{transaction.createdAt}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-100 pb-2">
+              <span className="text-gray-500">Description</span>
+              <span className="font-medium text-gray-800">{transaction.description}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2">
+               <span className="text-gray-500">QR String</span>
+               <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(transaction.qrString);
+                  alert('QR String copied!');
+                }}
+                className="text-indigo-600 hover:text-indigo-700 text-xs font-bold flex items-center"
+               >
+                 <Copy size={12} className="mr-1" /> Copy
+               </button>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button 
+              onClick={() => onCopyLink(transaction)}
+              className="flex-1 flex items-center justify-center space-x-2 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium transition-colors"
+            >
+              <LinkIcon size={18} />
+              <span>Copy Payment Link</span>
+            </button>
+             <button 
+              onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(transaction.qrString)}`, '_blank')}
+              className="flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+            >
+              <Download size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Default Data ---
 const DEFAULT_CONFIG: MerchantConfig = {
   merchantName: "Narpra Digital",
@@ -81,6 +167,12 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tempAmount, setTempAmount] = useState<string>('');
   const [generatedQR, setGeneratedQR] = useState<string | null>(null);
+  
+  // New States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isPublicMode, setIsPublicMode] = useState(false);
+  const [publicData, setPublicData] = useState<{amount: number, note: string} | null>(null);
 
   // Mock Data for Charts
   const chartData = [
@@ -93,19 +185,40 @@ export default function App() {
     { name: 'Sun', amt: 349000 },
   ];
 
-  // Load from LocalStorage
+  // Load from LocalStorage and Check URL Params
   useEffect(() => {
+    // 1. Load Config
     const savedConfig = localStorage.getItem('qios_config');
+    let currentConfig = DEFAULT_CONFIG;
     if (savedConfig) {
-      setConfig(JSON.parse(savedConfig));
+      currentConfig = JSON.parse(savedConfig);
+      setConfig(currentConfig);
     }
     
-    // Mock some transactions if empty
+    // 2. Load Mock Transactions
     if (transactions.length === 0) {
       setTransactions([
-        { id: 'TRX-9981', amount: 50000, description: 'Web Hosting - Paket A', status: 'paid', createdAt: '2023-10-25 14:30', qrString: '' },
-        { id: 'TRX-9982', amount: 150000, description: 'Topup Game', status: 'pending', createdAt: '2023-10-25 15:15', qrString: '' },
+        { id: 'TRX-9981', amount: 50000, description: 'Web Hosting - Paket A', status: 'paid', createdAt: '2023-10-25 14:30', qrString: generateDynamicQR(currentConfig.qrisString, 50000) },
+        { id: 'TRX-9982', amount: 150000, description: 'Topup Game', status: 'pending', createdAt: '2023-10-25 15:15', qrString: generateDynamicQR(currentConfig.qrisString, 150000) },
       ]);
+    }
+
+    // 3. Check for Public Payment Link (Query Params)
+    // Example: ?amount=50000&note=PaymentForInvoice123
+    const params = new URLSearchParams(window.location.search);
+    const amountParam = params.get('amount');
+    const noteParam = params.get('note');
+
+    if (amountParam) {
+      setIsPublicMode(true);
+      const amount = parseInt(amountParam, 10);
+      const qr = generateDynamicQR(currentConfig.qrisString, amount);
+      setGeneratedQR(qr);
+      setTempAmount(amount.toString());
+      setPublicData({
+        amount: amount,
+        note: noteParam || 'Payment'
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -137,9 +250,78 @@ export default function App() {
     alert('Copied to clipboard');
   };
 
+  const generatePaymentLink = (t: Transaction | null, amt?: number) => {
+    const amount = t ? t.amount : amt;
+    const note = t ? t.description : 'Payment';
+    if (!amount) return;
+    
+    const baseUrl = window.location.origin + window.location.pathname;
+    const link = `${baseUrl}?amount=${amount}&note=${encodeURIComponent(note)}`;
+    
+    navigator.clipboard.writeText(link);
+    alert('Public Payment Link copied to clipboard!\nShare this URL with your customer.');
+  };
+
+  const filteredTransactions = transactions.filter(t => 
+    t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.amount.toString().includes(searchQuery)
+  );
+
+  // --- PUBLIC MODE RENDER ---
+  if (isPublicMode && generatedQR) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6">
+          <div className="flex justify-center mb-2">
+             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                <QrCode size={32} />
+             </div>
+          </div>
+          
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">{config.merchantName}</h1>
+            <p className="text-gray-500 text-sm mt-1">{publicData?.note}</p>
+          </div>
+
+          <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 relative">
+             <div className="flex justify-center">
+                <QRCodeDisplay data={generatedQR} width={220} />
+             </div>
+          </div>
+
+          <div>
+             <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Payment</p>
+             <div className="text-4xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
+             <p className="text-xs text-gray-400">
+               Scan this QRIS with GoPay, OVO, Dana, LinkAja, ShopeePay, or Mobile Banking.
+             </p>
+             <div className="mt-4 text-xs text-gray-300 font-mono">
+               Merchant ID: {config.merchantCode}
+             </div>
+          </div>
+        </div>
+        <div className="mt-8 text-gray-400 text-sm">
+           Powered by <span className="font-semibold text-gray-600">QiosLink</span>
+        </div>
+      </div>
+    );
+  }
+
+  // --- DASHBOARD MODE RENDER ---
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
       
+      {/* Modals */}
+      <TransactionModal 
+        transaction={selectedTransaction} 
+        onClose={() => setSelectedTransaction(null)} 
+        onCopyLink={(t) => generatePaymentLink(t)}
+      />
+
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -306,13 +488,17 @@ export default function App() {
                   <h3 className="text-lg font-bold text-gray-800 mb-6">Recent Transactions</h3>
                   <div className="overflow-y-auto h-[80%] pr-2">
                     {transactions.map((trx) => (
-                      <div key={trx.id} className="flex items-center justify-between p-4 mb-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <button 
+                        key={trx.id} 
+                        onClick={() => setSelectedTransaction(trx)}
+                        className="w-full text-left flex items-center justify-between p-4 mb-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors group"
+                      >
                         <div className="flex items-center space-x-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${trx.status === 'paid' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
                             {trx.status === 'paid' ? <CheckCircle2 size={18} /> : <History size={18} />}
                           </div>
                           <div>
-                            <div className="font-semibold text-gray-800">{trx.id}</div>
+                            <div className="font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors">{trx.id}</div>
                             <div className="text-xs text-gray-500">{trx.description}</div>
                           </div>
                         </div>
@@ -320,7 +506,7 @@ export default function App() {
                           <div className="font-bold text-gray-800">{formatRupiah(trx.amount)}</div>
                           <div className="text-xs text-gray-500">{trx.createdAt}</div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </Card>
@@ -473,14 +659,14 @@ export default function App() {
                           className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium text-sm transition-colors"
                          >
                            <Copy size={16} />
-                           <span>Copy String</span>
+                           <span>Copy</span>
                          </button>
                          <button 
-                          onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatedQR)}`, '_blank')}
+                          onClick={() => generatePaymentLink(null, Number(tempAmount))}
                           className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-700 font-medium text-sm transition-colors"
                          >
-                           <ExternalLink size={16} />
-                           <span>Open Image</span>
+                           <Share2 size={16} />
+                           <span>Share Link</span>
                          </button>
                       </div>
                     </div>
@@ -587,35 +773,74 @@ app.post('/create-payment', (req, res) => {
           {/* VIEW: HISTORY */}
           {view === 'history' && (
             <Card>
-              <h3 className="text-lg font-bold text-gray-800 mb-6">Transaction History</h3>
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100 text-sm text-gray-500 uppercase tracking-wider">
-                    <th className="pb-3 pl-2">ID</th>
-                    <th className="pb-3">Description</th>
-                    <th className="pb-3">Date</th>
-                    <th className="pb-3 text-right">Amount</th>
-                    <th className="pb-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {transactions.map((trx) => (
-                    <tr key={trx.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-4 pl-2 font-mono text-xs text-indigo-600 font-bold">{trx.id}</td>
-                      <td className="py-4 text-sm text-gray-700">{trx.description}</td>
-                      <td className="py-4 text-xs text-gray-500">{trx.createdAt}</td>
-                      <td className="py-4 text-sm font-bold text-gray-800 text-right">{formatRupiah(trx.amount)}</td>
-                      <td className="py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          trx.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {trx.status}
-                        </span>
-                      </td>
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <h3 className="text-lg font-bold text-gray-800">Transaction History</h3>
+                <div className="relative w-full md:w-64">
+                   <input 
+                     type="text" 
+                     placeholder="Search transactions..."
+                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-sm"
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                   />
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-sm text-gray-500 uppercase tracking-wider">
+                      <th className="pb-3 pl-2">ID</th>
+                      <th className="pb-3">Description</th>
+                      <th className="pb-3">Date</th>
+                      <th className="pb-3 text-right">Amount</th>
+                      <th className="pb-3 text-center">Status</th>
+                      <th className="pb-3 text-center">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredTransactions.map((trx) => (
+                      <tr 
+                        key={trx.id} 
+                        onClick={() => setSelectedTransaction(trx)}
+                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <td className="py-4 pl-2 font-mono text-xs text-indigo-600 font-bold group-hover:underline">{trx.id}</td>
+                        <td className="py-4 text-sm text-gray-700">{trx.description}</td>
+                        <td className="py-4 text-xs text-gray-500">{trx.createdAt}</td>
+                        <td className="py-4 text-sm font-bold text-gray-800 text-right">{formatRupiah(trx.amount)}</td>
+                        <td className="py-4 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            trx.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {trx.status}
+                          </span>
+                        </td>
+                        <td className="py-4 text-center">
+                           <button 
+                             onClick={(e) => {
+                               e.stopPropagation(); // Prevent row click
+                               setSelectedTransaction(trx);
+                             }}
+                             className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                             title="View Details"
+                           >
+                             <Eye size={18} />
+                           </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredTransactions.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-400 text-sm">
+                          No transactions found matching "{searchQuery}"
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           )}
 
