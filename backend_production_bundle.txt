@@ -1,6 +1,6 @@
 
 ================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.7 (PAYMENT LINKS)
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.8 (SMTP FALLBACK)
 ================================================================================
 
 Struktur folder hosting:
@@ -11,16 +11,16 @@ Struktur folder hosting:
      ├── register.php
      ├── manage_users.php
      ├── get_data.php
-     ├── create_payment.php    <-- UPDATED (Generate Hash Link)
-     ├── get_payment_details.php <-- NEW (Untuk Cek Status Link)
-     ├── revoke_link.php       <-- NEW (Fitur Batalkan Link)
+     ├── create_payment.php
+     ├── get_payment_details.php
+     ├── revoke_link.php
      ├── update_config.php
      ├── test_smtp.php
      └── qris_utils.php
   ├── callback.php
 
 --------------------------------------------------------------------------------
-FILE 1: /api/db_connect.php (Sama)
+FILE 1: /api/db_connect.php
 --------------------------------------------------------------------------------
 <?php
 header("Access-Control-Allow-Origin: *");
@@ -32,156 +32,125 @@ if ($conn->connect_error) { die(json_encode(["success"=>false, "message"=>"DB Co
 ?>
 
 --------------------------------------------------------------------------------
-FILE 6: /api/create_payment.php (UPDATED: Generate Token & Expiry)
+FILE: /callback.php (UPDATED: Robust Fallback Logic)
 --------------------------------------------------------------------------------
 <?php
-require 'db_connect.php';
-require 'qris_utils.php'; 
-
-$data = json_decode(file_get_contents("php://input"));
-
-if(isset($data->amount) && isset($data->merchant_id)) {
-    $stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
-    $stmt->bind_param("i", $data->merchant_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    
-    if($res->num_rows > 0) {
-        $user = $res->fetch_assoc();
-        $config = json_decode($user['merchant_config']);
-        
-        // Generate QR
-        $dynamicQR = generateDynamicQR($config->qrisString, $data->amount);
-        
-        // Generate Secure Token (Hash Unik)
-        $token = bin2hex(random_bytes(16)); // 32 chars random string
-        
-        // Handle Expiry
-        $expires_at = null;
-        if(isset($data->expiry_minutes) && $data->expiry_minutes > 0) {
-            $expires_at = date('Y-m-d H:i:s', strtotime("+" . $data->expiry_minutes . " minutes"));
-        }
-        
-        $trx_id = "TRX-" . time() . rand(100,999);
-        $desc = isset($data->description) ? $data->description : 'Payment';
-        $is_single_use = isset($data->single_use) && $data->single_use ? 1 : 0;
-        
-        // Construct Full URL
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-        $host = $_SERVER['HTTP_HOST'];
-        // URL menunjuk ke index.html frontend dengan parameter ?pay=TOKEN
-        // Contoh: https://qioslink.com/?pay=a1b2c3d4...
-        $payment_url = "$protocol://$host/?pay=$token";
-        
-        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string, payment_token, payment_url, expires_at, is_single_use) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)");
-        $insert->bind_param("siisssssi", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR, $token, $payment_url, $expires_at, $is_single_use);
-        
-        if($insert->execute()) {
-             echo json_encode([
-                "success" => true,
-                "trx_id" => $trx_id,
-                "payment_url" => $payment_url,
-                "qr_string" => $dynamicQR
-            ]);
-        } else {
-             echo json_encode(["success" => false, "message" => "DB Insert Failed"]);
-        }
-    } else {
-        echo json_encode(["success" => false, "message" => "Merchant Not Found"]);
-    }
-} else {
-    echo json_encode(["success" => false, "message" => "Invalid Input"]);
-}
-?>
-
---------------------------------------------------------------------------------
-FILE: /api/get_payment_details.php (NEW: Untuk Halaman Publik)
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-
-if(isset($_GET['token'])) {
-    $token = $conn->real_escape_string($_GET['token']);
-    
-    // Join ke tabel users untuk ambil branding
-    $sql = "SELECT t.*, u.merchant_config FROM transactions t JOIN users u ON t.merchant_id = u.id WHERE t.payment_token = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $token);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if($result->num_rows > 0) {
-        $trx = $result->fetch_assoc();
-        
-        // Cek Expiry Time
-        if ($trx['status'] == 'pending' && $trx['expires_at'] && strtotime($trx['expires_at']) < time()) {
-            // Auto expire jika waktu habis
-            $conn->query("UPDATE transactions SET status = 'expired' WHERE id = " . $trx['id']);
-            $trx['status'] = 'expired';
-        }
-
-        // Parse merchant config for branding (Logo, Color)
-        $mConfig = json_decode($trx['merchant_config'], true);
-        $branding = isset($mConfig['branding']) ? $mConfig['branding'] : null;
-        $merchantName = isset($mConfig['merchantName']) ? $mConfig['merchantName'] : 'Merchant';
-
-        echo json_encode([
-            "success" => true,
-            "data" => [
-                "amount" => $trx['amount'],
-                "status" => $trx['status'], // pending, paid, expired, cancelled
-                "qr_string" => $trx['qr_string'],
-                "description" => $trx['description'],
-                "expires_at" => $trx['expires_at'],
-                "merchant_name" => $merchantName,
-                "branding" => $branding // Mengirim data branding dari DB
-            ]
-        ]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Link Invalid"]);
-    }
-}
-?>
-
---------------------------------------------------------------------------------
-FILE: /api/revoke_link.php (NEW: Batalkan Link)
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-$data = json_decode(file_get_contents("php://input"));
-
-if(isset($data->trx_id)) {
-    $trx_id = $conn->real_escape_string($data->trx_id);
-    
-    // Ubah status jadi 'cancelled'
-    $stmt = $conn->prepare("UPDATE transactions SET status = 'cancelled' WHERE trx_id = ? AND status = 'pending'");
-    $stmt->bind_param("s", $trx_id);
-    
-    if($stmt->execute()) {
-        if ($stmt->affected_rows > 0) {
-            echo json_encode(["success" => true, "message" => "Payment Link Revoked"]);
-        } else {
-             echo json_encode(["success" => false, "message" => "Link already paid or expired"]);
-        }
-    } else {
-         echo json_encode(["success" => false, "message" => "DB Error"]);
-    }
-}
-?>
-
---------------------------------------------------------------------------------
-FILE: /callback.php (UPDATED: Handle Single Use)
---------------------------------------------------------------------------------
-<?php
-// ... (Kode koneksi sama) ...
+// ... (Bagian Koneksi Database di atas) ...
 require 'api/db_connect.php'; 
-// ...
-if($result->num_rows > 0) {
-    // ...
-    // Update logic:
-    // Jika is_single_use = 1, status 'paid' akan mencegah link dibuka lagi di get_payment_details.php
-    // Sehingga muncul "Payment Successful" bukan QR lagi.
-    $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
-    // ...
+
+// Load PHPMailer (Pastikan folder api/PHPMailer sudah ada)
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+if (file_exists('api/PHPMailer/PHPMailer.php')) {
+    require 'api/PHPMailer/Exception.php';
+    require 'api/PHPMailer/PHPMailer.php';
+    require 'api/PHPMailer/SMTP.php';
+}
+
+$input = file_get_contents("php://input");
+$data = json_decode($input);
+
+file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Hit: " . $input . "\n", FILE_APPEND);
+
+if(isset($data->status) && $data->status == 'success') {
+    $amount_paid = $data->amount;
+    
+    // Cari Transaksi
+    $sql = "SELECT id, trx_id, merchant_id, external_callback_url, external_ref_id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1";
+    
+    if($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $amount_paid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            
+            // Ambil Data Merchant & Emailnya
+            $m_sql = "SELECT email, merchant_config FROM users WHERE id = ?";
+            $m_stmt = $conn->prepare($m_sql);
+            $m_stmt->bind_param("i", $row['merchant_id']);
+            $m_stmt->execute();
+            $m_res = $m_stmt->get_result();
+            $merchant = $m_res->fetch_assoc();
+            $m_conf = json_decode($merchant['merchant_config'], true);
+
+            // Update Status Transaksi
+            $internal_id = $row['id'];
+            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+            $update->bind_param("i", $internal_id);
+            $update->execute();
+            
+            // -----------------------------------------------------------------
+            // LOGIKA SMTP (SYSTEM FALLBACK)
+            // -----------------------------------------------------------------
+            if (isset($m_conf['smtp']) && $m_conf['smtp']['enableNotifications']) {
+                $smtpConfig = $m_conf['smtp'];
+                $recipientEmail = $merchant['email'];
+                
+                // Cek apakah merchant memilih pakai System SMTP
+                if (isset($smtpConfig['useSystemSmtp']) && $smtpConfig['useSystemSmtp'] === true) {
+                    // Ambil config dari Superadmin (ID 1)
+                    $admin_sql = "SELECT merchant_config FROM users WHERE id = 1";
+                    $admin_res = $conn->query($admin_sql);
+                    if ($admin_res->num_rows > 0) {
+                        $admin_data = $admin_res->fetch_assoc();
+                        $admin_conf = json_decode($admin_data['merchant_config'], true);
+                        if (isset($admin_conf['smtp'])) {
+                            $smtpConfig = $admin_conf['smtp']; // Override dengan System Config
+                        }
+                    }
+                }
+
+                // Eksekusi Kirim Email
+                if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+                    $mail = new PHPMailer(true);
+                    try {
+                        $mail->isSMTP();
+                        $mail->Host       = $smtpConfig['host'];
+                        $mail->SMTPAuth   = true;
+                        $mail->Username   = $smtpConfig['user'];
+                        $mail->Password   = $smtpConfig['pass'];
+                        $mail->SMTPSecure = $smtpConfig['secure'] === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+                        $mail->Port       = $smtpConfig['port'];
+
+                        $mail->setFrom($smtpConfig['fromEmail'], $smtpConfig['fromName']);
+                        $mail->addAddress($recipientEmail);
+
+                        $mail->isHTML(true);
+                        $mail->Subject = 'Payment Received: Rp ' . number_format($amount_paid);
+                        $mail->Body    = "<h3>Payment Successful</h3><p>Transaction ID: {$row['trx_id']}</p><p>Amount: Rp ".number_format($amount_paid)."</p>";
+
+                        $mail->send();
+                    } catch (Exception $e) {
+                        file_put_contents('smtp_error.txt', $mail->ErrorInfo, FILE_APPEND);
+                    }
+                }
+            }
+            // -----------------------------------------------------------------
+
+            // Forwarding ke External URL (WHMCS/WooCommerce)
+            if (!empty($row['external_callback_url'])) {
+                $forward_data = [
+                    'status' => 'paid',
+                    'trx_id' => $row['trx_id'],
+                    'external_id' => $row['external_ref_id'],
+                    'amount' => $amount_paid
+                ];
+                
+                $ch = curl_init($row['external_callback_url']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($forward_data));
+                $response = curl_exec($ch);
+                curl_close($ch);
+            }
+            
+            echo json_encode(["status" => "success", "message" => "Transaction PAID"]);
+        } else {
+            echo json_encode(["status" => "ignored", "message" => "No pending trx match"]);
+        }
+    }
 }
 ?>

@@ -27,6 +27,7 @@ export interface SmtpConfig {
   fromName: string;
   fromEmail: string;
   enableNotifications: boolean;
+  useSystemSmtp?: boolean; // NEW: Option to use Superadmin's SMTP
 }
 
 export interface MerchantConfig {
