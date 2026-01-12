@@ -54,7 +54,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.0.0 (Landing & Registration)";
+const APP_VERSION = "3.0.1 (Author Correction)";
 
 const getEnv = () => {
   try {
@@ -174,7 +174,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
              <span className="font-bold text-gray-900">QiosLink</span>
           </div>
           <p className="text-sm text-gray-500">
-            Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" className="text-indigo-600 hover:underline font-medium">Nabhan Rizqi</a>
+            Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>
           </p>
         </div>
       </footer>

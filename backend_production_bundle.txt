@@ -1,16 +1,16 @@
-================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API)
-================================================================================
-Buat folder bernama `api` di dalam `public_html` hosting Anda.
-Lalu buat file-file berikut di dalam folder `api` tersebut.
 
-Struktur folder hosting nanti:
+================================================================================
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.0
+================================================================================
+Update Terakhir: Penambahan register.php & Logic RBAC manage_users.php.
+
+Struktur folder hosting:
 /public_html
-  /index.html (dari React build)
-  /assets/    (dari React build)
   /api/
      ├── db_connect.php
      ├── login.php
+     ├── register.php        (BARU)
+     ├── manage_users.php    (UPDATED)
      ├── get_data.php
      ├── create_payment.php
      ├── update_config.php
@@ -50,11 +50,9 @@ if(isset($data->username) && isset($data->password)) {
         $user = $result->fetch_assoc();
         // Cek password sederhana (di real production gunakan password_verify)
         if($data->password == $user['password']) {
-             // Parse merchant config dari JSON string ke Object
              $user['merchantConfig'] = json_decode($user['merchant_config']);
-             unset($user['password']); // Jangan kirim password balik
+             unset($user['password']); 
              unset($user['merchant_config']);
-             
              echo json_encode(["success" => true, "user" => $user]);
         } else {
              echo json_encode(["success" => false, "message" => "Wrong password"]);
@@ -66,18 +64,115 @@ if(isset($data->username) && isset($data->password)) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 3: /api/get_data.php
+FILE 3: /api/register.php (BARU)
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['username']) && isset($input['password'])) {
+    $username = $conn->real_escape_string($input['username']);
+    $password = $input['password']; 
+    $role = 'user'; // Default role public
+    
+    $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
+    if($check->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Username already exists']);
+        exit;
+    }
+    
+    $stmt = $conn->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
+    $stmt->bind_param("sss", $username, $password, $role);
+    
+    if($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid input']);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 4: /api/manage_users.php (UPDATED RBAC LOGIC)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
 
-// Ambil Transaksi user tertentu
+$input = json_decode(file_get_contents("php://input"), true);
+$action = isset($_GET['action']) ? $_GET['action'] : ($input['action'] ?? '');
+
+if ($action === 'list') {
+    // Di produksi, sebaiknya filter berdasarkan session user
+    $sql = "SELECT id, username, role, merchant_config FROM users ORDER BY id ASC";
+    $result = $conn->query($sql);
+    $users = [];
+    while ($row = $result->fetch_assoc()) {
+        $row['merchantConfig'] = json_decode($row['merchant_config']);
+        unset($row['merchant_config']);
+        $users[] = $row;
+    }
+    echo json_encode(['success' => true, 'users' => $users]);
+    exit;
+}
+
+if ($action === 'create' || $action === 'update') {
+    $username = $input['username'];
+    $password = $input['password'];
+    $role = $input['role'];
+    $config = isset($input['config']) ? json_encode($input['config']) : null;
+    $creator_role = isset($input['creator_role']) ? $input['creator_role'] : 'user';
+
+    // SERVER-SIDE VALIDATION FOR RBAC
+    if ($creator_role === 'merchant') {
+        if ($role === 'superadmin' || $role === 'merchant') {
+             echo json_encode(['success' => false, 'message' => 'Merchants cannot create Admins/Merchants']);
+             exit;
+        }
+    }
+    if ($creator_role === 'cs') {
+        if ($role !== 'user') {
+             echo json_encode(['success' => false, 'message' => 'CS can only create Users']);
+             exit;
+        }
+    }
+    
+    if ($action === 'create') {
+        $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
+        if($check->num_rows > 0) { echo json_encode(['success'=>false, 'message'=>'Username exists']); exit; }
+
+        $stmt = $conn->prepare("INSERT INTO users (username, password, role, merchant_config) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $username, $password, $role, $config);
+        if ($stmt->execute()) echo json_encode(['success' => true]);
+        else echo json_encode(['success' => false, 'message' => 'DB Error']);
+    } 
+    else if ($action === 'update') {
+        $id = $input['id'];
+        if (!empty($password)) {
+            $stmt = $conn->prepare("UPDATE users SET username=?, password=?, role=?, merchant_config=? WHERE id=?");
+            $stmt->bind_param("ssssi", $username, $password, $role, $config, $id);
+        } else {
+            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, merchant_config=? WHERE id=?");
+            $stmt->bind_param("sssi", $username, $role, $config, $id);
+        }
+        if ($stmt->execute()) echo json_encode(['success' => true]);
+        else echo json_encode(['success' => false, 'message' => 'Update failed']);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 5: /api/get_data.php
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
 if(isset($_GET['user_id']) && isset($_GET['role'])) {
     $uid = $_GET['user_id'];
     $role = $_GET['role'];
     
     $sql = "SELECT * FROM transactions ORDER BY created_at DESC LIMIT 50";
-    
     if($role == 'merchant') {
         $sql = "SELECT * FROM transactions WHERE merchant_id = $uid ORDER BY created_at DESC LIMIT 50";
     }
@@ -85,29 +180,26 @@ if(isset($_GET['user_id']) && isset($_GET['role'])) {
     $result = $conn->query($sql);
     $transactions = [];
     while($row = $result->fetch_assoc()) {
-        // Format ulang field agar sesuai frontend
         $row['id'] = $row['trx_id']; 
         $row['merchantId'] = $row['merchant_id'];
         $row['qrString'] = $row['qr_string'];
         $row['createdAt'] = $row['created_at'];
         $transactions[] = $row;
     }
-    
     echo json_encode(["success" => true, "transactions" => $transactions]);
 }
 ?>
 
 --------------------------------------------------------------------------------
-FILE 4: /api/create_payment.php (Update lokasi qris_utils)
+FILE 6: /api/create_payment.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
-require 'qris_utils.php'; // Pastikan file qris_utils ada di folder yg sama
+require 'qris_utils.php'; 
 
 $data = json_decode(file_get_contents("php://input"));
 
 if(isset($data->amount) && isset($data->merchant_id)) {
-    // Ambil Config Merchant dari DB
     $stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
     $stmt->bind_param("i", $data->merchant_id);
     $stmt->execute();
@@ -121,12 +213,10 @@ if(isset($data->amount) && isset($data->merchant_id)) {
         $trx_id = "TRX-" . time() . rand(100,999);
         $desc = isset($data->description) ? $data->description : 'Payment';
         
-        // Simpan ke DB
         $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string) VALUES (?, ?, ?, ?, 'pending', ?)");
         $insert->bind_param("siiss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR);
         
         if($insert->execute()) {
-             // Return format object Transaction React
              echo json_encode([
                 "success" => true,
                 "transaction" => [
@@ -146,7 +236,7 @@ if(isset($data->amount) && isset($data->merchant_id)) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 5: /api/update_config.php
+FILE 7: /api/update_config.php
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -156,17 +246,13 @@ if(isset($data->user_id) && isset($data->config)) {
     $configStr = json_encode($data->config);
     $stmt = $conn->prepare("UPDATE users SET merchant_config = ? WHERE id = ?");
     $stmt->bind_param("si", $configStr, $data->user_id);
-    
-    if($stmt->execute()) {
-        echo json_encode(["success" => true]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Update failed"]);
-    }
+    if($stmt->execute()) echo json_encode(["success" => true]);
+    else echo json_encode(["success" => false, "message" => "Update failed"]);
 }
 ?>
 
 --------------------------------------------------------------------------------
-FILE 6: /api/qris_utils.php (Sama dengan sebelumnya)
+FILE 8: /api/qris_utils.php
 --------------------------------------------------------------------------------
 <?php
 function crc16($data) {
@@ -174,7 +260,7 @@ function crc16($data) {
     for ($i = 0; $i < strlen($data); $i++) {
         $x = (($crc >> 8) ^ ord($data[$i])) & 0xFF;
         $x ^= $x >> 4;
-        $crc = (($crc << 8) ^ ($x << 12) ^ ($x << 5) ^ $x) & 0xFFFF;
+        $crc = (($crc << 8) ^ ($x << 12) ^ ($x << 5) ^ x) & 0xFFFF;
     }
     return strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
 }
