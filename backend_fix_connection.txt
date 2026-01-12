@@ -1,0 +1,56 @@
+
+================================================================================
+FIX DATABASE CONNECTION (WAJIB REPLACE FILE LAMA)
+================================================================================
+Instruksi:
+1. Hapus file `api/db_connect.php` yang lama di hosting.
+2. Buat file baru `api/db_connect.php`.
+3. Copy isi di bawah ini.
+4. SAYA SANGAT MENYARANKAN GANTI PASSWORD DATABASE DI CPANEL JADI HURUF & ANGKA SAJA (CONTOH: JajanServer2025) UNTUK MENGHINDARI EROR KODE.
+================================================================================
+
+<?php
+// 1. Matikan Error Reporting HTML agar tidak merusak JSON React
+error_reporting(0);
+mysqli_report(MYSQLI_REPORT_OFF);
+
+// 2. Handle CORS (PENTING UNTUK REACT)
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Content-Type: application/json; charset=UTF-8");
+
+// Jika browser kirim sinyal OPTIONS (Pre-flight), matikan script di sini
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// 3. KREDENSIAL DATABASE
+$host = "localhost";
+$username = "jajanserver_u888_masterjajan"; 
+
+// SARAN: Ubah password di cPanel jadi "Jajan123" atau yang simpel, lalu update disini.
+// Jika password asli mengandung tanda baca aneh, kadang PHP salah baca.
+$password = "%2Fjajanserver%2Fjajanin"; 
+
+$dbname = "jajanserver_qioslinkjajan";
+
+// 4. KONEKSI DENGAN TRY-CATCH
+try {
+    $conn = new mysqli($host, $username, $password, $dbname);
+    
+    if ($conn->connect_error) {
+        throw new Exception($conn->connect_error);
+    }
+} catch (Exception $e) {
+    // Return JSON error yang rapi, bukan HTML error
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Database Connection Failed. Check Credentials."
+    ]);
+    exit();
+}
+?>
