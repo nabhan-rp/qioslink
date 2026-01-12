@@ -2,65 +2,66 @@
 KNOWLEDGE BASE: ALUR SISTEM & LOGIKA FORWARDING
 ================================================================================
 
-Dokumen ini menjawab pertanyaan: "Bagaimana WHMCS bisa tahu kalau user sudah bayar, padahal Callback Qiospay masuknya ke QiosLink?"
+Dokumen ini menjawab pertanyaan: 
+1. "Bagaimana WHMCS tahu user sudah bayar?"
+2. "Apakah sistem ini butuh AI/Upload Bukti Transfer?"
 
 --------------------------------------------------------------------------------
-1. KONSEP DASAR (ANALOGI)
+1. KONSEP DASAR (NO AI, NO IMAGE UPLOAD)
 --------------------------------------------------------------------------------
-Bayangkan sistem ini seperti pengiriman paket:
-- PENGIRIM (Pembeli) membayar uang.
-- KURIR (Qiospay/Bank) memberi kabar uang sampai.
-- KANTOR POS PUSAT (Server QiosLink/callback.php) menerima kabar dari Kurir.
-- PENERIMA PAKET (WHMCS/WooCommerce) menunggu kabar dari Kantor Pos.
+Sistem QiosLink ini menggunakan teknologi **Server-to-Server Callback (Webhook)**.
 
-Masalahnya: Kurir (Qiospay) tidak tahu alamat Penerima Paket (WHMCS). Kurir hanya tahu alamat Kantor Pos Pusat.
-Solusinya: Kantor Pos Pusat harus MENERUSKAN (Forward) kabar itu ke Penerima Paket.
+PENTING:
+- **TIDAK ADA AI:** Sistem tidak membaca gambar struk/screenshot.
+- **TIDAK ADA UPLOAD:** User tidak perlu upload bukti transfer.
+- **ANTI STRUK PALSU:** Karena kita tidak mengecek gambar, user tidak bisa menipu dengan struk editan Photoshop/AI. Kita hanya percaya jika ada sinyal uang masuk dari Bank/Qiospay.
+
+ANALOGI:
+Bayangkan "SMS Banking". Ketika ada uang masuk, Bank mengirim SMS ke Anda. Anda percaya uang itu masuk karena SMS-nya dari Bank, bukan karena pengirim mengirim foto struk ATM.
+Di sini, Qiospay bertindak sebagai Bank yang mengirim "SMS" (Callback) ke Website Anda.
 
 --------------------------------------------------------------------------------
-2. ALUR TEKNIS (LANGKAH DEMI LANGKAH)
+2. ALUR DETEKSI PEMBAYARAN (REAL MONEY DETECTION)
 --------------------------------------------------------------------------------
 
 A. SAAT ORDER DIBUAT (Request)
-   1. User checkout di WHMCS (Invoice #100, Rp 50.000).
-   2. Modul WHMCS mengirim data ke API QiosLink (`create_payment.php`).
-   3. Data yang dikirim: 
-      - Merchant ID: 1
-      - Amount: 50000
-      - Callback URL WHMCS: `https://whmcs-anda.com/modules/gateways/callback/qioslink.php`
-   4. QiosLink menyimpan data ini di database (`transactions` table).
-      - Di tahap ini, QiosLink "mencatat" bahwa: "Jika nanti ada uang 50.000 masuk, saya harus lapor ke URL WHMCS di atas".
+   1. User checkout (Invoice #100, Rp 50.000).
+   2. QiosLink membuat kode unik/nominal unik di database.
 
-B. SAAT PEMBAYARAN SUKSES (The Callback Logic)
-   1. User scan QRIS dan bayar.
-   2. Qiospay mendeteksi uang masuk.
-   3. Qiospay menembak `https://qioslink-anda.com/callback.php` (Callback Utama).
-   
-C. PROSES DI `callback.php` (Server QiosLink)
-   1. Menerima notifikasi: "Hei, ada uang masuk Rp 50.000".
-   2. Cek Database: "Siapa ya yang tadi request pembayaran 50.000 yang statusnya masih pending?".
-   3. Ketemu! Transaksi Invoice #100 tadi.
-   4. Update Status Database Lokal jadi 'PAID'.
-   
-   --- DISINI LOGIKA FORWARDING BEKERJA ---
-   5. Cek kolom `external_callback_url` di database.
-   6. Ternyata ada isinya: `https://whmcs-anda.com/.../qioslink.php`.
-   7. `callback.php` melakukan cURL POST (Menembak balik) ke URL tersebut membawa data: "Invoice #100 LUNAS".
-   
-D. PROSES DI WHMCS
-   1. File `modules/gateways/callback/qioslink.php` menerima tembakan dari langkah C.7.
-   2. WHMCS mencatat invoice #100 sebagai Paid.
-   3. Hosting aktif otomatis.
+B. SAAT USER BAYAR (Real Time)
+   1. User Scan QRIS di HP mereka.
+   2. Transaksi berhasil di sisi Bank (Gopay/OVO/BCA user).
+   3. Jaringan Pembayaran Nasional (GPN/Bank) memberitahu Server Qiospay: "Ada dana masuk Rp 50.000".
+
+C. SAAT CALLBACK (Notifikasi Server)
+   1. Detik itu juga, Server Qiospay menembak URL Anda: `https://domain-anda.com/callback.php`
+   2. Data yang dikirim bukan gambar, tapi data mentah valid:
+      {
+         "status": "success",
+         "amount": 50000,
+         "desc": "Payment from..."
+      }
+   3. Server Anda menerima data ini. Karena pengirimnya adalah IP Qiospay, data ini dianggap Otoritas Tertinggi (Kebenaran Mutlak).
 
 --------------------------------------------------------------------------------
-3. IMPLEMENTASI KODE
+3. LOGIKA FORWARDING (MENERUSKAN KABAR)
 --------------------------------------------------------------------------------
+Masalah: Qiospay hanya tahu lapor ke `callback.php` utama Anda. Dia tidak tahu Anda pakai WHMCS atau WooCommerce.
 
-Untuk mewujudkan ini, pastikan Anda menggunakan kode terbaru dari `backend_php.txt`:
+Solusi:
+1. `callback.php` menerima kabar sukses dari Qiospay.
+2. `callback.php` cek database: "Ooh, uang 50.000 ini untuk Invoice #100 milik WHMCS".
+3. `callback.php` melakukan cURL (menelpon) ke Modul WHMCS Anda.
+4. WHMCS merubah status jadi PAID.
 
-1. Di file `create_payment.php`:
-   - Pastikan menangkap parameter `callback_url` dan menyimpannya ke database (kolom `external_callback_url`).
+--------------------------------------------------------------------------------
+4. KEUNTUNGAN SISTEM INI
+--------------------------------------------------------------------------------
+1. **Hemat Biaya:** Tidak perlu beli API Key OpenAI/Gemini/Google Vision. Gratis selamanya (hanya bayar admin fee QRIS ke penyedia).
+2. **Otomatis 24 Jam:** Tidak perlu Admin CS untuk cek mutasi manual atau validasi bukti transfer.
+3. **Aman:** Menghilangkan risiko penipuan struk palsu (Fake Transfer Proof) yang marak terjadi.
 
-2. Di file `callback.php`:
-   - Setelah status diupdate jadi PAID, tambahkan logika `curl_init($row['external_callback_url'])` untuk mengirim notifikasi ke website asal (WHMCS/Woo).
-
-Kesimpulan: `callback.php` adalah OTAK dari sistem ini. Dia menerima dari Bank, lalu membagi-bagikan (Forward) infonya ke website yang berhak.
+--------------------------------------------------------------------------------
+5. IMPLEMENTASI TEKNIS
+--------------------------------------------------------------------------------
+Pastikan file `callback.php` Anda selalu aktif dan hosting Anda tidak memblokir Incoming Connection (Post) dari IP luar, agar Qiospay bisa mengirim data.
