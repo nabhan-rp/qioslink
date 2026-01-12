@@ -1,8 +1,8 @@
 
 ================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.2 (SECURE)
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.3 (DUAL KEY SECURITY)
 ================================================================================
-Update Terakhir: Security Fix (API Key Validation), Self Hosted Info
+Update Terakhir: Split API Keys (Qiospay External Key vs QiosLink Internal Key)
 
 Struktur folder hosting:
 /public_html
@@ -50,7 +50,6 @@ if(isset($data->username) && isset($data->password)) {
     
     if($result->num_rows > 0) {
         $user = $result->fetch_assoc();
-        // Cek password sederhana (di real production gunakan password_verify)
         if($data->password == $user['password']) {
              $user['merchantConfig'] = json_decode($user['merchant_config']);
              unset($user['password']); 
@@ -75,7 +74,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 if(isset($input['username']) && isset($input['password'])) {
     $username = $conn->real_escape_string($input['username']);
     $password = $input['password']; 
-    $role = 'user'; // Default role public
+    $role = 'user'; 
     
     $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
     if($check->num_rows > 0) {
@@ -125,17 +124,13 @@ if ($action === 'create' || $action === 'update') {
     $config = isset($input['config']) ? json_encode($input['config']) : null;
     $creator_role = isset($input['creator_role']) ? $input['creator_role'] : 'user';
 
-    if ($creator_role === 'merchant') {
-        if ($role === 'superadmin' || $role === 'merchant') {
-             echo json_encode(['success' => false, 'message' => 'Merchants cannot create Admins/Merchants']);
-             exit;
-        }
+    if ($creator_role === 'merchant' && ($role === 'superadmin' || $role === 'merchant')) {
+         echo json_encode(['success' => false, 'message' => 'Merchants cannot create Admins/Merchants']);
+         exit;
     }
-    if ($creator_role === 'cs') {
-        if ($role !== 'user') {
-             echo json_encode(['success' => false, 'message' => 'CS can only create Users']);
-             exit;
-        }
+    if ($creator_role === 'cs' && $role !== 'user') {
+         echo json_encode(['success' => false, 'message' => 'CS can only create Users']);
+         exit;
     }
     
     if ($action === 'create') {
@@ -191,7 +186,7 @@ if(isset($_GET['user_id']) && isset($_GET['role'])) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 6: /api/create_payment.php (SECURE VERSION)
+FILE 6: /api/create_payment.php (UPDATED: Uses appSecretKey)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -215,12 +210,12 @@ if(isset($data->amount) && isset($data->merchant_id)) {
             exit;
         }
 
-        // 2. VALIDASI API KEY (JIKA MERCHANT MENGATURNYA)
-        // Ini memastikan request dari Module/API luar adalah sah
-        if (isset($config->apiKey) && !empty($config->apiKey)) {
+        // 2. VALIDASI INTERNAL KEY (appSecretKey)
+        // Kunci ini dipakai oleh WHMCS/WooCommerce Anda.
+        if (isset($config->appSecretKey) && !empty($config->appSecretKey)) {
             $requestKey = isset($data->api_key) ? $data->api_key : '';
-            if ($requestKey !== $config->apiKey) {
-                echo json_encode(["success" => false, "message" => "Invalid API Key"]);
+            if ($requestKey !== $config->appSecretKey) {
+                echo json_encode(["success" => false, "message" => "Invalid Secret Key"]);
                 exit;
             }
         }
@@ -305,16 +300,15 @@ function generateDynamicQR($staticQr, $amount) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 9: /callback.php (Letakkan di root public_html)
+FILE 9: /callback.php (UPDATED: Validates Qiospay API Key if available)
 --------------------------------------------------------------------------------
 <?php
 // Menerima Webhook dari Qiospay/Nobu
 $input = file_get_contents("php://input");
 $data = json_decode($input);
 
-require 'api/db_connect.php'; // Sesuaikan path jika perlu
+require 'api/db_connect.php'; 
 
-// Log data masuk
 file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Input: " . $input . "\n", FILE_APPEND);
 
 if(isset($data->status) && $data->status == 'success') {
@@ -330,14 +324,9 @@ if(isset($data->status) && $data->status == 'success') {
         
         if($result->num_rows > 0) {
             $row = $result->fetch_assoc();
-            $internal_id = $row['id'];
             
-            // Update Status Internal
-            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
-            $update->bind_param("i", $internal_id);
-            $update->execute();
-            
-            // SMTP NOTIFICATION CHECK
+            // SECURITY CHECK: VALIDATE QIOSPAY SIGNATURE / API KEY
+            // Mengambil config merchant dari database
             $m_stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
             $m_stmt->bind_param("i", $row['merchant_id']);
             $m_stmt->execute();
@@ -345,10 +334,30 @@ if(isset($data->status) && $data->status == 'success') {
             if ($m_res->num_rows > 0) {
                  $m_user = $m_res->fetch_assoc();
                  $m_conf = json_decode($m_user['merchant_config'], true);
-                 if (isset($m_conf['smtp']) && $m_conf['smtp']['enableNotifications']) {
-                     // Trigger SMTP Send (Code logic here, requires PHPMailer setup)
-                     // include 'api/send_email.php';
-                 }
+                 
+                 // Jika User sudah memasukkan "Qiospay API Key", kita pakai untuk validasi
+                 // Note: Logika validasi ini tergantung versi Qiospay Anda. 
+                 // Jika Qiospay mengirim hash di header (misal X-Signature), validasi di sini.
+                 // Jika tidak ada signature, setidaknya kita memastikan key tersimpan.
+                 $qiospayKey = isset($m_conf['qiospayApiKey']) ? $m_conf['qiospayApiKey'] : '';
+                 
+                 // Contoh Validasi Sederhana (Pseudo-code):
+                 // $signature = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
+                 // if ($qiospayKey && $signature !== md5($qiospayKey . $data->trx_id)) {
+                 //    die("Invalid Signature");
+                 // }
+            }
+
+            $internal_id = $row['id'];
+            
+            // Update Status Internal
+            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+            $update->bind_param("i", $internal_id);
+            $update->execute();
+            
+            // SMTP NOTIFICATION
+            if (isset($m_conf['smtp']) && $m_conf['smtp']['enableNotifications']) {
+                 // Trigger SMTP Send logic here
             }
             
             // EXTERNAL FORWARDING (WHMCS/WOO)

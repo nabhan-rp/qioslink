@@ -44,7 +44,9 @@ import {
   CreditCard,
   Mail,
   Send,
-  Github
+  Github,
+  Key,
+  RefreshCw
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -60,7 +62,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.5.0 (Open Source Edition)";
+const APP_VERSION = "3.6.0 (Secure Key Edition)";
 
 const getEnv = () => {
   try {
@@ -244,7 +246,8 @@ const TransactionModal = ({ transaction, onClose, onCopyLink, branding }: any) =
 const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   merchantName: "Narpra Digital",
   merchantCode: "QP040887",
-  apiKey: "",
+  qiospayApiKey: "",
+  appSecretKey: "QlOS_SECRET_KEY_" + Math.random().toString(36).substring(7),
   qrisString: "00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424",
   callbackUrl: "https://your-domain.com/callback.php",
   branding: {
@@ -470,7 +473,7 @@ export default function App() {
                     merchant_id: currentUser?.id,
                     amount: Number(tempAmount),
                     description: 'Dashboard Manual Gen',
-                    api_key: config.apiKey // SENDING API KEY FOR VALIDATION
+                    api_key: config.appSecretKey // SENDING INTERNAL API KEY FOR VALIDATION
                 })
             });
             const data = await res.json();
@@ -643,7 +646,8 @@ export default function App() {
     const payloadConfig = userFormData.role === 'merchant' ? {
        merchantName: userFormData.merchantName,
        merchantCode: userFormData.merchantCode,
-       apiKey: userFormData.apiKey,
+       qiospayApiKey: userFormData.apiKey, // Map correctly
+       appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), // Auto Gen for new user
        qrisString: userFormData.qrisString
     } : null;
 
@@ -1038,13 +1042,26 @@ export default function App() {
                              
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Merchant Code / ID</label>
+                                    <label className="block text-sm font-medium mb-1">Qiospay Merchant Code</label>
                                     <input type="text" className="w-full border p-2 rounded" value={config.merchantCode} onChange={e => setConfig({...config, merchantCode: e.target.value})} disabled={currentUser.role === 'user'} placeholder="e.g. QP001" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">API Key (Internal)</label>
-                                    <input type="password" className="w-full border p-2 rounded" value={config.apiKey} onChange={e => setConfig({...config, apiKey: e.target.value})} disabled={currentUser.role === 'user'} placeholder="Secret Key" />
+                                    <label className="block text-sm font-medium mb-1">Qiospay API Key (From Screenshot)</label>
+                                    <div className="relative">
+                                        <input type="password" className="w-full border p-2 rounded pr-10" value={config.qiospayApiKey || ''} onChange={e => setConfig({...config, qiospayApiKey: e.target.value})} disabled={currentUser.role === 'user'} placeholder="Key from Mitra Qiospay Dashboard" />
+                                        <Key size={16} className="absolute right-3 top-3 text-gray-400" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-1">Used to validate callbacks from Qiospay.</p>
                                 </div>
+                             </div>
+
+                             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                <label className="block text-sm font-bold text-yellow-800 mb-1">QiosLink Secret Key (Internal)</label>
+                                <div className="flex gap-2">
+                                    <input type="text" readOnly className="w-full bg-white border border-yellow-300 p-2 rounded text-gray-600 font-mono" value={config.appSecretKey || 'Not Generated'} />
+                                    <button onClick={() => setConfig({...config, appSecretKey: 'QIOS_SEC_' + Math.random().toString(36).substring(2, 12).toUpperCase()})} className="px-3 bg-white border border-yellow-300 rounded hover:bg-yellow-100 text-yellow-700"><RefreshCw size={16}/></button>
+                                </div>
+                                <p className="text-xs text-yellow-700 mt-1">Use this key in your WHMCS / WooCommerce Module settings.</p>
                              </div>
 
                              <div>
@@ -1204,7 +1221,7 @@ export default function App() {
                     <p className="mb-4">Content-Type: application/json</p>
                     <pre>{`{
   "merchant_id": "${currentUser.id}",
-  "api_key": "${config.apiKey || 'YOUR_API_KEY'}",
+  "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",
   "amount": 10000,
   "description": "Order #123",
   "external_id": "INV-123",

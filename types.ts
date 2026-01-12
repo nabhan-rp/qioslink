@@ -5,14 +5,14 @@ export type UserRole = 'superadmin' | 'merchant' | 'cs' | 'user';
 export interface User {
   id: string;
   username: string;
-  email?: string; // Added email
+  email?: string;
   role: UserRole;
-  merchantConfig?: MerchantConfig; // Only for merchant & superadmin
+  merchantConfig?: MerchantConfig;
 }
 
 export interface WhitelabelConfig {
-  customDomain?: string; // e.g., pay.merchant.com
-  brandColor?: string; // Hex code
+  customDomain?: string;
+  brandColor?: string;
   logoUrl?: string;
   faviconUrl?: string;
   footerText?: string;
@@ -31,18 +31,19 @@ export interface SmtpConfig {
 
 export interface MerchantConfig {
   merchantName: string;
-  merchantCode: string; // e.g., QP040887
-  apiKey: string;
-  qrisString: string; // The long string starting with 000201...
+  merchantCode: string; // From Qiospay Dashboard (e.g., QP040887)
+  qiospayApiKey: string; // From Qiospay Dashboard (for Callback Validation)
+  appSecretKey: string; // Internal Key for WHMCS/Woo Integration
+  qrisString: string; 
   callbackUrl?: string;
-  branding?: WhitelabelConfig; // Added branding config
-  smtp?: SmtpConfig; // Added SMTP config
+  branding?: WhitelabelConfig;
+  smtp?: SmtpConfig;
 }
 
 export interface Transaction {
   id: string;
-  merchantId: string; // To link transaction to specific merchant
-  customerId?: string; // To link to specific registered end-user
+  merchantId: string;
+  customerId?: string;
   amount: number;
   description: string;
   status: 'pending' | 'paid' | 'expired';
