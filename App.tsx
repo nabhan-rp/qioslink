@@ -46,7 +46,9 @@ import {
   Send,
   Github,
   Key,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Ban
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -62,7 +64,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "3.6.3 (Email Support)";
+const APP_VERSION = "3.7.0 (Payment Links & Secure)";
 
 const getEnv = () => {
   try {
@@ -296,7 +298,12 @@ export default function App() {
   
   // UI Inputs
   const [tempAmount, setTempAmount] = useState<string>('');
+  const [tempDesc, setTempDesc] = useState<string>('Payment');
+  const [expiryMinutes, setExpiryMinutes] = useState<string>('');
+  const [singleUse, setSingleUse] = useState(false);
   const [generatedQR, setGeneratedQR] = useState<string | null>(null);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [amountError, setAmountError] = useState('');
@@ -335,7 +342,7 @@ export default function App() {
 
   // Public Link Mode
   const [isPublicMode, setIsPublicMode] = useState(false);
-  const [publicData, setPublicData] = useState<{amount: number, note: string} | null>(null);
+  const [publicData, setPublicData] = useState<any>(null); // Changed to any to support complex obj
   
   // Whitelabel Detected State
   const [detectedBranding, setDetectedBranding] = useState<any>(null);
@@ -349,13 +356,54 @@ export default function App() {
     setAuthLoading(true);
 
     const params = new URLSearchParams(window.location.search);
+    
+    // 1. Check for SECURE PAYMENT LINK (?pay=TOKEN)
+    if (params.get('pay')) {
+        setIsPublicMode(true);
+        setShowLanding(false);
+        const token = params.get('pay');
+        
+        // Fetch Transaction Details from Backend
+        if (IS_DEMO_MODE) {
+            // Demo Mock Data
+            setGeneratedQR(generateDynamicQR(DEFAULT_MERCHANT_CONFIG.qrisString, 50000));
+            setTempAmount('50000');
+            setPublicData({ 
+                amount: 50000, 
+                description: 'Demo Secure Payment', 
+                status: 'pending', 
+                merchant_name: 'Demo Merchant',
+                expires_at: null
+            });
+        } else {
+            try {
+                const res = await fetch(`${API_BASE}/get_payment_details.php?token=${token}`);
+                const data = await res.json();
+                if(data.success) {
+                    setGeneratedQR(data.data.qr_string);
+                    setTempAmount(data.data.amount);
+                    setPublicData(data.data);
+                    // Set Branding if exists
+                    if(data.data.branding) setConfig(prev => ({...prev, branding: data.data.branding, merchantName: data.data.merchant_name}));
+                } else {
+                    setPublicData({ error: data.message });
+                }
+            } catch(e) {
+                setPublicData({ error: 'Connection Failed' });
+            }
+        }
+        setAuthLoading(false);
+        return;
+    }
+
+    // 2. Check for LEGACY INSECURE LINK (?amount=...)
     if (params.get('amount')) {
       setIsPublicMode(true);
       setShowLanding(false);
       const amount = parseInt(params.get('amount')!, 10);
       setGeneratedQR(generateDynamicQR(DEFAULT_MERCHANT_CONFIG.qrisString, amount));
       setTempAmount(amount.toString());
-      setPublicData({ amount, note: params.get('note') || 'Payment' });
+      setPublicData({ amount, description: params.get('note') || 'Payment', status: 'pending' });
       setAuthLoading(false);
       return; 
     }
@@ -363,7 +411,6 @@ export default function App() {
     const sessionUser = sessionStorage.getItem('qios_user');
     if (sessionUser) {
       const user = JSON.parse(sessionUser);
-      // FORCE FIX: Ensure 'admin' always has 'superadmin' role in demo/session
       if (user.username === 'admin' && user.role !== 'superadmin') {
           user.role = 'superadmin';
       }
@@ -453,24 +500,33 @@ export default function App() {
     if (!tempAmount || isNaN(Number(tempAmount))) return;
     
     setApiLoading(true);
+    setGeneratedQR(null);
+    setGeneratedLink(null);
 
     if (IS_DEMO_MODE) {
         // DEMO MODE (Client Side Only)
         const qr = generateDynamicQR(config.qrisString, Number(tempAmount));
-        setGeneratedQR(qr);
-        const newTrx: Transaction = {
-            id: `TRX-${Date.now()}`,
-            merchantId: currentUser?.id || '0',
-            amount: Number(tempAmount),
-            description: 'Manual Generation',
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            qrString: qr
-        };
-        setTransactions([newTrx, ...transactions]);
-        setApiLoading(false);
+        const token = Math.random().toString(36).substring(7);
+        const link = `${window.location.origin}/?pay=${token}`;
+        
+        setTimeout(() => {
+            setGeneratedQR(qr);
+            setGeneratedLink(link);
+            const newTrx: Transaction = {
+                id: `TRX-${Date.now()}`,
+                merchantId: currentUser?.id || '0',
+                amount: Number(tempAmount),
+                description: tempDesc,
+                status: 'pending',
+                createdAt: new Date().toISOString(),
+                qrString: qr,
+                paymentUrl: link
+            };
+            setTransactions([newTrx, ...transactions]);
+            setApiLoading(false);
+        }, 800);
     } else {
-        // PRODUCTION MODE (Connect to Backend to ensure Callback works)
+        // PRODUCTION MODE
         try {
             const res = await fetch(`${API_BASE}/create_payment.php`, {
                 method: 'POST',
@@ -478,22 +534,26 @@ export default function App() {
                 body: JSON.stringify({
                     merchant_id: currentUser?.id,
                     amount: Number(tempAmount),
-                    description: 'Dashboard Manual Gen',
-                    api_key: config.appSecretKey // SENDING INTERNAL API KEY FOR VALIDATION
+                    description: tempDesc,
+                    expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0,
+                    single_use: singleUse,
+                    api_key: config.appSecretKey
                 })
             });
             const data = await res.json();
             
             if (data.success) {
                 setGeneratedQR(data.qr_string);
+                setGeneratedLink(data.payment_url);
                 const newTrx: Transaction = {
                     id: data.trx_id,
                     merchantId: currentUser?.id || '0',
                     amount: Number(tempAmount),
-                    description: 'Dashboard Manual Gen',
+                    description: tempDesc,
                     status: 'pending',
                     createdAt: new Date().toISOString(),
-                    qrString: data.qr_string
+                    qrString: data.qr_string,
+                    paymentUrl: data.payment_url
                 };
                 setTransactions([newTrx, ...transactions]);
             } else {
@@ -507,13 +567,42 @@ export default function App() {
     }
   };
 
+  const handleRevokeLink = async (trx: Transaction) => {
+      if (!confirm("Are you sure you want to cancel this payment link? Users won't be able to pay anymore.")) return;
+      
+      if (IS_DEMO_MODE) {
+          const updated = transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t);
+          // @ts-ignore
+          setTransactions(updated);
+          alert("Link Revoked (Demo)");
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/revoke_link.php`, {
+                  method: 'POST',
+                  body: JSON.stringify({ trx_id: trx.id })
+              });
+              const data = await res.json();
+              if (data.success) {
+                  fetchTransactions(currentUser!);
+                  alert("Link Revoked Successfully");
+              } else {
+                  alert("Failed: " + data.message);
+              }
+          } catch(e) { alert("Connection Error"); }
+      }
+  };
+
+  const copyToClipboard = (text: string) => {
+      navigator.clipboard.writeText(text);
+      alert("Copied to clipboard!");
+  };
+
   const fetchTransactions = async (user: User) => {
     if (IS_DEMO_MODE) {
       const savedTx = localStorage.getItem('qios_transactions');
       if (savedTx) {
           setTransactions(JSON.parse(savedTx));
       } else {
-          // Generate dummy data if empty
           const dummies: Transaction[] = Array(5).fill(0).map((_, i) => ({
              id: `TRX-DEMO-${1000+i}`,
              merchantId: user.id,
@@ -521,7 +610,8 @@ export default function App() {
              description: `Demo Transaction ${i+1}`,
              status: i % 2 === 0 ? 'paid' : 'pending',
              createdAt: new Date().toISOString(),
-             qrString: user.merchantConfig?.qrisString || ''
+             qrString: user.merchantConfig?.qrisString || '',
+             paymentUrl: window.location.origin + '/?pay=demo' + i
           }));
           setTransactions(dummies);
       }
@@ -538,7 +628,6 @@ export default function App() {
     if (IS_DEMO_MODE) {
       const savedUsers = localStorage.getItem('qios_users');
       const parsedSaved = savedUsers ? JSON.parse(savedUsers) : [];
-      // CORRECTLY MERGE MOCK DATA WITH LOCAL STORAGE SO ADMIN NEVER DISAPPEARS
       const combined = [...MOCK_USERS, ...parsedSaved.filter((u: User) => !MOCK_USERS.find(m => m.id === u.id))];
       setUsers(combined);
       return;
@@ -551,7 +640,6 @@ export default function App() {
   };
 
   const loginSuccess = (user: User, redirect = true) => {
-    // FORCE FIX: Ensure 'admin' is superadmin
     if (user.username === 'admin' && user.role !== 'superadmin') {
        user.role = 'superadmin';
     }
@@ -560,7 +648,6 @@ export default function App() {
     sessionStorage.setItem('qios_user', JSON.stringify(user));
     if (user.merchantConfig) setConfig(user.merchantConfig);
     
-    // Initialize forms
     setAccountForm({
         username: user.username,
         email: user.email || '',
@@ -578,7 +665,6 @@ export default function App() {
     if (redirect) setShowLanding(false);
 
     fetchTransactions(user);
-    // Fetch users only if allowed
     if (['superadmin', 'merchant', 'cs'].includes(user.role)) fetchUsers();
   };
 
@@ -592,15 +678,11 @@ export default function App() {
       const savedUsers = localStorage.getItem('qios_users');
       if (savedUsers) {
           const parsed = JSON.parse(savedUsers);
-          // Merge avoiding dupes
           allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))];
       }
-
       const foundUser = allUsers.find(u => u.username === loginUser);
-      
-      // Override for Admin Demo Login to ensure success even if local data is weird
       if (loginUser === 'admin' && loginPass === 'admin') {
-          loginSuccess(MOCK_USERS[0]); // Force login as the Clean Mock Admin
+          loginSuccess(MOCK_USERS[0]); 
       } 
       else if (foundUser && loginPass === foundUser.username) {
          loginSuccess(foundUser);
@@ -718,14 +800,46 @@ export default function App() {
 
   // --- RENDER ---
 
-  // 1. PUBLIC PAYMENT VIEW (Has Whitelabel Logic)
-  if (isPublicMode && generatedQR) {
+  // 1. PUBLIC PAYMENT VIEW (SECURE & WHITELABEL)
+  if (isPublicMode) {
      const brandColor = config.branding?.brandColor || '#4f46e5';
      const logo = config.branding?.logoUrl;
+     
+     if (publicData?.error) {
+         return (
+             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                 <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full">
+                     <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                     <h2 className="text-xl font-bold text-gray-800">Invalid Link</h2>
+                     <p className="text-gray-500 mt-2">{publicData.error}</p>
+                 </div>
+             </div>
+         )
+     }
+
+     const isPaid = publicData?.status === 'paid';
+     const isExpired = publicData?.status === 'expired' || publicData?.status === 'cancelled';
 
      return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6">
+         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6 relative overflow-hidden">
+          {/* Status Overlay */}
+          {isPaid && (
+              <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in">
+                  <CheckCircle2 className="text-green-500 mb-4" size={64} />
+                  <h2 className="text-2xl font-bold text-gray-800">Payment Successful!</h2>
+                  <p className="text-gray-500 mt-2">Thank you for your payment.</p>
+                  <p className="font-bold text-lg mt-4">{formatRupiah(publicData.amount)}</p>
+              </div>
+          )}
+          {isExpired && (
+              <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in">
+                  <Ban className="text-red-500 mb-4" size={64} />
+                  <h2 className="text-2xl font-bold text-gray-800">Link Expired</h2>
+                  <p className="text-gray-500 mt-2">This payment link is no longer active.</p>
+              </div>
+          )}
+
           <div className="flex justify-center mb-2">
              {logo ? (
                  <img src={logo} alt="Merchant Logo" className="h-16 w-auto object-contain" />
@@ -736,12 +850,13 @@ export default function App() {
              )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">{config.merchantName}</h1>
-            <p className="text-gray-500 text-sm mt-1">{publicData?.note}</p>
+            <h1 className="text-2xl font-bold text-gray-800">{config.merchantName || publicData?.merchant_name}</h1>
+            <p className="text-gray-500 text-sm mt-1">{publicData?.description}</p>
+            {publicData?.expires_at && <p className="text-xs text-orange-500 font-bold mt-2 flex justify-center items-center gap-1"><Clock size={12}/> Expires: {new Date(publicData.expires_at).toLocaleString()}</p>}
           </div>
           <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative">
              <div className="flex justify-center">
-                <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />
+                {generatedQR && <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />}
              </div>
           </div>
           <div style={{color: brandColor}} className="text-4xl font-extrabold">{formatRupiah(Number(tempAmount))}</div>
@@ -760,112 +875,22 @@ export default function App() {
 
   // 3. AUTH PAGES
   if (!currentUser) {
-    if (showRegister) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-            <div className="bg-indigo-600 p-8 text-center relative">
-               <button onClick={() => {setShowRegister(false); setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button>
-               <h1 className="text-2xl font-bold text-white">Create Account</h1>
-            </div>
-            <div className="p-8">
-               <form onSubmit={handleRegister} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                    <input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)} placeholder="Choose a username" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <input type="email" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)} placeholder="your@email.com" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <input type="password" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regPass} onChange={e=>setRegPass(e.target.value)} placeholder="Choose a password" />
-                  </div>
-                  {regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}
-                  <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading ? <Loader2 className="animate-spin"/> : 'Sign Up'}</button>
-               </form>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-          <div className="bg-indigo-600 p-8 text-center relative">
-             <button onClick={() => setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button>
-            <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-          </div>
-          <div className="p-8">
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                <input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                <input type="password" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} />
-              </div>
-              {loginError && (<div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2" /> {loginError}</div>)}
-              <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading ? <Loader2 className="animate-spin" /> : 'Login'}</button>
-              <div className="text-center text-sm">
-                  <span className="text-gray-500">New here? </span>
-                  <button type="button" onClick={() => {setShowRegister(true);}} className="text-indigo-600 font-bold hover:underline">Create Account</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
+     // ... (AUTH COMPONENTS - SAME AS BEFORE) ...
+     // Re-using the same code from previous step for brevity in this delta update
+     if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-6"><div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label><input type="email" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Password</label><input type="password" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={regPass} onChange={e=>setRegPass(e.target.value)}/></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button></form></div></div></div>; }
+     return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Welcome Back</h1></div><div className="p-8"><form onSubmit={handleLogin} className="space-y-6"><div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Password</label><input type="password" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/></div>{loginError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2"/>{loginError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button><div className="text-center text-sm"><span className="text-gray-500">New here? </span><button type="button" onClick={()=>{setShowRegister(true);}} className="text-indigo-600 font-bold hover:underline">Create Account</button></div></form></div></div></div>;
   }
 
   // 4. MAIN DASHBOARD
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => {/* logic */}} branding={config.branding} />
+      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} />
 
       {/* User Management Modal */}
       {isUserModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
-             <div className="bg-indigo-600 p-4 text-white flex justify-between items-center">
-                <h3 className="font-bold">{editingUser ? 'Edit User' : 'Add New User'}</h3>
-                <button onClick={() => setUserModalOpen(false)}><X size={20}/></button>
-             </div>
-             <form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4">
-                <div>
-                   <label className="block text-sm font-medium mb-1">Role</label>
-                   <select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData, role: e.target.value as UserRole})}>
-                      {currentUser.role === 'superadmin' && (<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>)}
-                      {currentUser.role === 'merchant' && (<><option value="user">User</option><option value="cs">CS</option></>)}
-                      {currentUser.role === 'cs' && (<option value="user">User</option>)}
-                   </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                   <div>
-                      <label className="block text-sm font-medium mb-1">Username</label>
-                      <input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData, username: e.target.value})} />
-                   </div>
-                   <div>
-                      <label className="block text-sm font-medium mb-1">Password</label>
-                      <input type={editingUser ? "text" : "password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData, password: e.target.value})} placeholder={editingUser ? "Blank to keep" : "Password"} />
-                   </div>
-                </div>
-                <div>
-                   <label className="block text-sm font-medium mb-1">Email Address</label>
-                   <input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData, email: e.target.value})} placeholder="user@example.com" />
-                </div>
-                {(userFormData.role === 'merchant' || userFormData.role === 'superadmin') && (
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
-                     <p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p>
-                     <input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData, merchantName: e.target.value})} placeholder="Merchant Name" />
-                     <textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData, qrisString: e.target.value})} placeholder="QRIS String" />
-                  </div>
-                )}
-                <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading ? <Loader2 className="animate-spin"/> : 'Save User'}</button>
-             </form>
-          </div>
+           {/* ... (User Modal Code - Same as Previous) ... */}
+           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"><div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">{editingUser?'Edit User':'Add New User'}</h3><button onClick={()=>setUserModalOpen(false)}><X size={20}/></button></div><form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4"><div><label className="block text-sm font-medium mb-1">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData,role:e.target.value as UserRole})}>{currentUser.role==='superadmin'&&<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>}{currentUser.role==='merchant'&&<><option value="user">User</option><option value="cs">CS</option></>}{currentUser.role==='cs'&&<option value="user">User</option>}</select></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData,username:e.target.value})}/></div><div><label className="block text-sm font-medium mb-1">Password</label><input type={editingUser?"text":"password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData,password:e.target.value})} placeholder={editingUser?"Blank to keep":"Password"}/></div></div><div><label className="block text-sm font-medium mb-1">Email Address</label><input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData,email:e.target.value})} placeholder="user@example.com"/></div>{(userFormData.role==='merchant'||userFormData.role==='superadmin')&&<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p><input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData,merchantName:e.target.value})} placeholder="Merchant Name"/><textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData,qrisString:e.target.value})} placeholder="QRIS String"/></div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading?<Loader2 className="animate-spin"/>:'Save User'}</button></form></div>
         </div>
       )}
 
@@ -883,6 +908,7 @@ export default function App() {
              <SidebarItem active={view === 'history'} icon={<History size={20} />} label="Transactions" onClick={() => setView('history')} />
              {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'terminal'} icon={<Smartphone size={20} />} label="Terminal" onClick={() => setView('terminal')} />}
              {['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <SidebarItem active={view === 'users'} icon={<Users size={20} />} label="Users" onClick={() => setView('users')} />}
+             {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Payment Links" onClick={() => setView('links')} />}
              {currentUser.role === 'superadmin' && <SidebarItem active={view === 'integration'} icon={<Code2 size={20} />} label="Integration" onClick={() => setView('integration')} />}
              <SidebarItem active={view === 'settings'} icon={<Settings size={20} />} label="Settings & Profile" onClick={() => setView('settings')} />
           </nav>
@@ -900,7 +926,7 @@ export default function App() {
 
         <div className="flex-1 overflow-y-auto p-6 lg:p-10">
           
-          {/* DASHBOARD VIEW (RESTORED) */}
+          {/* DASHBOARD VIEW */}
           {view === 'dashboard' && (
              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -938,11 +964,11 @@ export default function App() {
              </div>
           )}
 
-          {/* TERMINAL VIEW (RESTORED) */}
+          {/* TERMINAL VIEW (UPDATED: Advanced Options) */}
           {view === 'terminal' && (
              <div className="flex flex-col lg:flex-row gap-8">
                <Card className="flex-1">
-                 <h3 className="text-lg font-bold text-gray-800 mb-4">QR Generator</h3>
+                 <h3 className="text-lg font-bold text-gray-800 mb-4">Create Payment Link</h3>
                  <div className="space-y-4">
                    <div>
                      <label className="block text-sm font-medium text-gray-600 mb-1">Amount (IDR)</label>
@@ -951,28 +977,108 @@ export default function App() {
                        <input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} />
                      </div>
                    </div>
+                   <div>
+                       <label className="block text-sm font-medium text-gray-600 mb-1">Description (Optional)</label>
+                       <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={tempDesc} onChange={e=>setTempDesc(e.target.value)} placeholder="e.g. Order #123" />
+                   </div>
+                   
+                   {/* Advanced Options */}
+                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+                       <p className="text-xs font-bold text-gray-500 uppercase">Advanced Options</p>
+                       <div>
+                           <label className="block text-sm font-medium text-gray-600 mb-1">Expiry Time (Minutes)</label>
+                           <input type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white" value={expiryMinutes} onChange={e=>setExpiryMinutes(e.target.value)} placeholder="e.g. 60 (Leave empty for no expiry)" />
+                       </div>
+                       <div className="flex items-center gap-2">
+                           <input type="checkbox" id="singleUse" checked={singleUse} onChange={e=>setSingleUse(e.target.checked)} className="h-4 w-4 text-indigo-600 rounded" />
+                           <label htmlFor="singleUse" className="text-sm text-gray-700">One-time Use (Link expires after payment)</label>
+                       </div>
+                   </div>
+
                    <button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">
-                     {apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate QRIS</span></>}
+                     {apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate Payment Link</span></>}
                    </button>
                  </div>
                </Card>
                <Card className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-dashed border-2 border-gray-200">
                   {generatedQR ? (
-                     <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300">
-                        <QRCodeDisplay data={generatedQR} width={256} logoUrl={config.branding?.logoUrl} />
-                        <div>
-                           <p className="text-sm text-gray-500 mb-1">Scan to Pay</p>
-                           <h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2>
+                     <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300 w-full">
+                        <div className="flex justify-center">
+                            <QRCodeDisplay data={generatedQR} width={200} logoUrl={config.branding?.logoUrl} />
                         </div>
+                        <div>
+                           <h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2>
+                           <p className="text-sm text-gray-500 mt-1">{tempDesc}</p>
+                        </div>
+                        {generatedLink && (
+                            <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-2 text-left">
+                                <div className="flex-1 truncate text-xs text-gray-500 font-mono">{generatedLink}</div>
+                                <button onClick={() => copyToClipboard(generatedLink)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Copy size={16}/></button>
+                                <a href={generatedLink} target="_blank" className="text-gray-500 hover:bg-gray-50 p-2 rounded"><ExternalLink size={16}/></a>
+                            </div>
+                        )}
                      </div>
                   ) : (
                      <div className="text-center text-gray-400 py-12">
                         <QrCode size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>Enter amount to generate QRIS</p>
+                        <p>Generate to create QR & Link</p>
                      </div>
                   )}
                </Card>
              </div>
+          )}
+
+          {/* PAYMENT LINKS VIEW (NEW TAB) */}
+          {view === 'links' && (
+              <Card>
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-lg">Active Payment Links</h3>
+                      <button onClick={()=>fetchTransactions(currentUser!)} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><RefreshCw size={18}/></button>
+                  </div>
+                  <div className="overflow-x-auto">
+                   <table className="w-full text-left border-collapse">
+                      <thead>
+                         <tr className="border-b border-gray-100 text-gray-500 text-sm">
+                            <th className="py-4 font-medium">Created At</th>
+                            <th className="py-4 font-medium">Amount</th>
+                            <th className="py-4 font-medium">Description</th>
+                            <th className="py-4 font-medium">Link</th>
+                            <th className="py-4 font-medium">Status</th>
+                            <th className="py-4 font-medium text-right">Action</th>
+                         </tr>
+                      </thead>
+                      <tbody className="text-sm">
+                         {transactions.filter(t => t.paymentUrl).map((t) => (
+                               <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
+                                  <td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString()}</td>
+                                  <td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td>
+                                  <td className="py-4 text-gray-600 max-w-[150px] truncate">{t.description}</td>
+                                  <td className="py-4">
+                                      <button onClick={() => copyToClipboard(t.paymentUrl || '')} className="flex items-center gap-1 text-indigo-600 hover:underline text-xs">
+                                          <LinkIcon size={12}/> Copy Link
+                                      </button>
+                                  </td>
+                                  <td className="py-4">
+                                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize 
+                                        ${t.status === 'paid' ? 'bg-green-100 text-green-700' : 
+                                          t.status === 'pending' ? 'bg-orange-100 text-orange-700' : 
+                                          'bg-red-100 text-red-700'}`}>
+                                        {t.status}
+                                     </span>
+                                  </td>
+                                  <td className="py-4 text-right flex justify-end gap-2">
+                                     {t.status === 'pending' && (
+                                         <button onClick={() => handleRevokeLink(t)} title="Revoke/Cancel Link" className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Ban size={18} /></button>
+                                     )}
+                                     <button onClick={() => { setGeneratedQR(t.qrString); setGeneratedLink(t.paymentUrl || ''); setTempAmount(t.amount.toString()); setTempDesc(t.description); setView('terminal'); }} title="View QR" className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"><Eye size={18} /></button>
+                                  </td>
+                               </tr>
+                            ))
+                         }
+                      </tbody>
+                   </table>
+                </div>
+              </Card>
           )}
 
           {/* HISTORY VIEW (RESTORED) */}
@@ -1006,7 +1112,7 @@ export default function App() {
                                   <td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td>
                                   <td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td>
                                   <td className="py-4">
-                                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{t.status}</span>
+                                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>{t.status}</span>
                                   </td>
                                   <td className="py-4 text-right">
                                      <button onClick={() => setSelectedTransaction(t)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"><Eye size={18} /></button>
@@ -1020,7 +1126,7 @@ export default function App() {
              </Card>
           )}
           
-          {/* USER MANAGEMENT (Already Implemented correctly above) */}
+          {/* USER MANAGEMENT (Already Implemented) */}
           {view === 'users' && ['superadmin', 'merchant', 'cs'].includes(currentUser.role) && (
             <Card>
               <div className="flex justify-between items-center mb-6">
@@ -1049,7 +1155,7 @@ export default function App() {
             </Card>
           )}
 
-          {/* SETTINGS VIEW (NEW: WITH SMTP) */}
+          {/* SETTINGS VIEW (Same as before) */}
           {view === 'settings' && (
              <div className="max-w-4xl mx-auto">
                  {/* Tabs */}
@@ -1114,24 +1220,106 @@ export default function App() {
                          </div>
                      </Card>
                  )}
+
+                 {/* TAB 2: Account Profile */}
+                 {settingsTab === 'account' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><UserIcon size={20}/> Edit Profile</h3>
+                         <div className="space-y-4 max-w-lg">
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Username</label>
+                                 <input type="text" className="w-full border p-2 rounded bg-gray-50" value={accountForm.username} onChange={e => setAccountForm({...accountForm, username: e.target.value})} />
+                             </div>
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Email Address</label>
+                                 <input type="email" className="w-full border p-2 rounded" value={accountForm.email} onChange={e => setAccountForm({...accountForm, email: e.target.value})} />
+                             </div>
+                             <div className="pt-4 border-t border-gray-100">
+                                 <label className="block text-sm font-medium mb-1">Change Password</label>
+                                 <input type="password" placeholder="New Password (Optional)" className="w-full border p-2 rounded mb-2" value={accountForm.newPassword} onChange={e => setAccountForm({...accountForm, newPassword: e.target.value})} />
+                             </div>
+                             <button onClick={handleUpdateAccount} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700">Update Profile</button>
+                         </div>
+                     </Card>
+                 )}
+
+                 {/* TAB 3: Branding */}
+                 {settingsTab === 'branding' && (
+                     <Card>
+                         <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold flex items-center gap-2"><Palette size={20}/> Whitelabel Branding</h3>
+                                <p className="text-sm text-gray-500">Customize how your payment page looks.</p>
+                            </div>
+                            <div className="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200">Merchant Feature</div>
+                         </div>
+                         
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                             <div className="space-y-4">
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Custom Domain (CNAME)</label>
+                                     <input type="text" placeholder="e.g. pay.mystore.com" className="w-full border p-2 rounded" value={config.branding?.customDomain || ''} onChange={e => setConfig({...config, branding: {...config.branding, customDomain: e.target.value}})} />
+                                     <p className="text-xs text-gray-400 mt-1">Point your domain CNAME to <code>{window.location.host}</code></p>
+                                 </div>
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Brand Color</label>
+                                     <div className="flex items-center gap-2">
+                                        <input type="color" className="h-10 w-10 border p-1 rounded" value={config.branding?.brandColor || '#4f46e5'} onChange={e => setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})} />
+                                        <input type="text" className="border p-2 rounded w-full" value={config.branding?.brandColor || '#4f46e5'} onChange={e => setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})} />
+                                     </div>
+                                 </div>
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Logo URL</label>
+                                     <input type="text" placeholder="https://..." className="w-full border p-2 rounded" value={config.branding?.logoUrl || ''} onChange={e => setConfig({...config, branding: {...config.branding, logoUrl: e.target.value}})} />
+                                 </div>
+                                 <button onClick={handleUpdateConfig} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 mt-4">Save Branding</button>
+                             </div>
+
+                             {/* Preview */}
+                             <div className="bg-gray-100 p-4 rounded-xl border border-gray-200 flex flex-col items-center justify-center min-h-[300px]">
+                                 <p className="text-xs font-bold text-gray-400 uppercase mb-4">Payment Page Preview</p>
+                                 <div className="bg-white p-6 rounded-2xl shadow-lg w-64 text-center">
+                                     <div className="flex justify-center mb-3">
+                                         {config.branding?.logoUrl ? (
+                                            <img src={config.branding.logoUrl} className="h-8 w-auto" />
+                                         ) : (
+                                            <div style={{backgroundColor: config.branding?.brandColor || '#4f46e5'}} className="w-8 h-8 rounded-lg flex items-center justify-center text-white"><QrCode size={16}/></div>
+                                         )}
+                                     </div>
+                                     <div className="h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-300">QR CODE</div>
+                                     <div style={{color: config.branding?.brandColor || '#4f46e5'}} className="font-bold text-xl">Rp 50.000</div>
+                                 </div>
+                             </div>
+                         </div>
+                     </Card>
+                 )}
+
+                 {/* TAB 4: SMTP */}
+                 {settingsTab === 'smtp' && (
+                     <Card>
+                         {/* ... (SMTP Content - Same as previous) ... */}
+                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Mail size={20}/> SMTP Configuration</h3><div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 flex gap-3"><div className="text-blue-600"><AlertCircle size={20}/></div><div className="text-sm text-blue-800"><strong>Why configure SMTP?</strong><br/>This allows the system to send automatic payment receipts, invoices, and notifications to your customers' email ({currentUser.email || 'user@email.com'}) when a transaction is successful.</div></div><div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">SMTP Host</label><input type="text" placeholder="smtp.gmail.com" className="w-full border p-2 rounded" value={config.smtp?.host || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})} /></div><div><label className="block text-sm font-medium mb-1">SMTP Port</label><input type="text" placeholder="587" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} /></div><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} /></div><div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} /></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Encryption</label><select className="w-full border p-2 rounded" value={config.smtp?.secure || 'tls'} onChange={e => setConfig({...config, smtp: {...config.smtp!, secure: e.target.value as any}})}><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div><div><label className="block text-sm font-medium mb-1">From Email</label><input type="email" placeholder="no-reply@domain.com" className="w-full border p-2 rounded" value={config.smtp?.fromEmail || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromEmail: e.target.value}})} /></div></div><div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2"><input type="checkbox" id="enableNotif" className="h-4 w-4 text-indigo-600 rounded" checked={config.smtp?.enableNotifications || false} onChange={e => setConfig({...config, smtp: {...config.smtp!, enableNotifications: e.target.checked}})} /><label htmlFor="enableNotif" className="text-sm font-medium text-gray-700">Send me an email notification when a payment is received.</label></div><div className="flex gap-4 pt-4 border-t border-gray-100"><button onClick={handleUpdateConfig} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2"><Save size={18}/> Save Settings</button><button onClick={handleTestEmail} disabled={apiLoading} className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2 border border-gray-200">{apiLoading ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Test Email</button></div></div>
+                     </Card>
+                 )}
              </div>
           )}
 
-          {/* INTEGRATION VIEW (RESTORED) */}
+          {/* INTEGRATION VIEW */}
           {view === 'integration' && (
              <Card>
                 <h3 className="text-xl font-bold mb-4">Integration API</h3>
                 <p className="text-gray-500 mb-6">Use these endpoints to integrate QiosLink with your custom application.</p>
                 <div className="bg-gray-900 rounded-xl p-6 text-gray-300 font-mono text-sm overflow-x-auto">
-                    <p className="text-green-400">// Create Dynamic Payment</p>
+                    <p className="text-green-400">// Create Dynamic Payment (With Options)</p>
                     <p>POST {window.location.origin}/api/create_payment.php</p>
                     <p className="mb-4">Content-Type: application/json</p>
                     <pre>{`{
   "merchant_id": "${currentUser.id}",
   "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",
   "amount": 10000,
-  "description": "Order #123",
-  "external_id": "INV-123",
+  "description": "Invoice #123",
+  "expiry_minutes": 60, // Optional: Expire in 60 mins
+  "single_use": true,   // Optional: Link becomes invalid after payment
   "callback_url": "https://your-site.com/webhook"
 }`}</pre>
                 </div>

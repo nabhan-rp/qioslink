@@ -46,9 +46,11 @@ export interface Transaction {
   customerId?: string;
   amount: number;
   description: string;
-  status: 'pending' | 'paid' | 'expired';
+  status: 'pending' | 'paid' | 'expired' | 'cancelled';
   createdAt: string;
   qrString: string;
+  paymentUrl?: string; // NEW: The shareable link
+  expiresAt?: string;  // NEW: When the link expires
 }
 
 export interface MenuItem {
@@ -57,4 +59,4 @@ export interface MenuItem {
   icon: React.ReactNode;
 }
 
-export type ViewState = 'dashboard' | 'terminal' | 'settings' | 'integration' | 'history' | 'users' | 'my_orders';
+export type ViewState = 'dashboard' | 'terminal' | 'settings' | 'integration' | 'history' | 'users' | 'links';

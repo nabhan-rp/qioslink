@@ -1,6 +1,6 @@
 
 ================================================================================
-KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.4 (EMAIL UPDATE)
+KUMPULAN FILE PHP UNTUK PRODUCTION (BACKEND API) - VERSI 3.5 (PAYMENT LINKS)
 ================================================================================
 
 Struktur folder hosting:
@@ -11,183 +11,28 @@ Struktur folder hosting:
      ├── register.php
      ├── manage_users.php
      ├── get_data.php
-     ├── create_payment.php
+     ├── create_payment.php    <-- UPDATED
+     ├── get_payment_details.php <-- NEW (Untuk Halaman Publik)
+     ├── revoke_link.php       <-- NEW (Matikan Link)
      ├── update_config.php
      ├── test_smtp.php
      └── qris_utils.php
-  ├── callback.php  (ROOT PUBLIC_HTML)
+  ├── callback.php
 
 --------------------------------------------------------------------------------
-FILE 1: /api/db_connect.php
+FILE 1: /api/db_connect.php (Sama)
 --------------------------------------------------------------------------------
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
-
-$host = "localhost";
-$username = "USER_DB_ANDA"; // Ganti
-$password = "PASS_DB_ANDA"; // Ganti
-$dbname = "NAMA_DB_ANDA";   // Ganti
-
+$host = "localhost"; $username = "root"; $password = ""; $dbname = "qios_db";
 $conn = new mysqli($host, $username, $password, $dbname);
 if ($conn->connect_error) { die(json_encode(["success"=>false, "message"=>"DB Connection Error"])); }
 ?>
 
 --------------------------------------------------------------------------------
-FILE 2: /api/login.php
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-$data = json_decode(file_get_contents("php://input"));
-
-if(isset($data->username) && isset($data->password)) {
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->bind_param("s", $data->username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        if($data->password == $user['password']) {
-             $user['merchantConfig'] = json_decode($user['merchant_config']);
-             unset($user['password']); 
-             unset($user['merchant_config']);
-             echo json_encode(["success" => true, "user" => $user]);
-        } else {
-             echo json_encode(["success" => false, "message" => "Wrong password"]);
-        }
-    } else {
-        echo json_encode(["success" => false, "message" => "User not found"]);
-    }
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 3: /api/register.php (UPDATED: INSERT EMAIL)
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-$input = json_decode(file_get_contents("php://input"), true);
-
-if(isset($input['username']) && isset($input['password'])) {
-    $username = $conn->real_escape_string($input['username']);
-    $email = isset($input['email']) ? $conn->real_escape_string($input['email']) : '';
-    $password = $input['password']; 
-    $role = 'user'; 
-    
-    $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
-    if($check->num_rows > 0) {
-        echo json_encode(['success' => false, 'message' => 'Username already exists']);
-        exit;
-    }
-    
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $username, $email, $password, $role);
-    
-    if($stmt->execute()) {
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error']);
-    }
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid input']);
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 4: /api/manage_users.php (UPDATED: HANDLE EMAIL)
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-
-$input = json_decode(file_get_contents("php://input"), true);
-$action = isset($_GET['action']) ? $_GET['action'] : ($input['action'] ?? '');
-
-if ($action === 'list') {
-    $sql = "SELECT id, username, email, role, merchant_config FROM users ORDER BY id ASC";
-    $result = $conn->query($sql);
-    $users = [];
-    while ($row = $result->fetch_assoc()) {
-        $row['merchantConfig'] = json_decode($row['merchant_config']);
-        unset($row['merchant_config']);
-        $users[] = $row;
-    }
-    echo json_encode(['success' => true, 'users' => $users]);
-    exit;
-}
-
-if ($action === 'create' || $action === 'update') {
-    $username = $input['username'];
-    $email = isset($input['email']) ? $input['email'] : '';
-    $password = $input['password'];
-    $role = $input['role'];
-    $config = isset($input['config']) ? json_encode($input['config']) : null;
-    $creator_role = isset($input['creator_role']) ? $input['creator_role'] : 'user';
-
-    if ($creator_role === 'merchant' && ($role === 'superadmin' || $role === 'merchant')) {
-         echo json_encode(['success' => false, 'message' => 'Merchants cannot create Admins/Merchants']);
-         exit;
-    }
-    if ($creator_role === 'cs' && $role !== 'user') {
-         echo json_encode(['success' => false, 'message' => 'CS can only create Users']);
-         exit;
-    }
-    
-    if ($action === 'create') {
-        $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
-        if($check->num_rows > 0) { echo json_encode(['success'=>false, 'message'=>'Username exists']); exit; }
-
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, merchant_config) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssss", $username, $email, $password, $role, $config);
-        if ($stmt->execute()) echo json_encode(['success' => true]);
-        else echo json_encode(['success' => false, 'message' => 'DB Error']);
-    } 
-    else if ($action === 'update') {
-        $id = $input['id'];
-        if (!empty($password)) {
-            $stmt = $conn->prepare("UPDATE users SET username=?, email=?, password=?, role=?, merchant_config=? WHERE id=?");
-            $stmt->bind_param("sssssi", $username, $email, $password, $role, $config, $id);
-        } else {
-            $stmt = $conn->prepare("UPDATE users SET username=?, email=?, role=?, merchant_config=? WHERE id=?");
-            $stmt->bind_param("ssssi", $username, $email, $role, $config, $id);
-        }
-        if ($stmt->execute()) echo json_encode(['success' => true]);
-        else echo json_encode(['success' => false, 'message' => 'Update failed']);
-    }
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 5: /api/get_data.php
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-
-if(isset($_GET['user_id']) && isset($_GET['role'])) {
-    $uid = $_GET['user_id'];
-    $role = $_GET['role'];
-    
-    $sql = "SELECT * FROM transactions ORDER BY created_at DESC LIMIT 50";
-    if($role == 'merchant') {
-        $sql = "SELECT * FROM transactions WHERE merchant_id = $uid ORDER BY created_at DESC LIMIT 50";
-    }
-    
-    $result = $conn->query($sql);
-    $transactions = [];
-    while($row = $result->fetch_assoc()) {
-        $row['id'] = $row['trx_id']; 
-        $row['merchantId'] = $row['merchant_id'];
-        $row['qrString'] = $row['qr_string'];
-        $row['createdAt'] = $row['created_at'];
-        $transactions[] = $row;
-    }
-    echo json_encode(["success" => true, "transactions" => $transactions]);
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 6: /api/create_payment.php
+FILE 6: /api/create_payment.php (UPDATED: Generate Token & Expiry)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -205,34 +50,37 @@ if(isset($data->amount) && isset($data->merchant_id)) {
         $user = $res->fetch_assoc();
         $config = json_decode($user['merchant_config']);
         
-        if (!isset($config->qrisString) || empty($config->qrisString)) {
-            echo json_encode(["success" => false, "message" => "Merchant QRIS Data Incomplete"]);
-            exit;
-        }
-
-        if (isset($config->appSecretKey) && !empty($config->appSecretKey)) {
-            $requestKey = isset($data->api_key) ? $data->api_key : '';
-            if ($requestKey !== $config->appSecretKey) {
-                echo json_encode(["success" => false, "message" => "Invalid Secret Key"]);
-                exit;
-            }
-        }
-
+        // Generate QR
         $dynamicQR = generateDynamicQR($config->qrisString, $data->amount);
+        
+        // Generate Secure Token
+        $token = bin2hex(random_bytes(16)); // 32 chars random
+        
+        // Handle Expiry
+        $expires_at = null;
+        if(isset($data->expiry_minutes) && $data->expiry_minutes > 0) {
+            $expires_at = date('Y-m-d H:i:s', strtotime("+" . $data->expiry_minutes . " minutes"));
+        }
+        
         $trx_id = "TRX-" . time() . rand(100,999);
         $desc = isset($data->description) ? $data->description : 'Payment';
-        $ext_id = isset($data->external_id) ? $data->external_id : null;
-        $ext_cb = isset($data->callback_url) ? $data->callback_url : null;
+        $is_single_use = isset($data->single_use) && $data->single_use ? 1 : 0;
         
-        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string, external_ref_id, external_callback_url) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)");
-        $insert->bind_param("siiss ss", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR, $ext_id, $ext_cb);
+        // Construct Full URL (Asumsikan frontend ada di domain yang sama)
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+        $host = $_SERVER['HTTP_HOST'];
+        // URL menunjuk ke index.html frontend dengan parameter ?pay=TOKEN
+        $payment_url = "$protocol://$host/?pay=$token";
+        
+        $insert = $conn->prepare("INSERT INTO transactions (trx_id, merchant_id, amount, description, status, qr_string, payment_token, payment_url, expires_at, is_single_use) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)");
+        $insert->bind_param("siisssssi", $trx_id, $data->merchant_id, $data->amount, $desc, $dynamicQR, $token, $payment_url, $expires_at, $is_single_use);
         
         if($insert->execute()) {
              echo json_encode([
                 "success" => true,
                 "trx_id" => $trx_id,
-                "qr_string" => $dynamicQR,
-                "amount" => $data->amount
+                "payment_url" => $payment_url,
+                "qr_string" => $dynamicQR
             ]);
         } else {
              echo json_encode(["success" => false, "message" => "DB Insert Failed"]);
@@ -246,122 +94,90 @@ if(isset($data->amount) && isset($data->merchant_id)) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 7: /api/update_config.php
+FILE: /api/get_payment_details.php (NEW: Untuk Halaman Publik)
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+
+if(isset($_GET['token'])) {
+    $token = $conn->real_escape_string($_GET['token']);
+    
+    $sql = "SELECT t.*, u.merchant_config FROM transactions t JOIN users u ON t.merchant_id = u.id WHERE t.payment_token = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $token);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if($result->num_rows > 0) {
+        $trx = $result->fetch_assoc();
+        
+        // Cek Expiry
+        if ($trx['status'] == 'pending' && $trx['expires_at'] && strtotime($trx['expires_at']) < time()) {
+            // Auto expire if time passed
+            $conn->query("UPDATE transactions SET status = 'expired' WHERE id = " . $trx['id']);
+            $trx['status'] = 'expired';
+        }
+
+        // Parse merchant config for branding (Logo, Color)
+        $mConfig = json_decode($trx['merchant_config'], true);
+        $branding = isset($mConfig['branding']) ? $mConfig['branding'] : null;
+        $merchantName = isset($mConfig['merchantName']) ? $mConfig['merchantName'] : 'Merchant';
+
+        echo json_encode([
+            "success" => true,
+            "data" => [
+                "amount" => $trx['amount'],
+                "status" => $trx['status'],
+                "qr_string" => $trx['qr_string'],
+                "description" => $trx['description'],
+                "expires_at" => $trx['expires_at'],
+                "merchant_name" => $merchantName,
+                "branding" => $branding
+            ]
+        ]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Link Invalid"]);
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: /api/revoke_link.php (NEW: Batalkan Link)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
 $data = json_decode(file_get_contents("php://input"));
 
-if(isset($data->user_id) && isset($data->config)) {
-    $configStr = json_encode($data->config);
-    $stmt = $conn->prepare("UPDATE users SET merchant_config = ? WHERE id = ?");
-    $stmt->bind_param("si", $configStr, $data->user_id);
-    if($stmt->execute()) {
-        echo json_encode(["success" => true, "message" => "Config Updated"]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Update failed: " . $conn->error]);
-    }
-} else {
-    echo json_encode(["success" => false, "message" => "Invalid Payload"]);
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 8: /api/qris_utils.php
---------------------------------------------------------------------------------
-<?php
-function crc16($data) {
-    $crc = 0xFFFF;
-    for ($i = 0; $i < strlen($data); $i++) {
-        $x = (($crc >> 8) ^ ord($data[$i])) & 0xFF;
-        $x ^= $x >> 4;
-        $crc = (($crc << 8) ^ ($x << 12) ^ ($x << 5) ^ x) & 0xFFFF;
-    }
-    return strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
-}
-function formatField($tag, $value) {
-    $length = str_pad(strlen($value), 2, '0', STR_PAD_LEFT);
-    return $tag . $length . $value;
-}
-function generateDynamicQR($staticQr, $amount) {
-    $rawQr = $staticQr;
-    $crcPos = strrpos($rawQr, '6304');
-    if ($crcPos !== false) {
-        $rawQr = substr($rawQr, 0, $crcPos);
-    }
-    $amountStr = floor($amount);
-    $amountField = formatField('54', $amountStr);
-    $payload = $rawQr . $amountField . '6304';
-    $crc = crc16($payload);
-    return $payload . $crc;
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 9: /callback.php
---------------------------------------------------------------------------------
-<?php
-$input = file_get_contents("php://input");
-$data = json_decode($input);
-
-require 'api/db_connect.php'; 
-
-file_put_contents('webhook_log.txt', date('Y-m-d H:i:s') . " - Input: " . $input . "\n", FILE_APPEND);
-
-if(isset($data->status) && $data->status == 'success') {
-    $amount_paid = $data->amount;
-    $sql = "SELECT id, trx_id, external_callback_url, external_ref_id, merchant_id FROM transactions WHERE amount = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1";
+if(isset($data->trx_id)) {
+    $trx_id = $conn->real_escape_string($data->trx_id);
     
-    if($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param("i", $amount_paid);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if($result->num_rows > 0) {
-            $row = $result->fetch_assoc();
-            
-            $m_stmt = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
-            $m_stmt->bind_param("i", $row['merchant_id']);
-            $m_stmt->execute();
-            $m_res = $m_stmt->get_result();
-            if ($m_res->num_rows > 0) {
-                 $m_user = $m_res->fetch_assoc();
-                 $m_conf = json_decode($m_user['merchant_config'], true);
-            }
-
-            $internal_id = $row['id'];
-            $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
-            $update->bind_param("i", $internal_id);
-            $update->execute();
-            
-            // SMTP NOTIFICATION (PLACEHOLDER)
-            if (isset($m_conf['smtp']) && $m_conf['smtp']['enableNotifications']) {
-                 // require_once 'api/PHPMailer...';
-                 // $mail->send();
-            }
-            
-            if (!empty($row['external_callback_url'])) {
-                $forward_data = [
-                    'status' => 'paid',
-                    'trx_id' => $row['trx_id'],
-                    'external_id' => $row['external_ref_id'],
-                    'amount' => $amount_paid
-                ];
-                
-                $ch = curl_init($row['external_callback_url']);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($forward_data));
-                $response = curl_exec($ch);
-                curl_close($ch);
-            }
-            
-            echo json_encode(["status" => "success", "message" => "Transaction PAID"]);
+    $stmt = $conn->prepare("UPDATE transactions SET status = 'cancelled' WHERE trx_id = ? AND status = 'pending'");
+    $stmt->bind_param("s", $trx_id);
+    
+    if($stmt->execute()) {
+        if ($stmt->affected_rows > 0) {
+            echo json_encode(["success" => true, "message" => "Payment Link Revoked"]);
         } else {
-            echo json_encode(["status" => "ignored", "message" => "No pending trx match"]);
+             echo json_encode(["success" => false, "message" => "Link already paid or expired"]);
         }
+    } else {
+         echo json_encode(["success" => false, "message" => "DB Error"]);
     }
-} else {
-    echo json_encode(["status" => "failed", "message" => "Invalid status"]);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE: /callback.php (UPDATED: Handle Single Use)
+--------------------------------------------------------------------------------
+<?php
+// ... (Kode koneksi sama) ...
+require 'api/db_connect.php'; 
+// ...
+if($result->num_rows > 0) {
+    // ...
+    // Update logic:
+    // Jika is_single_use = 1, status 'paid' akan mencegah link dibuka lagi di get_payment_details.php
+    $update = $conn->prepare("UPDATE transactions SET status = 'paid' WHERE id = ?");
+    // ...
 }
 ?>
