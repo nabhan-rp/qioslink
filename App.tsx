@@ -45,10 +45,17 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "2.6.0 (Demo Feature Update)";
-// Set this to TRUE to fix "Server connection failed" on localhost
-const IS_DEMO_MODE = true; 
-const API_BASE = './api'; 
+const APP_VERSION = "2.7.0 (Env Configured)";
+
+// Menggunakan Environment Variable (Vite Feature)
+// Cek file .env.development dan .env.production
+const IS_DEMO_MODE = (import.meta as any).env.VITE_USE_DEMO_DATA === 'true';
+const API_BASE = (import.meta as any).env.VITE_API_BASE_URL || './api';
+
+// Debug log untuk memastikan mode yang berjalan
+console.log(`[App Config] Version: ${APP_VERSION}`);
+console.log(`[App Config] Mode: ${IS_DEMO_MODE ? 'DEMO (Local Storage)' : 'PRODUCTION (PHP API)'}`);
+console.log(`[App Config] API Base: ${API_BASE}`);
 
 // --- Components ---
 
