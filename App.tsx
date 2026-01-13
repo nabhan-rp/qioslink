@@ -71,7 +71,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.4.0 (Cloud SaaS Update)";
+const APP_VERSION = "4.5.0 (Public Beta)";
 
 const getEnv = () => {
   try {
@@ -121,7 +121,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
                 <QrCode size={20} aria-hidden="true" />
               </div>
-              <span className="font-bold text-xl tracking-tight text-gray-800">QiosLink <span className="text-indigo-600 text-xs px-1 border border-indigo-200 rounded">v4</span></span>
+              <span className="font-bold text-xl tracking-tight text-gray-800">QiosLink <span className="text-indigo-600 text-xs px-1 border border-indigo-200 rounded">Beta</span></span>
             </div>
             <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
               <a href="#options" className="hover:text-indigo-600 transition-colors" title="Deployment Options">Pricing & Hosting</a>
@@ -306,12 +306,11 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                  <span className="font-bold text-gray-900">QiosLink</span>
              </div>
              <p className="text-sm text-gray-500">
-                Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
+                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
                 Sponsored by <a href="https://www.jajanserver.com" target="_blank" className="text-indigo-600 font-bold hover:underline">JajanServer</a>.
              </p>
           </div>
           
-          {/* ADDED LINKS TO FOOTER */}
           <div className="flex items-center gap-6 text-sm font-medium">
               <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
                   <PlayCircle size={16} /> Live Demo
@@ -389,7 +388,6 @@ export default function App() {
   const [apiLoading, setApiLoading] = useState(false);
   const [view, setView] = useState<ViewState>('dashboard');
   const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding' | 'smtp'>('config');
-  // Sidebar state: Default false on mobile (handled by media query logic usually, but here default true for desktop)
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
@@ -424,14 +422,10 @@ export default function App() {
   const [isPublicMode, setIsPublicMode] = useState(false);
   const [publicData, setPublicData] = useState<any>(null);
 
-  // Handle Resize for Sidebar
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
+      if (window.innerWidth >= 1024) setSidebarOpen(true);
+      else setSidebarOpen(false);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -478,7 +472,6 @@ export default function App() {
     setAuthLoading(false);
   };
 
-  // ... (ALL ACTION HANDLERS REMAIN THE SAME) ...
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
@@ -507,21 +500,17 @@ export default function App() {
   
   if (showLanding && !currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
   
-  // LOGIN SCREEN
   if (!currentUser) { 
       if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button></form></div></div></div>; } 
       return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Welcome Back</h1></div><div className="p-8"><form onSubmit={handleLogin} className="space-y-6"><div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-3 border border-gray-200 rounded-lg pr-10" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>{loginError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2"/>{loginError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button><div className="text-center text-sm"><span className="text-gray-500">New here? </span><button type="button" onClick={()=>{setShowRegister(true);}} className="text-indigo-600 font-bold hover:underline">Create Account</button></div></form></div></div></div>; 
   }
 
-  // --- DASHBOARD LAYOUT (FIXED OVERLAY SIDEBAR FOR MOBILE) ---
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
       <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} />
       
-      {/* USER MODAL */}
       {isUserModalOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"><div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">{editingUser?'Edit User':'Add New User'}</h3><button onClick={()=>setUserModalOpen(false)}><X size={20}/></button></div><form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4"><div><label className="block text-sm font-medium mb-1">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData,role:e.target.value as UserRole})}>{currentUser.role==='superadmin'&&<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>}{currentUser.role==='merchant'&&<><option value="user">User</option><option value="cs">CS</option></>}{currentUser.role==='cs'&&<option value="user">User</option>}</select></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData,username:e.target.value})}/></div><div><label className="block text-sm font-medium mb-1">Password</label><input type={editingUser?"text":"password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData,password:e.target.value})} placeholder={editingUser?"Blank to keep":"Password"}/></div></div><div><label className="block text-sm font-medium mb-1">Email Address</label><input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData,email:e.target.value})} placeholder="user@example.com"/></div>{(userFormData.role==='merchant'||userFormData.role==='superadmin')&&<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p><input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData,merchantName:e.target.value})} placeholder="Merchant Name"/><textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData,qrisString:e.target.value})} placeholder="QRIS String"/></div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading?<Loader2 className="animate-spin"/>:'Save User'}</button></form></div> </div> )}
       
-      {/* MOBILE OVERLAY BACKGROUND (Closes sidebar when clicked) */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 lg:hidden transition-opacity"
@@ -529,7 +518,6 @@ export default function App() {
         />
       )}
 
-      {/* SIDEBAR */}
       <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0`}>
         <div className="h-full flex flex-col">
           <div className="h-20 flex items-center justify-between px-6 border-b border-gray-100">
@@ -537,7 +525,6 @@ export default function App() {
               <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><QrCode size={24} /></div>
               <div><h1 className="text-xl font-bold text-gray-800">QiosLink</h1><p className="text-xs text-gray-500">{currentUser.username}</p></div>
             </div>
-            {/* CLOSE BUTTON FOR MOBILE */}
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-500 hover:text-red-500">
                 <X size={24} />
             </button>
@@ -555,11 +542,9 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
         <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-10 shrink-0">
           <div className="flex items-center gap-4">
-              {/* HAMBURGER MENU BUTTON (Visible on Mobile) */}
               <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 hover:bg-gray-100 rounded-lg lg:hidden text-gray-700">
                 <Menu size={28} />
               </button>
@@ -568,14 +553,12 @@ export default function App() {
           <div className="flex items-center gap-2">{currentUser.isVerified ? <CheckCircle2 size={16} className="text-green-500"/> : <AlertTriangle size={16} className="text-yellow-500"/>}</div>
         </header>
         
-        {/* SCROLLABLE CONTENT AREA */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20">
           <VerificationBanner user={currentUser} onVerifyClick={() => { setView('settings'); setSettingsTab('account'); }} />
           
           {view === 'dashboard' && <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-none"><div className="flex justify-between items-start"><div><p className="text-indigo-100 font-medium">Total Transactions</p><h3 className="text-4xl font-bold mt-2">{transactions.length}</h3></div><div className="bg-white/20 p-2 rounded-lg"><Wallet className="text-white" size={24}/></div></div></Card><Card><p className="text-gray-500 font-medium">Total Revenue {IS_DEMO_MODE ? '(Demo)' : ''}</p><h3 className="text-3xl font-bold text-gray-800 mt-2">{formatRupiah(transactions.reduce((acc, curr) => acc + (curr.status === 'paid' ? Number(curr.amount) : 0), 0))}</h3></Card><Card><p className="text-gray-500 font-medium">Pending</p><h3 className="text-3xl font-bold text-orange-600 mt-2">{transactions.filter(t => t.status === 'pending').length}</h3></Card></div><Card className="h-80"><h3 className="font-bold text-gray-700 mb-4">Transaction Volume</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={transactions.slice(0, 10).reverse()}><defs><linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e7ff" /><XAxis dataKey="createdAt" hide /><YAxis hide /><RechartsTooltip /><Area type="monotone" dataKey="amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorAmt)" /></AreaChart></ResponsiveContainer></Card></div>}
           {view === 'terminal' && <div className="flex flex-col lg:flex-row gap-8"><Card className="flex-1"><h3 className="text-lg font-bold text-gray-800 mb-4">Create Payment Link</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-600 mb-1">Amount (IDR)</label><div className="relative"><span className="absolute left-3 top-3 text-gray-400 font-bold">Rp</span><input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} /></div></div><div><label className="block text-sm font-medium text-gray-600 mb-1">Description (Optional)</label><input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={tempDesc} onChange={e=>setTempDesc(e.target.value)} placeholder="e.g. Order #123" /></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Advanced Options</p><div><label className="block text-sm font-medium text-gray-600 mb-1">Expiry Time (Minutes)</label><input type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white" value={expiryMinutes} onChange={e=>setExpiryMinutes(e.target.value)} placeholder="e.g. 60 (Leave empty for no expiry)" /></div><div className="flex items-center gap-2"><input type="checkbox" id="singleUse" checked={singleUse} onChange={e=>setSingleUse(e.target.checked)} className="h-4 w-4 text-indigo-600 rounded" /><label htmlFor="singleUse" className="text-sm text-gray-700">One-time Use (Link expires after payment)</label></div></div><button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">{apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate Payment Link</span></>}</button></div></Card><Card className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-dashed border-2 border-gray-200">{generatedQR ? <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300 w-full"><div className="flex justify-center"><QRCodeDisplay data={generatedQR} width={200} logoUrl={config.branding?.logoUrl} /></div><div><h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2><p className="text-sm text-gray-500 mt-1">{tempDesc}</p></div>{generatedLink && <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-2 text-left"><div className="flex-1 truncate text-xs text-gray-500 font-mono">{generatedLink}</div><button onClick={() => copyToClipboard(generatedLink)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Copy size={16}/></button><a href={generatedLink} target="_blank" className="text-gray-500 hover:bg-gray-50 p-2 rounded"><ExternalLink size={16}/></a></div>}</div> : <div className="text-center text-gray-400 py-12"><QrCode size={48} className="mx-auto mb-4 opacity-50" /><p>Generate to create QR & Link</p></div>}</Card></div>}
           
-          {/* ... SETTINGS TAB (Keep existing content, just ensuring it fits) ... */}
           {view === 'settings' && (
              <div className="max-w-4xl mx-auto w-full">
                  <div className="flex space-x-4 mb-6 border-b border-gray-200 overflow-x-auto pb-2">
@@ -634,13 +617,10 @@ export default function App() {
                          <div className={`space-y-4 transition-opacity duration-200 ${config.smtp?.useSystemSmtp ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div><label className="block text-sm font-medium mb-1">SMTP Host</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.host || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})} placeholder="smtp.gmail.com" /></div>
-                                 
                                  <div>
                                    <label className="block text-sm font-medium mb-1">SMTP Port</label>
                                    <input type="text" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} placeholder="587" />
-                                   <p className="text-xs text-gray-400 mt-1">Common ports: <strong>587</strong> (TLS), <strong>465</strong> (SSL), 25 (None)</p>
                                  </div>
-                                 
                                  <div>
                                     <label className="block text-sm font-medium mb-1">Encryption Protocol</label>
                                     <select className="w-full border p-2 rounded bg-white" value={config.smtp?.secure || 'tls'} onChange={e => setConfig({...config, smtp: {...config.smtp!, secure: e.target.value as any}})}>
@@ -649,11 +629,9 @@ export default function App() {
                                         <option value="none">None</option>
                                     </select>
                                  </div>
-
                                  <div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} placeholder="email@gmail.com" /></div>
                                  <div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} placeholder="App Password" /></div>
                              </div>
-                             
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                 <div><label className="block text-sm font-medium mb-1">From Email</label><input type="email" className="w-full border p-2 rounded" value={config.smtp?.fromEmail || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromEmail: e.target.value}})} placeholder="no-reply@domain.com" /></div>
                                 <div><label className="block text-sm font-medium mb-1">From Name</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.fromName || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromName: e.target.value}})} placeholder="My Store" /></div>
@@ -674,7 +652,7 @@ export default function App() {
           {view === 'history' && <Card><div className="flex justify-between items-center mb-6"><div className="relative max-w-sm w-full"><Search className="absolute left-3 top-3 text-gray-400" size={18} /><input type="text" placeholder="Search ID or Amount..." className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><button onClick={() => fetchTransactions(currentUser!)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><ArrowRight size={18} className="rotate-90" /></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Transaction ID</th><th className="py-4 font-medium">Date</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-gray-400">No transactions found</td></tr> : transactions.filter(t => t.id.toLowerCase().includes(searchQuery.toLowerCase())).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 font-medium text-gray-800">{t.id}</td><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>{t.status}</span></td><td className="py-4 text-right"><button onClick={() => setSelectedTransaction(t)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
           {view === 'users' && ['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">User Management</h3><button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button></div><table className="w-full text-left"><thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead><tbody>{users.map(u => (<tr key={u.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{u.username}</td><td className="px-4 py-3 text-gray-500 text-sm">{u.email || '-'}</td><td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-xs rounded-full uppercase font-bold">{u.role}</span></td><td className="px-4 py-3">{u.isVerified?<span className="text-green-600 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Verified</span>:<span className="text-yellow-600 text-xs font-bold flex items-center gap-1"><AlertTriangle size={12}/> Pending</span>}</td><td className="px-4 py-3">{(currentUser.role === 'superadmin' || (currentUser.role === 'merchant' && ['cs','user'].includes(u.role))) && (<div className="flex space-x-2">{!u.isVerified && <button onClick={() => handleManualVerifyUser(u.id)} title="Verify Manually" className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"><Check size={16} /></button>}<button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600"><Pencil size={18} /></button></div>)}</td></tr>))}</tbody></table></Card>}
           {view === 'links' && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Active Payment Links</h3><button onClick={()=>fetchTransactions(currentUser!)} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><RefreshCw size={18}/></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Created At</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Description</th><th className="py-4 font-medium">Link</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.filter(t => t.paymentUrl).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4 text-gray-600 max-w-[150px] truncate">{t.description}</td><td className="py-4"><button onClick={() => copyToClipboard(t.paymentUrl || '')} className="flex items-center gap-1 text-indigo-600 hover:underline text-xs"><LinkIcon size={12}/> Copy Link</button></td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{t.status}</span></td><td className="py-4 text-right flex justify-end gap-2">{t.status === 'pending' && <button onClick={() => handleRevokeLink(t)} title="Revoke/Cancel Link" className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Ban size={18} /></button>}<button onClick={() => { setGeneratedQR(t.qrString); setGeneratedLink(t.paymentUrl || ''); setTempAmount(t.amount.toString()); setTempDesc(t.description); setView('terminal'); }} title="View QR" className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
-          {view === 'integration' && <Card><h3 className="text-xl font-bold mb-4">Integration API</h3><p className="text-gray-500 mb-6">Use these endpoints to integrate QiosLink with your custom application.</p><div className="bg-gray-900 rounded-xl p-6 text-gray-300 font-mono text-sm overflow-x-auto"><p className="text-green-400">// Create Dynamic Payment (With Options)</p><p>POST {window.location.origin}/api/create_payment.php</p><p className="mb-4">Content-Type: application/json</p><pre>{`{\n  "merchant_id": "${currentUser.id}",\n  "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",\n  "amount": 10000,\n  "description": "Invoice #123",\n  "expiry_minutes": 60, // Optional: Expire in 60 mins\n  "single_use": true,   // Optional: Link becomes invalid after payment\n  "callback_url": "https://your-site.com/webhook"\n}`}</pre></div></Card>}
+          {view === 'integration' && <Card><h3 className="text-xl font-bold mb-4">Integration API</h3><p className="text-gray-500 mb-6">Use ini endpoints to integrate QiosLink with your custom application.</p><div className="bg-gray-900 rounded-xl p-6 text-gray-300 font-mono text-sm overflow-x-auto"><p className="text-green-400">// Create Dynamic Payment (With Options)</p><p>POST {window.location.origin}/api/create_payment.php</p><p className="mb-4">Content-Type: application/json</p><pre>{`{\n  "merchant_id": "${currentUser.id}",\n  "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",\n  "amount": 10000,\n  "description": "Invoice #123",\n  "expiry_minutes": 60, // Optional: Expire in 60 mins\n  "single_use": true,   // Optional: Link becomes invalid after payment\n  "callback_url": "https://your-site.com/webhook"\n}`}</pre></div></Card>}
         </div>
       </main>
     </div>
