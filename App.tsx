@@ -190,14 +190,14 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-            <div className="md:hidden bg-white border-b border-gray-100 animate-in slide-in-from-top-2">
-                <div className="px-4 pt-2 pb-4 space-y-1">
-                    <a href="#options" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Pricing & Hosting</a>
-                    <a href="#features" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Features</a>
-                    <a href="https://github.com/nabhan-rp/qioslink" target="_blank" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Open Source</a>
-                    <div className="pt-4 flex flex-col gap-2">
-                        <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-2 text-sm font-bold text-gray-600 border border-gray-200 rounded-lg">Log In</button>
-                        <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg shadow-lg">Get Started</button>
+            <div className="md:hidden bg-white border-b border-gray-100 animate-in slide-in-from-top-2 shadow-xl">
+                <div className="px-4 pt-2 pb-6 space-y-2">
+                    <a href="#options" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-transparent hover:border-indigo-100">Pricing & Hosting</a>
+                    <a href="#features" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-transparent hover:border-indigo-100">Features</a>
+                    <a href="https://github.com/nabhan-rp/qioslink" target="_blank" className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-transparent hover:border-indigo-100">Open Source</a>
+                    <div className="pt-4 flex flex-col gap-3">
+                        <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-gray-600 border border-gray-200 rounded-xl">Log In</button>
+                        <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-lg">Get Started</button>
                     </div>
                 </div>
             </div>
