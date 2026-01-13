@@ -495,7 +495,12 @@ export default function App() {
 
   // --- PUBLIC CHECK FUNCTION ---
   const handlePublicCheck = async (silent = false) => {
-      if (!publicData?.trx_id || !publicData?.merchant_id) return;
+      // Validasi data awal
+      if (!publicData?.trx_id || !publicData?.merchant_id) {
+          if(!silent) alert("Please wait for payment details to load fully.");
+          return;
+      }
+      
       if (IS_DEMO_MODE) {
           if (!silent) alert("Check Status Demo");
           return;
@@ -504,7 +509,7 @@ export default function App() {
       if (!silent) setIsCheckingPublic(true);
       try {
           // 1. Trigger Check Mutation
-          await fetch(`${API_BASE}/check_mutation.php`, {
+          const res = await fetch(`${API_BASE}/check_mutation.php`, {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ 
@@ -512,6 +517,8 @@ export default function App() {
                   merchant_id: publicData.merchant_id 
               })
           });
+          
+          if(!res.ok) throw new Error(`Server Error: ${res.status}`);
           
           // 2. Refresh Status
           const params = new URLSearchParams(window.location.search);
@@ -524,12 +531,15 @@ export default function App() {
                    if (data.data.status === 'paid' && !silent) {
                        alert("Payment Confirmed!");
                    } else if (data.data.status === 'pending' && !silent) {
-                       alert("Payment not found yet. Please wait a moment.");
+                       alert("Payment not received yet. Please try again in a few seconds.");
                    }
                }
           }
-      } catch (e) {
-          if (!silent) console.error("Auto check failed");
+      } catch (e: any) {
+          if (!silent) {
+              console.error("Auto check failed", e);
+              alert("Check Failed: " + e.message);
+          }
       } finally {
           if (!silent) setIsCheckingPublic(false);
       }

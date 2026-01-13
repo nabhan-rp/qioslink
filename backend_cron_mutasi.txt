@@ -1,14 +1,23 @@
 
 <?php
 // FILE: api/check_mutation.php
-// INSTRUKSI: 
-// 1. Rename file ini jadi "check_mutation.php".
-// 2. Upload ke folder /api/ di hosting.
-// 3. Anda bisa set Cron Job cPanel untuk mengakses file ini setiap menit:
-//    curl -s https://domain-anda.com/api/check_mutation.php
+// INSTRUKSI: Rename jadi check_mutation.php -> Upload ke /api/
+
+// HEADER CORS AGAR BISA DIAKSES PUBLIC
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json");
+
+// Handle Preflight
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 require 'db_connect.php';
 
+// Terima input JSON dari Frontend
 $input = json_decode(file_get_contents("php://input"), true);
 
 // Jika dipanggil manual dari tombol di Frontend (Single Check)
@@ -28,7 +37,7 @@ if ($target_merchant_id) {
 $result = $conn->query($sql);
 $updated_count = 0;
 
-if ($result->num_rows > 0) {
+if ($result && $result->num_rows > 0) {
     while ($merchant = $result->fetch_assoc()) {
         $config = json_decode($merchant['merchant_config'], true);
         $m_code = $config['merchantCode'] ?? '';
@@ -42,9 +51,14 @@ if ($result->num_rows > 0) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        // Timeout pendek agar tidak loading lama di frontend
         curl_setopt($ch, CURLOPT_TIMEOUT, 15); 
         $response = curl_exec($ch);
+        
+        if (curl_errno($ch)) {
+            // Jika koneksi ke Qiospay gagal, skip ke merchant berikutnya
+            curl_close($ch);
+            continue;
+        }
         curl_close($ch);
 
         $mutasi = json_decode($response, true);
@@ -59,7 +73,6 @@ if ($result->num_rows > 0) {
                 $amount_paid = (int)$data['amount'];
                 
                 // Cari transaksi pending dengan nominal ini milik merchant ini
-                // Kita cari yang paling baru
                 $checkSql = "SELECT id, trx_id, external_callback_url, external_ref_id FROM transactions 
                              WHERE merchant_id = {$merchant['merchant_id']} 
                              AND amount = $amount_paid 
@@ -68,7 +81,7 @@ if ($result->num_rows > 0) {
                 
                 $trxResult = $conn->query($checkSql);
 
-                if ($trxResult->num_rows > 0) {
+                if ($trxResult && $trxResult->num_rows > 0) {
                     $trx = $trxResult->fetch_assoc();
                     $trx_id_internal = $trx['id'];
 
@@ -88,6 +101,7 @@ if ($result->num_rows > 0) {
                         $chf = curl_init($trx['external_callback_url']);
                         curl_setopt($chf, CURLOPT_RETURNTRANSFER, true);
                         curl_setopt($chf, CURLOPT_POSTFIELDS, http_build_query($forward_data));
+                        curl_setopt($chf, CURLOPT_TIMEOUT, 5); // Timeout cepat untuk forwarding
                         curl_exec($chf);
                         curl_close($chf);
                     }
