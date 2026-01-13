@@ -73,7 +73,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.6.0 (Public Beta)";
+const APP_VERSION = "4.7.0 (Public Beta)";
 
 const getEnv = () => {
   try {
@@ -384,7 +384,7 @@ const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   callbackUrl: "https://your-domain.com/callback.php",
   branding: { brandColor: '#4f46e5', customDomain: '' },
   smtp: { host: 'smtp.gmail.com', port: '587', user: 'your-email@gmail.com', pass: 'app-password', secure: 'tls', fromName: 'QiosLink Notification', fromEmail: 'no-reply@qioslink.com', enableNotifications: false, useSystemSmtp: false, requireEmailVerification: false },
-  kyc: { provider: 'manual' } // Default Manual
+  kyc: { enabled: false, provider: 'manual' } // Default Manual, Feature OFF
 };
 
 const MOCK_USERS: User[] = [
@@ -600,11 +600,26 @@ export default function App() {
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
   
-  const handleStartDiditKyc = () => {
-      // Logic for Didit.me integration would go here.
-      // 1. Create session via Backend API
-      // 2. Redirect user to Didit verification URL
-      alert("Didit.me Integration: This would redirect to Didit.me verification flow.");
+  const handleStartDiditKyc = async () => {
+      setApiLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/create_kyc_session.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ user_id: currentUser?.id })
+          });
+          const data = await res.json();
+          
+          if (data.success && data.verification_url) {
+              window.location.href = data.verification_url;
+          } else {
+              alert("Failed to start KYC: " + (data.message || "Unknown error"));
+          }
+      } catch (e) {
+          alert("Didit.me is not configured on this demo server.");
+      } finally {
+          setApiLoading(false);
+      }
   };
 
   const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
@@ -820,36 +835,40 @@ export default function App() {
                                     </div>
                                 )}
 
-                                {/* 2. KYC STATUS */}
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-full ${currentUser.isKycVerified ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
-                                            <ScanFace size={20}/>
+                                {/* 2. KYC STATUS (CONDITIONAL) */}
+                                {(config.kyc?.enabled) && (
+                                    <>
+                                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 animate-in fade-in">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-full ${currentUser.isKycVerified ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
+                                                    <ScanFace size={20}/>
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-800">Identity Verified (KYC)</p>
+                                                    <p className="text-xs text-gray-500">Official ID Verification</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {currentUser.isKycVerified ? (
+                                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">YES</span>
+                                                ) : (
+                                                    <span className="px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-bold uppercase">NO</span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-gray-800">Identity Verified (KYC)</p>
-                                            <p className="text-xs text-gray-500">Official ID Verification</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        {currentUser.isKycVerified ? (
-                                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">YES</span>
-                                        ) : (
-                                            <span className="px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-bold uppercase">NO</span>
+                                        {!currentUser.isKycVerified && (
+                                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
+                                                <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
+                                                <button 
+                                                    onClick={config.kyc?.provider === 'didit' ? handleStartDiditKyc : () => window.open(`https://wa.me/628123456789?text=Halo%20Admin,%20saya%20${currentUser.username}%20ingin%20verifikasi%20KYC%20manual.`, '_blank')}
+                                                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+                                                >
+                                                    <ScanFace size={18}/> 
+                                                    {config.kyc?.provider === 'didit' ? 'Start Automated Verification' : 'Contact Admin for Manual Verification'}
+                                                </button>
+                                            </div>
                                         )}
-                                    </div>
-                                </div>
-                                {!currentUser.isKycVerified && (
-                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                                        <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
-                                        <button 
-                                            onClick={config.kyc?.provider === 'didit' ? handleStartDiditKyc : () => window.open(`https://wa.me/628123456789?text=Halo%20Admin,%20saya%20${currentUser.username}%20ingin%20verifikasi%20KYC%20manual.`, '_blank')}
-                                            className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
-                                        >
-                                            <ScanFace size={18}/> 
-                                            {config.kyc?.provider === 'didit' ? 'Start Automated Verification' : 'Contact Admin for Manual Verification'}
-                                        </button>
-                                    </div>
+                                    </>
                                 )}
                             </div>
                          </Card>
@@ -912,88 +931,112 @@ export default function App() {
                  {settingsTab === 'kyc' && (
                      <Card>
                          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><ScanFace size={20}/> KYC Configuration (Didit.me)</h3>
-                         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-6 text-sm text-indigo-800">
-                             Configure how users verify their identity. You can use <strong>Manual Verification</strong> (Admin approves via WhatsApp/Email) or <strong>Automated Verification</strong> using Didit.me API.
+                         
+                         {/* TOGGLE ENABLE KYC */}
+                         <div className="mb-6 p-4 border border-indigo-100 rounded-lg bg-indigo-50/50">
+                             <div className="flex items-center gap-2">
+                                 <input 
+                                    type="checkbox" 
+                                    id="enableKyc" 
+                                    className="h-5 w-5 text-indigo-600 rounded" 
+                                    checked={config.kyc?.enabled || false} 
+                                    onChange={e => setConfig({...config, kyc: {...config.kyc!, enabled: e.target.checked}})} 
+                                 />
+                                 <div>
+                                     <label htmlFor="enableKyc" className="text-base font-medium text-gray-900 cursor-pointer">Enable Identity Verification System</label>
+                                     <p className="text-sm text-gray-500">If enabled, users will see an option to verify their identity in their account settings.</p>
+                                 </div>
+                             </div>
                          </div>
                          
-                         <div className="space-y-4">
-                             <div>
-                                 <label className="block text-sm font-medium mb-1">Verification Provider</label>
-                                 <select 
-                                    className="w-full border p-2 rounded bg-white"
-                                    value={config.kyc?.provider || 'manual'}
-                                    onChange={e => setConfig({...config, kyc: {...config.kyc, provider: e.target.value as any}})}
-                                 >
-                                     <option value="manual">Manual (Contact Admin)</option>
-                                     <option value="didit">Didit.me (Automated)</option>
-                                 </select>
-                             </div>
+                         {config.kyc?.enabled && (
+                            <div className="animate-in fade-in slide-in-from-top-4">
+                                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-6 text-sm text-indigo-800">
+                                     Configure how users verify their identity. You can use <strong>Manual Verification</strong> (Admin approves via WhatsApp/Email) or <strong>Automated Verification</strong> using Didit.me API.
+                                </div>
+                                 
+                                <div className="space-y-4">
+                                     <div>
+                                         <label className="block text-sm font-medium mb-1">Verification Provider</label>
+                                         <select 
+                                            className="w-full border p-2 rounded bg-white"
+                                            value={config.kyc?.provider || 'manual'}
+                                            onChange={e => setConfig({...config, kyc: {...config.kyc!, provider: e.target.value as any}})}
+                                         >
+                                             <option value="manual">Manual (Contact Admin)</option>
+                                             <option value="didit">Didit.me (Automated)</option>
+                                         </select>
+                                     </div>
 
-                             {config.kyc?.provider === 'didit' && (
-                                 <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
-                                     <div className="bg-white border p-4 rounded-lg">
-                                         <h4 className="font-bold text-gray-800 mb-2">Didit.me API Credentials</h4>
-                                         <p className="text-xs text-gray-500 mb-4">Get these from your <a href="https://business.didit.me" target="_blank" className="text-blue-600 underline">Didit Business Console</a>.</p>
-                                         
-                                         <div className="space-y-3">
-                                             <div>
-                                                 <label className="block text-sm font-medium mb-1">Client ID</label>
-                                                 <input 
-                                                    type="text" 
-                                                    className="w-full border p-2 rounded" 
-                                                    value={config.kyc?.diditClientId || ''}
-                                                    onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientId: e.target.value}})}
-                                                    placeholder="Enter Client ID"
-                                                 />
-                                             </div>
-                                             <div>
-                                                 <label className="block text-sm font-medium mb-1">Client Secret</label>
-                                                 <input 
-                                                    type="password" 
-                                                    className="w-full border p-2 rounded" 
-                                                    value={config.kyc?.diditClientSecret || ''}
-                                                    onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientSecret: e.target.value}})}
-                                                    placeholder="Enter Client Secret"
-                                                 />
-                                             </div>
-                                             <div>
-                                                 <label className="block text-sm font-medium mb-1">Callback URL (Optional)</label>
-                                                 <input 
-                                                    type="text" 
-                                                    className="w-full border p-2 rounded bg-gray-50" 
-                                                    readOnly
-                                                    value={`${window.location.origin}/api/kyc_callback.php`} 
-                                                 />
-                                                 <p className="text-xs text-gray-400 mt-1">Set this in your Didit Console Webhook settings.</p>
+                                     {config.kyc?.provider === 'didit' && (
+                                         <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
+                                             <div className="bg-white border p-4 rounded-lg">
+                                                 <h4 className="font-bold text-gray-800 mb-2">Didit.me API Credentials</h4>
+                                                 <p className="text-xs text-gray-500 mb-4">Get these from your <a href="https://business.didit.me" target="_blank" className="text-blue-600 underline">Didit Business Console</a>.</p>
+                                                 
+                                                 <div className="space-y-3">
+                                                     <div>
+                                                         <label className="block text-sm font-medium mb-1">Client ID</label>
+                                                         <input 
+                                                            type="text" 
+                                                            className="w-full border p-2 rounded" 
+                                                            value={config.kyc?.diditClientId || ''}
+                                                            onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientId: e.target.value}})}
+                                                            placeholder="Enter Client ID"
+                                                         />
+                                                     </div>
+                                                     <div>
+                                                         <label className="block text-sm font-medium mb-1">Client Secret</label>
+                                                         <input 
+                                                            type="password" 
+                                                            className="w-full border p-2 rounded" 
+                                                            value={config.kyc?.diditClientSecret || ''}
+                                                            onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientSecret: e.target.value}})}
+                                                            placeholder="Enter Client Secret"
+                                                         />
+                                                     </div>
+                                                     <div>
+                                                         <label className="block text-sm font-medium mb-1">Callback URL (Optional)</label>
+                                                         <input 
+                                                            type="text" 
+                                                            className="w-full border p-2 rounded bg-gray-50" 
+                                                            readOnly
+                                                            value={`${window.location.origin}/api/kyc_callback.php`} 
+                                                         />
+                                                         <p className="text-xs text-gray-400 mt-1">Set this in your Didit Console Webhook settings.</p>
+                                                     </div>
+                                                 </div>
                                              </div>
                                          </div>
-                                     </div>
-                                 </div>
-                             )}
+                                     )}
+                                </div>
+                            </div>
+                         )}
 
-                             <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">
-                                 {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings
-                             </button>
-                         </div>
+                         <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">
+                             {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings
+                         </button>
                      </Card>
                  )}
              </div>
           )}
           {view === 'history' && <Card><div className="flex justify-between items-center mb-6"><div className="relative max-w-sm w-full"><Search className="absolute left-3 top-3 text-gray-400" size={18} /><input type="text" placeholder="Search ID or Amount..." className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><button onClick={() => fetchTransactions(currentUser!)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><ArrowRight size={18} className="rotate-90" /></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Transaction ID</th><th className="py-4 font-medium">Date</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-gray-400">No transactions found</td></tr> : transactions.filter(t => t.id.toLowerCase().includes(searchQuery.toLowerCase())).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 font-medium text-gray-800">{t.id}</td><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>{t.status}</span></td><td className="py-4 text-right"><button onClick={() => setSelectedTransaction(t)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
-          {view === 'users' && ['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">User Management</h3><button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button></div><table className="w-full text-left"><thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Email Verif</th><th className="px-4 py-3">KYC Verif</th><th className="px-4 py-3">Actions</th></tr></thead><tbody>{users.map(u => (<tr key={u.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{u.username}</td><td className="px-4 py-3 text-gray-500 text-sm">{u.email || '-'}</td><td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-xs rounded-full uppercase font-bold">{u.role}</span></td>
+          {view === 'users' && ['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">User Management</h3><button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button></div><table className="w-full text-left"><thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Email Verif</th>{config.kyc?.enabled && <th className="px-4 py-3">KYC Verif</th>}<th className="px-4 py-3">Actions</th></tr></thead><tbody>{users.map(u => (<tr key={u.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{u.username}</td><td className="px-4 py-3 text-gray-500 text-sm">{u.email || '-'}</td><td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-xs rounded-full uppercase font-bold">{u.role}</span></td>
             {/* EMAIL STATUS */}
             <td className="px-4 py-3">{u.isVerified?
                 <span className="text-green-600 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> YES</span>:
                 <span className="text-yellow-600 text-xs font-bold flex items-center gap-1"><AlertTriangle size={12}/> NO</span>
             }</td>
-            {/* KYC STATUS */}
-            <td className="px-4 py-3">{u.isKycVerified?
-                <span className="text-blue-600 text-xs font-bold flex items-center gap-1"><ScanFace size={12}/> YES</span>:
-                <span className="text-gray-400 text-xs font-bold flex items-center gap-1">NO</span>
-            }</td>
+            {/* KYC STATUS (CONDITIONAL) */}
+            {config.kyc?.enabled && (
+                <td className="px-4 py-3">{u.isKycVerified?
+                    <span className="text-blue-600 text-xs font-bold flex items-center gap-1"><ScanFace size={12}/> YES</span>:
+                    <span className="text-gray-400 text-xs font-bold flex items-center gap-1">NO</span>
+                }</td>
+            )}
             <td className="px-4 py-3">{(currentUser.role === 'superadmin' || (currentUser.role === 'merchant' && ['cs','user'].includes(u.role))) && (<div className="flex space-x-2">
                 {!u.isVerified && <button onClick={() => handleManualVerifyUser(u.id)} title="Approve Email" className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"><Check size={16} /></button>}
-                {!u.isKycVerified && <button onClick={() => handleManualApproveKyc(u.id)} title="Approve KYC" className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><ScanFace size={16} /></button>}
+                {config.kyc?.enabled && !u.isKycVerified && <button onClick={() => handleManualApproveKyc(u.id)} title="Approve KYC" className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><ScanFace size={16} /></button>}
                 <button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg"><Pencil size={18} /></button><button onClick={() => handleDeleteUser(u)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg" title="Delete User"><Trash2 size={18} /></button></div>)}</td></tr>))}</tbody></table></Card>}
           {view === 'links' && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Active Payment Links</h3><button onClick={()=>fetchTransactions(currentUser!)} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><RefreshCw size={18}/></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Created At</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Description</th><th className="py-4 font-medium">Link</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.filter(t => t.paymentUrl).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4 text-gray-600 max-w-[150px] truncate">{t.description}</td><td className="py-4"><button onClick={() => copyToClipboard(t.paymentUrl || '')} className="flex items-center gap-1 text-indigo-600 hover:underline text-xs"><LinkIcon size={12}/> Copy Link</button></td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{t.status}</span></td><td className="py-4 text-right flex justify-end gap-2">{t.status === 'pending' && <button onClick={() => handleRevokeLink(t)} title="Revoke/Cancel Link" className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Ban size={18} /></button>}<button onClick={() => { setGeneratedQR(t.qrString); setGeneratedLink(t.paymentUrl || ''); setTempAmount(t.amount.toString()); setTempDesc(t.description); setView('terminal'); }} title="View QR" className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
           {view === 'integration' && <Card><h3 className="text-xl font-bold mb-4">Integration API</h3><p className="text-gray-500 mb-6">Use these endpoints to integrate QiosLink with your custom application.</p><div className="bg-gray-900 rounded-xl p-6 text-gray-300 font-mono text-sm overflow-x-auto"><p className="text-green-400">// Create Dynamic Payment (With Options)</p><p>POST {window.location.origin}/api/create_payment.php</p><p className="mb-4">Content-Type: application/json</p><pre>{`{\n  "merchant_id": "${currentUser.id}",\n  "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",\n  "amount": 10000,\n  "description": "Invoice #123",\n  "expiry_minutes": 60, // Optional: Expire in 60 mins\n  "single_use": true,   // Optional: Link becomes invalid after payment\n  "callback_url": "https://your-site.com/webhook"\n}`}</pre></div></Card>}

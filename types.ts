@@ -38,6 +38,7 @@ export interface SmtpConfig {
 
 // NEW: Konfigurasi KYC (Didit.me)
 export interface KycConfig {
+  enabled: boolean; // Toggle On/Off Feature
   provider: 'manual' | 'didit';
   diditClientId?: string;
   diditClientSecret?: string;
