@@ -63,7 +63,8 @@ import {
   Chrome,
   Fingerprint,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  HelpCircle as QuestionMark
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -79,7 +80,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.6 (Enterprise Beta)";
+const APP_VERSION = "4.8.7 (Enterprise Beta)";
 
 const getEnv = () => {
   try {
@@ -514,6 +515,17 @@ export default function App() {
   const [systemConfig, setSystemConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
   
   const [loginMode, setLoginMode] = useState<'standard' | 'whatsapp' | 'social'>('standard'); 
+  
+  // FORGOT PASSWORD STATE
+  const [showForgotPass, setShowForgotPass] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'input' | 'method' | 'verify' | 'reset'>('input');
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotMethods, setForgotMethods] = useState<{has_wa: boolean, phone_masked: string, has_email: boolean, email_masked: string} | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<'wa' | 'email'>('email');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmNewPass, setConfirmNewPass] = useState('');
 
   useEffect(() => {
     const handleResize = () => {
@@ -793,6 +805,89 @@ export default function App() {
       }
   };
 
+  // --- FORGOT PASSWORD HANDLERS ---
+  const handleForgotCheck = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          setTimeout(() => {
+              setForgotMethods({has_wa: true, phone_masked: "081****789", has_email: true, email_masked: "ad***@example.com"});
+              setForgotStep('method');
+              setApiLoading(false);
+          }, 500);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/forgot_password.php?action=check`, {
+                  method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier })
+              });
+              const data = await res.json();
+              if(data.success) {
+                  setForgotMethods(data.methods);
+                  setForgotStep('method');
+                  if(!data.methods.has_wa) setSelectedMethod('email');
+              } else alert(data.message);
+          } catch(e) { alert("Connection error"); } finally { setApiLoading(false); }
+      }
+  };
+
+  const handleForgotSend = async () => {
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          if(selectedMethod === 'wa') { alert("OTP: 123456 (Demo)"); setForgotStep('verify'); }
+          else { alert("Link sent to email (Demo)"); setShowForgotPass(false); setForgotStep('input'); }
+          setApiLoading(false);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/forgot_password.php?action=send`, {
+                  method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier, method: selectedMethod })
+              });
+              const data = await res.json();
+              if(data.success) {
+                  if(selectedMethod === 'wa') { setForgotStep('verify'); }
+                  else { alert(data.message); setShowForgotPass(false); setForgotStep('input'); }
+              } else alert(data.message);
+          } catch(e) { alert("Error"); } finally { setApiLoading(false); }
+      }
+  };
+
+  const handleForgotVerify = async () => {
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          if(forgotOtp === '123456') { setForgotStep('reset'); setResetToken('demo-token'); } 
+          else alert('Invalid OTP');
+          setApiLoading(false);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/forgot_password.php?action=verify`, {
+                  method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier, otp: forgotOtp })
+              });
+              const data = await res.json();
+              if(data.success) { setResetToken(data.token); setForgotStep('reset'); }
+              else alert(data.message);
+          } catch(e) { alert("Error"); } finally { setApiLoading(false); }
+      }
+  };
+
+  const handleForgotReset = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if(newPass !== confirmNewPass) return alert("Password mismatch");
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          alert("Password Reset Success (Demo)");
+          setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier('');
+          setApiLoading(false);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/forgot_password.php?action=reset`, {
+                  method: 'POST', body: JSON.stringify({ token: resetToken, password: newPass })
+              });
+              const data = await res.json();
+              if(data.success) { alert("Password changed successfully. Please login."); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); }
+              else alert(data.message);
+          } catch(e) { alert("Error"); } finally { setApiLoading(false); }
+      }
+  };
+
   const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
   const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); setLoginError(''); setApiLoading(true); if (IS_DEMO_MODE) { let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); else setLoginError('Invalid (Demo: user=pass)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const text = await res.text(); if (!text || text.trim() === '') throw new Error("Empty Response"); let data; try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } } };
   const handleRegister = async (e: React.FormEvent) => { e.preventDefault(); setRegError(''); if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } setApiLoading(true); if (IS_DEMO_MODE) { const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Success (Demo)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } if (data.success) { alert('Success! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else setRegError(data.message || 'Failed'); } catch (err: any) { setRegError(err.message || 'Error'); } finally { setApiLoading(false); } } };
@@ -919,6 +1014,91 @@ export default function App() {
       // --- LOGIN SCREEN UPDATE ---
       return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          
+          {/* FORGOT PASSWORD MODAL */}
+          {showForgotPass && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden relative">
+                      <button onClick={()=>setShowForgotPass(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                      <div className="p-6">
+                          <h3 className="text-xl font-bold mb-4 text-center">Reset Password</h3>
+                          
+                          {/* Step 1: Input Identifier */}
+                          {forgotStep === 'input' && (
+                              <form onSubmit={handleForgotCheck} className="space-y-4">
+                                  <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">Username or Email</label>
+                                      <input type="text" className="w-full border p-2 rounded-lg" value={forgotIdentifier} onChange={e=>setForgotIdentifier(e.target.value)} required />
+                                  </div>
+                                  <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">
+                                      {apiLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Check Account'}
+                                  </button>
+                              </form>
+                          )}
+
+                          {/* Step 2: Select Method */}
+                          {forgotStep === 'method' && forgotMethods && (
+                              <div className="space-y-4">
+                                  <p className="text-sm text-gray-600">Select verifcation method:</p>
+                                  
+                                  {forgotMethods.has_email && (
+                                      <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${selectedMethod==='email'?'border-indigo-500 bg-indigo-50':''}`}>
+                                          <input type="radio" name="method" value="email" checked={selectedMethod==='email'} onChange={()=>setSelectedMethod('email')} />
+                                          <div>
+                                              <p className="font-bold text-sm">Email Verification</p>
+                                              <p className="text-xs text-gray-500">Send link to {forgotMethods.email_masked}</p>
+                                          </div>
+                                      </label>
+                                  )}
+
+                                  {forgotMethods.has_wa && (
+                                      <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${selectedMethod==='wa'?'border-green-500 bg-green-50':''}`}>
+                                          <input type="radio" name="method" value="wa" checked={selectedMethod==='wa'} onChange={()=>setSelectedMethod('wa')} />
+                                          <div>
+                                              <p className="font-bold text-sm">WhatsApp OTP</p>
+                                              <p className="text-xs text-gray-500">Send code to {forgotMethods.phone_masked}</p>
+                                          </div>
+                                      </label>
+                                  )}
+
+                                  <button onClick={handleForgotSend} disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">
+                                      {apiLoading ? <Loader2 className="animate-spin mx-auto"/> : (selectedMethod==='wa' ? 'Send OTP Code' : 'Send Reset Link')}
+                                  </button>
+                              </div>
+                          )}
+
+                          {/* Step 3: Verify OTP (WA Only) */}
+                          {forgotStep === 'verify' && (
+                              <div className="space-y-4">
+                                  <p className="text-sm text-gray-600 text-center">Enter the code sent to your WhatsApp</p>
+                                  <input type="text" className="w-full border p-2 rounded-lg text-center text-2xl tracking-widest" maxLength={6} value={forgotOtp} onChange={e=>setForgotOtp(e.target.value)} placeholder="000000" />
+                                  <button onClick={handleForgotVerify} disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">
+                                      {apiLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Verify Code'}
+                                  </button>
+                              </div>
+                          )}
+
+                          {/* Step 4: Reset Password */}
+                          {forgotStep === 'reset' && (
+                              <form onSubmit={handleForgotReset} className="space-y-4">
+                                  <div>
+                                      <label className="block text-sm font-medium mb-1">New Password</label>
+                                      <input type="password" className="w-full border p-2 rounded-lg" value={newPass} onChange={e=>setNewPass(e.target.value)} required />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                                      <input type="password" className="w-full border p-2 rounded-lg" value={confirmNewPass} onChange={e=>setConfirmNewPass(e.target.value)} required />
+                                  </div>
+                                  <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">
+                                      {apiLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Change Password'}
+                                  </button>
+                              </form>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          )}
+
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
               <div className="bg-indigo-600 p-8 text-center relative">
                   <button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button>
@@ -936,7 +1116,13 @@ export default function App() {
                   {loginMode === 'standard' && (
                       <form onSubmit={handleLogin} className="space-y-6">
                           <div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-2">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-3 border border-gray-200 rounded-lg pr-10" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
+                          <div>
+                              <div className="flex justify-between items-center mb-2">
+                                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                                  <button type="button" onClick={() => setShowForgotPass(true)} className="text-xs text-indigo-600 font-bold hover:underline">Forgot?</button>
+                              </div>
+                              <div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-3 border border-gray-200 rounded-lg pr-10" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
+                          </div>
                           {loginError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2"/>{loginError}</div>}
                           <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button>
                       </form>
@@ -1329,54 +1515,6 @@ export default function App() {
                              </div>
                          </Card>
 
-                         {/* 4. SOCIAL LOGIN */}
-                         <Card>
-                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Globe size={20}/> Social Login (OAuth)</h3>
-                             <div className="space-y-6">
-                                 {/* Google */}
-                                 <div className="border rounded-xl p-4">
-                                     <div className="flex items-center justify-between mb-4">
-                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Chrome size={20} className="text-red-500"/> Google Login</div>
-                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.google} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, google: e.target.checked}}})} />
-                                     </div>
-                                     {config.auth?.socialLogin?.google && (
-                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
-                                             <input type="text" className="border p-2 rounded text-sm" placeholder="Client ID" value={config.auth?.socialLogin?.googleClientId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientId: e.target.value}}})} />
-                                             <input type="password" className="border p-2 rounded text-sm" placeholder="Client Secret" value={config.auth?.socialLogin?.googleClientSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientSecret: e.target.value}}})} />
-                                         </div>
-                                     )}
-                                 </div>
-
-                                 {/* Facebook */}
-                                 <div className="border rounded-xl p-4">
-                                     <div className="flex items-center justify-between mb-4">
-                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Facebook size={20} className="text-blue-600"/> Facebook Login</div>
-                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.facebook} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebook: e.target.checked}}})} />
-                                     </div>
-                                     {config.auth?.socialLogin?.facebook && (
-                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
-                                             <input type="text" className="border p-2 rounded text-sm" placeholder="App ID" value={config.auth?.socialLogin?.facebookAppId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppId: e.target.value}}})} />
-                                             <input type="password" className="border p-2 rounded text-sm" placeholder="App Secret" value={config.auth?.socialLogin?.facebookAppSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppSecret: e.target.value}}})} />
-                                         </div>
-                                     )}
-                                 </div>
-
-                                 {/* Github */}
-                                 <div className="border rounded-xl p-4">
-                                     <div className="flex items-center justify-between mb-4">
-                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Github size={20}/> Github Login</div>
-                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.github} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, github: e.target.checked}}})} />
-                                     </div>
-                                     {config.auth?.socialLogin?.github && (
-                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
-                                             <input type="text" className="border p-2 rounded text-sm" placeholder="Client ID" value={config.auth?.socialLogin?.githubClientId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientId: e.target.value}}})} />
-                                             <input type="password" className="border p-2 rounded text-sm" placeholder="Client Secret" value={config.auth?.socialLogin?.githubClientSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientSecret: e.target.value}}})} />
-                                         </div>
-                                     )}
-                                 </div>
-                             </div>
-                         </Card>
-
                          <button onClick={handleUpdateConfig} disabled={apiLoading} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
                              {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save All Security Settings
                          </button>
@@ -1385,14 +1523,82 @@ export default function App() {
              </div>
           )}
           
-          {/* --- ACCOUNT TAB (UPDATED MANUAL BUTTON) --- */}
+          {/* --- ACCOUNT TAB (RESTORED CONTENT) --- */}
           {view === 'settings' && settingsTab === 'account' && (
              <div className="space-y-6">
-                 {/* ... (Existing Verification List) ... */}
+                 {/* 1. Account Details Form */}
                  <Card>
-                    {/* ... */}
+                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><UserIcon size={20}/> Profile Details</h3>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div>
+                             <label className="block text-sm font-medium mb-1">Username</label>
+                             <input type="text" className="w-full border p-2 rounded bg-gray-50" value={accountForm.username} readOnly />
+                         </div>
+                         <div>
+                             <label className="block text-sm font-medium mb-1">Email Address</label>
+                             <div className="flex gap-2">
+                                 <input type="email" className="w-full border p-2 rounded" value={accountForm.email} onChange={e => setAccountForm({...accountForm, email: e.target.value})} />
+                                 {currentUser.isVerified ? 
+                                     <span className="text-green-500 flex items-center" title="Verified"><CheckCircle2 size={20}/></span> : 
+                                     <button onClick={() => {}} className="text-xs bg-yellow-100 text-yellow-700 px-2 rounded hover:bg-yellow-200">Verify</button>
+                                 }
+                             </div>
+                         </div>
+                         <div>
+                             <label className="block text-sm font-medium mb-1">WhatsApp Number</label>
+                             <div className="flex gap-2">
+                                 <input type="text" className="w-full border p-2 rounded" value={accountForm.phone} onChange={e => setAccountForm({...accountForm, phone: e.target.value})} placeholder="628..." />
+                                 {currentUser.isPhoneVerified ? 
+                                     <span className="text-green-500 flex items-center" title="Verified"><CheckCircle2 size={20}/></span> : 
+                                     <span className="text-gray-300 flex items-center" title="Not Verified"><MinusCircle size={20}/></span>
+                                 }
+                             </div>
+                         </div>
+                     </div>
+                 </Card>
+
+                 {/* 2. Verification Status */}
+                 <Card>
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Verification Status</h3>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                                <Mail size={20} className="text-gray-500"/>
+                                <div><p className="font-medium">Email Verification</p><p className="text-xs text-gray-500">{currentUser.email}</p></div>
+                            </div>
+                            {currentUser.isVerified ? 
+                                <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : 
+                                <div className="flex gap-2"><input type="text" placeholder="OTP" className="w-20 border p-1 rounded text-xs" value={otpCode} onChange={e=>setOtpCode(e.target.value)} /><button onClick={handleVerifyEmail} className="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Submit</button><button onClick={handleResendOtp} className="text-xs text-indigo-600 underline">Resend</button></div>
+                            }
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                                <Phone size={20} className="text-gray-500"/>
+                                <div><p className="font-medium">WhatsApp Verification</p><p className="text-xs text-gray-500">{currentUser.phone || 'Not set'}</p></div>
+                            </div>
+                            {currentUser.isPhoneVerified ? 
+                                <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : 
+                                <button onClick={() => { if(!accountForm.phone) return alert("Save phone number first"); handleResendOtp(); }} className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded">Send OTP</button>
+                            }
+                        </div>
+
+                        {config.kyc?.enabled && (
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                <div className="flex items-center gap-3">
+                                    <ScanFace size={20} className="text-gray-500"/>
+                                    <div><p className="font-medium">Identity Verification (KYC)</p><p className="text-xs text-gray-500">Required for higher limits</p></div>
+                                </div>
+                                {currentUser.isKycVerified ? 
+                                    <span className="text-blue-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : 
+                                    <span className="text-gray-500 text-xs font-medium">Not Verified</span>
+                                }
+                            </div>
+                        )}
+                    </div>
+
                     {!currentUser.isKycVerified && config.kyc?.enabled && ( 
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
+                        <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
                             <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
                             <button 
                                 onClick={
@@ -1418,7 +1624,50 @@ export default function App() {
                         </div> 
                     )}
                  </Card>
-                 {/* ... (Existing Profile Form) ... */}
+
+                 {/* 3. Password Change */}
+                 <Card>
+                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Lock size={20}/> Change Password</h3>
+                     <div className="space-y-4">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">New Password</label>
+                                 <div className="relative"><input type={showNewPass ? "text" : "password"} className="w-full border p-2 rounded" value={accountForm.newPassword} onChange={e => setAccountForm({...accountForm, newPassword: e.target.value})} /><button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
+                             </div>
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                                 <div className="relative"><input type={showConfirmNewPass ? "text" : "password"} className="w-full border p-2 rounded" value={accountForm.confirmNewPassword} onChange={e => setAccountForm({...accountForm, confirmNewPassword: e.target.value})} /><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
+                             </div>
+                         </div>
+                     </div>
+                 </Card>
+
+                 {/* 4. Two-Factor Settings */}
+                 <Card>
+                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Fingerprint size={20}/> Two-Factor Authentication</h3>
+                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                         <div>
+                             <p className="font-bold text-gray-800">WhatsApp 2FA</p>
+                             <p className="text-sm text-gray-500">Require OTP from WhatsApp when logging in.</p>
+                         </div>
+                         <button 
+                             onClick={() => {
+                                 if(!currentUser.isPhoneVerified && !currentUser.twoFactorEnabled) return alert("Verify WhatsApp first!");
+                                 // Logic to toggle 2FA locally, then save via update account
+                                 alert("Please confirm your password to toggle 2FA (Coming Soon in UI, currently managed by Admin)");
+                             }}
+                             className={`px-4 py-2 rounded-lg font-bold transition-colors ${currentUser.twoFactorEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}
+                         >
+                             {currentUser.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                         </button>
+                     </div>
+                 </Card>
+
+                 <div className="pt-4">
+                     <button onClick={handleUpdateAccount} disabled={apiLoading} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
+                         {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Update Profile
+                     </button>
+                 </div>
              </div>
           )}
           {/* ... (Rest of views) ... */}
@@ -1427,3 +1676,5 @@ export default function App() {
     </div>
   );
 }
+// Add missing icon import
+function MinusCircle({size}:{size:number}) { return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
