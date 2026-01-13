@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,10 +7,10 @@
     <meta name="theme-color" content="#4f46e5" />
     
     <!-- Primary Meta Tags -->
-    <title>QiosLink - Dynamic QRIS Engine & Payment Gateway Integration</title>
-    <meta name="title" content="QiosLink - Dynamic QRIS Engine & Payment Gateway Integration" />
-    <meta name="description" content="Transform static QRIS (Nobu/Qiospay) into a dynamic payment engine. Accept automated payments on WHMCS, WooCommerce, and Shopify without manual verification. Best Open Source QRIS Tool." />
-    <meta name="keywords" content="QRIS Dynamic, QRIS Static to Dynamic, Nobu QRIS API, Qiospay Integration, Payment Gateway Indonesia, WHMCS QRIS Module, WooCommerce QRIS Plugin, Shopify Manual Payment, QRIS Generator" />
+    <title>QiosLink - Universal Dynamic QRIS Engine (JajanServer)</title>
+    <meta name="title" content="QiosLink - Universal Dynamic QRIS Engine (JajanServer)" />
+    <meta name="description" content="Transform static QRIS (Nobu/Qiospay) into dynamic payment gateway. Compatible with WHMCS, WooCommerce, and Shopify. Hosting provided by JajanServer.com" />
+    <meta name="keywords" content="QRIS Dynamic, QRIS Static to Dynamic, JajanServer, Free Hosting Indonesia, WHMCS Payment Gateway, WooCommerce QRIS, Nobu QRIS API, Payment Gateway Open Source" />
     <meta name="author" content="Nabhan Rafli" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="English" />
@@ -17,30 +18,26 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://qioslink.demo/" />
-    <meta property="og:title" content="QiosLink - Dynamic QRIS Engine" />
-    <meta property="og:description" content="Automate your QRIS payments. Integrate Nobu/Qiospay QRIS with your billing systems instantly. No monthly fees, open source logic." />
-    <meta property="og:image" content="https://placehold.co/1200x630/4f46e5/ffffff?text=QiosLink+QRIS+Platform" />
+    <meta property="og:title" content="QiosLink - Universal QRIS Engine" />
+    <meta property="og:description" content="Automate your QRIS payments. Integrate Nobu/Qiospay QRIS with your billing systems instantly. Powered by JajanServer Infrastructure." />
+    <meta property="og:image" content="https://placehold.co/1200x630/4f46e5/ffffff?text=QiosLink+JajanServer" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://qioslink.demo/" />
-    <meta property="twitter:title" content="QiosLink - Dynamic QRIS Engine" />
+    <meta property="twitter:title" content="QiosLink - Universal QRIS Engine" />
     <meta property="twitter:description" content="Automate your QRIS payments. Integrate Nobu/Qiospay QRIS with your billing systems instantly." />
-    <meta property="twitter:image" content="https://placehold.co/1200x630/4f46e5/ffffff?text=QiosLink+QRIS+Platform" />
+    <meta property="twitter:image" content="https://placehold.co/1200x630/4f46e5/ffffff?text=QiosLink+JajanServer" />
 
-    <!-- Tailwind CDN digunakan agar tidak perlu setup CSS build rumit untuk demo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       body { font-family: 'Inter', sans-serif; }
-      /* Custom Scrollbar */
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
-  <!-- Importmap ini berguna untuk preview tanpa build (No-Build), 
-       tapi saat npm run build, Vite akan mengabaikan ini dan mem-bundle dependensi. -->
   <script type="importmap">
 {
   "imports": {
@@ -60,7 +57,6 @@
 </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
     <div id="root"></div>
-    <!-- Script utama aplikasi -->
     <script type="module" src="./index.tsx"></script>
   </body>
 </html>

@@ -1,0 +1,261 @@
+
+================================================================================
+BUNDLE PHP BACKEND V4 (UNIVERSAL SMTP EDITION)
+================================================================================
+INSTRUKSI:
+1. File ini berisi semua kode PHP yang Anda butuhkan.
+2. Setiap bagian dipisahkan oleh garis putus-putus.
+3. Buat file sesuai nama judul (misal: api/simple_smtp.php) dan copas isinya.
+
+--------------------------------------------------------------------------------
+FILE 1: api/simple_smtp.php (ENGINE SMTP BARU - WAJIB ADA)
+--------------------------------------------------------------------------------
+<?php
+// CLASS SimpleSMTP - Mengirim email TANPA PHPMailer
+// Support SSL/TLS Socket, cocok untuk Hosting Gratisan (Byet/InfinityFree)
+
+class SimpleSMTP {
+    private $host;
+    private $port;
+    private $user;
+    private $pass;
+    private $conn;
+    private $debug = false;
+
+    public function __construct($host, $port, $user, $pass) {
+        $this->host = $host;
+        $this->port = $port;
+        $this->user = $user;
+        $this->pass = $pass;
+    }
+
+    private function log($msg) {
+        if ($this->debug) error_log("SMTP: $msg");
+    }
+
+    private function sendCmd($cmd, $expectedCode = null) {
+        $this->log("Client: $cmd");
+        fwrite($this->conn, $cmd . "\r\n");
+        $response = "";
+        while ($str = fgets($this->conn, 515)) {
+            $response .= $str;
+            if (substr($str, 3, 1) == " ") { break; }
+        }
+        $this->log("Server: $response");
+        
+        if ($expectedCode && substr($response, 0, 3) != $expectedCode) {
+            throw new Exception("SMTP Error: Expected $expectedCode, got $response");
+        }
+        return $response;
+    }
+
+    public function send($to, $subject, $bodyHTML, $fromEmail, $fromName) {
+        try {
+            // 1. Connect Socket
+            $protocol = ($this->port == 465) ? "ssl://" : "tcp://";
+            $this->conn = fsockopen($protocol . $this->host, $this->port, $errno, $errstr, 30);
+            
+            if (!$this->conn) throw new Exception("Could not connect to SMTP host: $errstr");
+            
+            // 2. Handshake
+            $this->sendCmd(NULL); // Read initial banner
+            $this->sendCmd("EHLO " . $_SERVER['HTTP_HOST']);
+
+            // 3. STARTTLS if needed (Port 587)
+            if ($this->port == 587) {
+                $this->sendCmd("STARTTLS", "220");
+                stream_socket_enable_crypto($this->conn, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+                $this->sendCmd("EHLO " . $_SERVER['HTTP_HOST']);
+            }
+
+            // 4. AUTH LOGIN
+            $this->sendCmd("AUTH LOGIN", "334");
+            $this->sendCmd(base64_encode($this->user), "334");
+            $this->sendCmd(base64_encode($this->pass), "235");
+
+            // 5. Send Headers
+            $this->sendCmd("MAIL FROM: <$fromEmail>", "250");
+            $this->sendCmd("RCPT TO: <$to>", "250");
+            $this->sendCmd("DATA", "354");
+
+            // 6. Send Body
+            $headers  = "MIME-Version: 1.0\r\n";
+            $headers .= "Content-type: text/html; charset=utf-8\r\n";
+            $headers .= "From: $fromName <$fromEmail>\r\n";
+            $headers .= "To: <$to>\r\n";
+            $headers .= "Subject: $subject\r\n";
+
+            fwrite($this->conn, $headers . "\r\n" . $bodyHTML . "\r\n.\r\n");
+            
+            $response = "";
+            while ($str = fgets($this->conn, 515)) {
+                $response .= $str;
+                if (substr($str, 3, 1) == " ") { break; }
+            }
+            if (substr($response, 0, 3) != "250") {
+                 throw new Exception("Failed to send data: $response");
+            }
+
+            // 7. Quit
+            $this->sendCmd("QUIT");
+            fclose($this->conn);
+            return true;
+
+        } catch (Exception $e) {
+            if ($this->conn) fclose($this->conn);
+            throw $e;
+        }
+    }
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 2: api/register.php (UPDATE: Pakai SimpleSMTP)
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+require 'simple_smtp.php'; // WAJIB ADA
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['username']) && isset($input['password'])) {
+    $username = $conn->real_escape_string($input['username']);
+    $email = isset($input['email']) ? $conn->real_escape_string($input['email']) : '';
+    $password = $input['password'];
+    $confirmPass = isset($input['confirmPassword']) ? $input['confirmPassword'] : $password;
+    
+    if ($password !== $confirmPass) {
+        echo json_encode(['success' => false, 'message' => 'Passwords do not match']); exit;
+    }
+
+    $role = 'user'; 
+    $creator_id = 1; // Default Superadmin
+
+    // Cek Duplicate
+    $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
+    if($check->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Username already exists']); exit;
+    }
+
+    // Ambil Config SMTP dari Superadmin
+    $stmtConfig = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
+    $stmtConfig->bind_param("i", $creator_id);
+    $stmtConfig->execute();
+    $resConfig = $stmtConfig->get_result();
+    $creatorData = $resConfig->fetch_assoc();
+    $creatorConf = json_decode($creatorData['merchant_config'], true);
+
+    $requireVerification = false;
+    $smtpConfig = null;
+
+    if (isset($creatorConf['smtp']) && isset($creatorConf['smtp']['requireEmailVerification']) && $creatorConf['smtp']['requireEmailVerification'] === true) {
+        $requireVerification = true;
+        $smtpConfig = $creatorConf['smtp'];
+    }
+
+    $is_verified = $requireVerification ? 0 : 1;
+    $otp_code = $requireVerification ? rand(100000, 999999) : null;
+
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, creator_id, is_verified, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssiss", $username, $email, $password, $role, $creator_id, $is_verified, $otp_code);
+    
+    if($stmt->execute()) {
+        $sendMsg = null;
+        if ($requireVerification && $smtpConfig) {
+            try {
+                $mail = new SimpleSMTP($smtpConfig['host'], $smtpConfig['port'], $smtpConfig['user'], $smtpConfig['pass']);
+                $body = "
+                    <div style='font-family: sans-serif; padding: 20px; border: 1px solid #ddd;'>
+                        <h2>Welcome to QiosLink</h2>
+                        <p>Your verification code is:</p>
+                        <h1 style='color: #4f46e5; letter-spacing: 5px;'>$otp_code</h1>
+                        <p>Hosted on JajanServer Infrastructure.</p>
+                    </div>
+                ";
+                $mail->send($email, "Verify Your Account", $body, $smtpConfig['fromEmail'], $smtpConfig['fromName']);
+            } catch (Exception $e) {
+                $sendMsg = " (Email Failed: " . $e->getMessage() . ")";
+            }
+        }
+        echo json_encode(['success' => true, 'message' => 'Registration successful' . $sendMsg]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid input']);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 3: api/test_smtp.php (UPDATE: Pakai SimpleSMTP)
+--------------------------------------------------------------------------------
+<?php
+require 'simple_smtp.php';
+
+header("Content-Type: application/json");
+$input = json_decode(file_get_contents("php://input"), true);
+
+if (!isset($input['config']) || !isset($input['recipient'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing config']); exit;
+}
+
+$conf = $input['config'];
+
+try {
+    $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass']);
+    $body = "<h1>It Works!</h1><p>Your SMTP configuration (SimpleSMTP) is correct.</p>";
+    
+    $mail->send($input['recipient'], "QiosLink SMTP Test", $body, $conf['fromEmail'], $conf['fromName'] ?: 'QiosLink');
+    echo json_encode(['success' => true, 'message' => 'Test email sent successfully via SimpleSMTP']);
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => "Send Failed: " . $e->getMessage()]);
+}
+?>
+
+--------------------------------------------------------------------------------
+FILE 4: api/resend_otp.php (UPDATE: Pakai SimpleSMTP)
+--------------------------------------------------------------------------------
+<?php
+require 'db_connect.php';
+require 'simple_smtp.php';
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if (isset($input['user_id'])) {
+    $user_id = $input['user_id'];
+    
+    // Ambil data user & config creator
+    $sql = "SELECT u.email, u.creator_id, c.merchant_config FROM users u LEFT JOIN users c ON u.creator_id = c.id WHERE u.id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if ($res->num_rows > 0) {
+        $data = $res->fetch_assoc();
+        $email = $data['email'];
+        $creatorConf = json_decode($data['merchant_config'], true);
+        
+        $new_code = rand(100000, 999999);
+        $upd = $conn->prepare("UPDATE users SET verification_code = ? WHERE id = ?");
+        $upd->bind_param("si", $new_code, $user_id);
+        $upd->execute();
+        
+        if (isset($creatorConf['smtp'])) {
+            $conf = $creatorConf['smtp'];
+            try {
+                $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass']);
+                $body = "<h3>New Verification Code</h3><p>Your code is: <b>$new_code</b></p>";
+                $mail->send($email, "Resend OTP", $body, $conf['fromEmail'], $conf['fromName']);
+                echo json_encode(['success' => true, 'message' => 'OTP Resent']);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'message' => 'SMTP Error: ' . $e->getMessage()]);
+            }
+        } else {
+             echo json_encode(['success' => false, 'message' => 'SMTP not configured']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'User not found']);
+    }
+}
+?>
