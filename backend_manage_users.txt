@@ -14,8 +14,11 @@ try {
         while ($row = $result->fetch_assoc()) {
             $row['merchantConfig'] = json_decode($row['merchant_config']);
             unset($row['merchant_config']);
-            $row['isVerified'] = $row['is_verified'] == 1;
-            $row['isKycVerified'] = $row['is_kyc_verified'] == 1;
+            
+            // Explicit cast to ensure React receives boolean or explicit number
+            $row['isVerified'] = ($row['is_verified'] == 1) ? true : false;
+            $row['isKycVerified'] = ($row['is_kyc_verified'] == 1) ? true : false;
+            
             $users[] = $row;
         }
         echo json_encode(['success' => true, 'users' => $users]);
