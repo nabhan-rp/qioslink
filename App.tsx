@@ -80,7 +80,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.7 (Enterprise Beta)";
+const APP_VERSION = "4.8.8 (Enterprise Stable)";
 
 const getEnv = () => {
   try {
@@ -142,8 +142,10 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
   );
 };
 
-// --- LANDING PAGE COMPONENT ---
+// --- LANDING PAGE COMPONENT (FIXED MOBILE MENU) ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-indigo-100 selection:text-indigo-700">
       {/* Navbar */}
@@ -156,6 +158,8 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               </div>
               <span className="font-bold text-xl tracking-tight text-gray-800">QiosLink <span className="text-indigo-600 text-xs px-1 border border-indigo-200 rounded">Beta</span></span>
             </div>
+            
+            {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
               <a href="#options" className="hover:text-indigo-600 transition-colors" title="Deployment Options">Pricing & Hosting</a>
               <a href="#features" className="hover:text-indigo-600 transition-colors" title="View Key Features">Features</a>
@@ -163,7 +167,9 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                 <Github size={16} /> Open Source
               </a>
             </div>
-            <div className="flex items-center gap-3">
+
+            {/* Desktop Buttons */}
+            <div className="hidden md:flex items-center gap-3">
               <button onClick={onLogin} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors" aria-label="Login to Dashboard">
                 Log In
               </button>
@@ -171,8 +177,31 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                 Get Started <ArrowRight size={16}/>
               </button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+                className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+            <div className="md:hidden bg-white border-b border-gray-100 animate-in slide-in-from-top-2">
+                <div className="px-4 pt-2 pb-4 space-y-1">
+                    <a href="#options" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Pricing & Hosting</a>
+                    <a href="#features" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Features</a>
+                    <a href="https://github.com/nabhan-rp/qioslink" target="_blank" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Open Source</a>
+                    <div className="pt-4 flex flex-col gap-2">
+                        <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-2 text-sm font-bold text-gray-600 border border-gray-200 rounded-lg">Log In</button>
+                        <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg shadow-lg">Get Started</button>
+                    </div>
+                </div>
+            </div>
+        )}
       </nav>
 
       <main>
@@ -1515,6 +1544,54 @@ export default function App() {
                              </div>
                          </Card>
 
+                         {/* 4. SOCIAL LOGIN */}
+                         <Card>
+                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Globe size={20}/> Social Login (OAuth)</h3>
+                             <div className="space-y-6">
+                                 {/* Google */}
+                                 <div className="border rounded-xl p-4">
+                                     <div className="flex items-center justify-between mb-4">
+                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Chrome size={20} className="text-red-500"/> Google Login</div>
+                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.google} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, google: e.target.checked}}})} />
+                                     </div>
+                                     {config.auth?.socialLogin?.google && (
+                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
+                                             <input type="text" className="border p-2 rounded text-sm" placeholder="Client ID" value={config.auth?.socialLogin?.googleClientId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientId: e.target.value}}})} />
+                                             <input type="password" className="border p-2 rounded text-sm" placeholder="Client Secret" value={config.auth?.socialLogin?.googleClientSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientSecret: e.target.value}}})} />
+                                         </div>
+                                     )}
+                                 </div>
+
+                                 {/* Facebook */}
+                                 <div className="border rounded-xl p-4">
+                                     <div className="flex items-center justify-between mb-4">
+                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Facebook size={20} className="text-blue-600"/> Facebook Login</div>
+                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.facebook} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebook: e.target.checked}}})} />
+                                     </div>
+                                     {config.auth?.socialLogin?.facebook && (
+                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
+                                             <input type="text" className="border p-2 rounded text-sm" placeholder="App ID" value={config.auth?.socialLogin?.facebookAppId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppId: e.target.value}}})} />
+                                             <input type="password" className="border p-2 rounded text-sm" placeholder="App Secret" value={config.auth?.socialLogin?.facebookAppSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppSecret: e.target.value}}})} />
+                                         </div>
+                                     )}
+                                 </div>
+
+                                 {/* Github */}
+                                 <div className="border rounded-xl p-4">
+                                     <div className="flex items-center justify-between mb-4">
+                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Github size={20}/> Github Login</div>
+                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.github} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, github: e.target.checked}}})} />
+                                     </div>
+                                     {config.auth?.socialLogin?.github && (
+                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
+                                             <input type="text" className="border p-2 rounded text-sm" placeholder="Client ID" value={config.auth?.socialLogin?.githubClientId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientId: e.target.value}}})} />
+                                             <input type="password" className="border p-2 rounded text-sm" placeholder="Client Secret" value={config.auth?.socialLogin?.githubClientSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientSecret: e.target.value}}})} />
+                                         </div>
+                                     )}
+                                 </div>
+                             </div>
+                         </Card>
+
                          <button onClick={handleUpdateConfig} disabled={apiLoading} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
                              {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save All Security Settings
                          </button>
@@ -1583,7 +1660,8 @@ export default function App() {
                             }
                         </div>
 
-                        {config.kyc?.enabled && (
+                        {/* KYC SECTION - ENABLED FOR USER IF SYSTEM CONFIG ALLOWS IT */}
+                        {(config.kyc?.enabled || systemConfig.verifyKyc) && (
                             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                                 <div className="flex items-center gap-3">
                                     <ScanFace size={20} className="text-gray-500"/>
@@ -1597,12 +1675,12 @@ export default function App() {
                         )}
                     </div>
 
-                    {!currentUser.isKycVerified && config.kyc?.enabled && ( 
+                    {!currentUser.isKycVerified && (config.kyc?.enabled || systemConfig.verifyKyc) && ( 
                         <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
                             <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
                             <button 
                                 onClick={
-                                    config.kyc?.provider === 'didit' 
+                                    (config.kyc?.provider === 'didit' || !config.kyc) // Default to didit/manual based on system config actually, but for now simple check
                                         ? handleStartDiditKyc 
                                         : () => {
                                             const type = config.kyc?.manualContactType || 'whatsapp';
@@ -1619,7 +1697,7 @@ export default function App() {
                                 className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
                             >
                                 <ScanFace size={18}/> 
-                                {config.kyc?.provider === 'didit' ? 'Start Automated Verification' : 'Contact Admin for Verification'}
+                                {config.kyc?.provider === 'didit' || !config.kyc ? 'Start Automated Verification' : 'Contact Admin for Verification'}
                             </button>
                         </div> 
                     )}
