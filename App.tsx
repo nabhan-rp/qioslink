@@ -337,7 +337,7 @@ const Card = ({ children, className = '' }: any) => (
   <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 ${className}`}>{children}</div>
 );
 
-const TransactionModal = ({ transaction, onClose, onCopyLink, branding }: any) => {
+const TransactionModal = ({ transaction, onClose, onCopyLink, branding, onCheckStatus }: any) => {
   if (!transaction) return null;
   const brandColor = branding?.brandColor || '#4f46e5';
   return (
@@ -354,9 +354,18 @@ const TransactionModal = ({ transaction, onClose, onCopyLink, branding }: any) =
              <div className="text-2xl font-bold text-gray-800">{formatRupiah(transaction.amount)}</div>
              <div className={`px-3 py-1 rounded-full text-xs font-medium mt-2 ${transaction.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{transaction.status.toUpperCase()}</div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button onClick={() => onCopyLink(transaction)} className="flex-1 flex items-center justify-center space-x-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors border border-gray-200"><LinkIcon size={18} /><span>Copy Link</span></button>
-            <button onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(transaction.qrString)}`, '_blank')} className="flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"><Download size={18} /></button>
+          <div className="flex gap-3 pt-2 flex-col">
+            <div className="flex gap-3">
+               <button onClick={() => onCopyLink(transaction)} className="flex-1 flex items-center justify-center space-x-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors border border-gray-200"><LinkIcon size={18} /><span>Copy Link</span></button>
+               <button onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(transaction.qrString)}`, '_blank')} className="flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"><Download size={18} /></button>
+            </div>
+            {/* MANUAL CHECK BUTTON */}
+            {transaction.status === 'pending' && (
+                <button onClick={() => onCheckStatus(transaction)} className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/30">
+                    <RefreshCw size={18} />
+                    <span>Check Payment Status (Sync)</span>
+                </button>
+            )}
           </div>
         </div>
       </div>
@@ -472,120 +481,73 @@ export default function App() {
     setAuthLoading(false);
   };
 
+  // --- NEW: CHECK MUTATION STATUS MANUALLY ---
+  const handleCheckStatus = async (trx: Transaction) => {
+      if(IS_DEMO_MODE) {
+          // Fake update
+          setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'paid'} : t));
+          alert("Status Updated (Demo)");
+          setSelectedTransaction(null);
+          return;
+      }
+      
+      setApiLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/check_mutation.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ trx_id: trx.id, merchant_id: trx.merchantId })
+          });
+          const data = await res.json();
+          if(data.status === 'success') {
+              alert(data.message);
+              fetchTransactions(currentUser!); // Refresh list
+              setSelectedTransaction(null);
+          } else {
+              alert(data.message || 'Status still pending or not found in mutation');
+          }
+      } catch(e) {
+          alert("Error checking mutation");
+      } finally {
+          setApiLoading(false);
+      }
+  };
+
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
   const handleUpdateConfig = async () => { setApiLoading(true); if (currentUser) { const updatedUser = { ...currentUser, merchantConfig: config }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert('Saved'); } else { try { const res = await fetch(`${API_BASE}/update_config.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: currentUser.id, config: config }) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert('Saved'); } else alert(data.message); } catch (e) { alert('Error'); } } } setApiLoading(false); };
   const handleTestEmail = async () => { if (!config.smtp) return alert("Configure SMTP first"); setApiLoading(true); if (IS_DEMO_MODE) { setTimeout(() => { alert(`Sent to ${config.smtp?.fromEmail}`); setApiLoading(false); }, 1500); } else { try { const res = await fetch(`${API_BASE}/test_smtp.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ config: config.smtp, recipient: currentUser?.email || config.smtp.fromEmail }) }); const data = await res.json(); alert(data.message); } catch(e) { alert("Failed"); } finally { setApiLoading(false); } } };
   
-  // --- UPDATED: HANDLE ACCOUNT UPDATE ---
   const handleUpdateAccount = async () => { 
     if (!accountForm.username) return alert("Username required"); 
     if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); 
-    
     setApiLoading(true); 
-    
-    // Prepare updated data
     const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email };
-    
     if (IS_DEMO_MODE) { 
-        // 1. Update Session & State
         setCurrentUser(updatedUser); 
         sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
-        
-        // 2. Persist to LocalStorage so it survives browser close (Demo Mode)
         const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]');
-        // Check if user exists in savedUsers
         const existingIndex = savedUsers.findIndex((u: User) => u.id === updatedUser.id);
-        
         let newUsersList;
-        if (existingIndex >= 0) {
-            savedUsers[existingIndex] = updatedUser;
-            newUsersList = savedUsers;
-        } else {
-            // If it's a mock user (like admin) being edited for the first time, add to LS
-            newUsersList = [...savedUsers, updatedUser];
-        }
+        if (existingIndex >= 0) { savedUsers[existingIndex] = updatedUser; newUsersList = savedUsers; } else { newUsersList = [...savedUsers, updatedUser]; }
         localStorage.setItem('qios_users', JSON.stringify(newUsersList));
-        
         alert("Profile Updated (Demo)"); 
         setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''});
     } else { 
         try { 
-            // 3. Call API (Production)
-            // We reuse manage_users.php?action=update logic
-            const payload = {
-                action: 'update',
-                id: currentUser!.id,
-                username: accountForm.username,
-                email: accountForm.email,
-                role: currentUser!.role,
-                config: currentUser!.merchantConfig, // Important: Send existing config back or it gets wiped
-                password: accountForm.newPassword ? accountForm.newPassword : undefined
-            };
-
-            const res = await fetch(`${API_BASE}/manage_users.php`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(payload) 
-            }); 
+            const payload = { action: 'update', id: currentUser!.id, username: accountForm.username, email: accountForm.email, role: currentUser!.role, config: currentUser!.merchantConfig, password: accountForm.newPassword ? accountForm.newPassword : undefined };
+            const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); 
             const data = await res.json(); 
-            
-            if (data.success) { 
-                setCurrentUser(updatedUser); 
-                sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
-                alert("Profile Updated Successfully"); 
-                setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); 
-            } else { 
-                alert("Update failed: " + data.message); 
-            } 
-        } catch (e) { 
-            alert('Connection Error'); 
-        } 
+            if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Profile Updated Successfully"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { alert("Update failed: " + data.message); } 
+        } catch (e) { alert('Connection Error'); } 
     } 
     setApiLoading(false); 
   };
 
   const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
   const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
-  
-  // --- NEW: HANDLE DELETE USER ---
-  const handleDeleteUser = async (targetUser: User) => {
-      if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account.");
-      if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return;
-
-      setApiLoading(true);
-
-      if (IS_DEMO_MODE) {
-          // Filter out from state
-          setUsers(users.filter(u => u.id !== targetUser.id));
-          // Update LocalStorage
-          const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]');
-          const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id);
-          localStorage.setItem('qios_users', JSON.stringify(newSaved));
-          alert("User deleted (Demo)");
-      } else {
-          try {
-              const res = await fetch(`${API_BASE}/manage_users.php`, {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({ action: 'delete', id: targetUser.id })
-              });
-              const data = await res.json();
-              
-              if (data.success) {
-                  alert("User deleted successfully");
-                  fetchUsers(); // Refresh list
-              } else {
-                  alert("Failed to delete: " + data.message);
-              }
-          } catch (e) {
-              alert("Connection Error");
-          }
-      }
-      setApiLoading(false);
-  };
-
+  const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
   const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); alert("Copied!"); };
   const fetchTransactions = async (user: User) => { if (IS_DEMO_MODE) { const savedTx = localStorage.getItem('qios_transactions'); if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions(Array(5).fill(0).map((_, i) => ({ id: `TRX-DEMO-${1000+i}`, merchantId: user.id, amount: 10000 + (i * 5000), description: `Demo ${i+1}`, status: i % 2 === 0 ? 'paid' : 'pending', createdAt: new Date().toISOString(), qrString: user.merchantConfig?.qrisString || '', paymentUrl: window.location.origin + '/?pay=demo' + i }))); return; } try { const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`); const data = await res.json(); if (data.success && data.transactions) setTransactions(data.transactions); } catch (e) { console.error(e); } };
   const fetchUsers = async () => { if (IS_DEMO_MODE) { const savedUsers = localStorage.getItem('qios_users'); setUsers([...MOCK_USERS, ...(savedUsers ? JSON.parse(savedUsers) : []).filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]); return; } try { const res = await fetch(`${API_BASE}/manage_users.php?action=list`); const data = await res.json(); if (data.success && data.users) setUsers(data.users); } catch (e) { console.error(e); } };
@@ -613,7 +575,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} />
+      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} onCheckStatus={handleCheckStatus} />
       
       {isUserModalOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"><div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">{editingUser?'Edit User':'Add New User'}</h3><button onClick={()=>setUserModalOpen(false)}><X size={20}/></button></div><form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4"><div><label className="block text-sm font-medium mb-1">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData,role:e.target.value as UserRole})}>{currentUser.role==='superadmin'&&<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>}{currentUser.role==='merchant'&&<><option value="user">User</option><option value="cs">CS</option></>}{currentUser.role==='cs'&&<option value="user">User</option>}</select></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData,username:e.target.value})}/></div><div><label className="block text-sm font-medium mb-1">Password</label><input type={editingUser?"text":"password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData,password:e.target.value})} placeholder={editingUser?"Blank to keep":"Password"}/></div></div><div><label className="block text-sm font-medium mb-1">Email Address</label><input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData,email:e.target.value})} placeholder="user@example.com"/></div>{(userFormData.role==='merchant'||userFormData.role==='superadmin')&&<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p><input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData,merchantName:e.target.value})} placeholder="Merchant Name"/><textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData,qrisString:e.target.value})} placeholder="QRIS String"/></div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading?<Loader2 className="animate-spin"/>:'Save User'}</button></form></div> </div> )}
       
