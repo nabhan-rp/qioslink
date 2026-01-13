@@ -1,6 +1,6 @@
 
 ================================================================================
-BUNDLE PHP BACKEND V4 (UNIVERSAL SMTP EDITION)
+BUNDLE PHP BACKEND V4.1 (UNIVERSAL SMTP + PROTOCOL FIX)
 ================================================================================
 INSTRUKSI:
 1. File ini berisi semua kode PHP yang Anda butuhkan.
@@ -8,7 +8,7 @@ INSTRUKSI:
 3. Buat file sesuai nama judul (misal: api/simple_smtp.php) dan copas isinya.
 
 --------------------------------------------------------------------------------
-FILE 1: api/simple_smtp.php (ENGINE SMTP BARU - WAJIB ADA)
+FILE 1: api/simple_smtp.php (ENGINE SMTP BARU - UPDATE PROTOCOL)
 --------------------------------------------------------------------------------
 <?php
 // CLASS SimpleSMTP - Mengirim email TANPA PHPMailer
@@ -19,14 +19,16 @@ class SimpleSMTP {
     private $port;
     private $user;
     private $pass;
+    private $secure; // 'ssl', 'tls', or 'none'
     private $conn;
     private $debug = false;
 
-    public function __construct($host, $port, $user, $pass) {
+    public function __construct($host, $port, $user, $pass, $secure = 'tls') {
         $this->host = $host;
         $this->port = $port;
         $this->user = $user;
         $this->pass = $pass;
+        $this->secure = $secure;
     }
 
     private function log($msg) {
@@ -51,8 +53,12 @@ class SimpleSMTP {
 
     public function send($to, $subject, $bodyHTML, $fromEmail, $fromName) {
         try {
-            // 1. Connect Socket
-            $protocol = ($this->port == 465) ? "ssl://" : "tcp://";
+            // 1. Connect Socket based on Secure Protocol
+            $protocol = "tcp://";
+            if ($this->secure === 'ssl') {
+                $protocol = "ssl://";
+            }
+            
             $this->conn = fsockopen($protocol . $this->host, $this->port, $errno, $errstr, 30);
             
             if (!$this->conn) throw new Exception("Could not connect to SMTP host: $errstr");
@@ -61,8 +67,8 @@ class SimpleSMTP {
             $this->sendCmd(NULL); // Read initial banner
             $this->sendCmd("EHLO " . $_SERVER['HTTP_HOST']);
 
-            // 3. STARTTLS if needed (Port 587)
-            if ($this->port == 587) {
+            // 3. STARTTLS if configured (usually Port 587)
+            if ($this->secure === 'tls') {
                 $this->sendCmd("STARTTLS", "220");
                 stream_socket_enable_crypto($this->conn, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
                 $this->sendCmd("EHLO " . $_SERVER['HTTP_HOST']);
@@ -110,7 +116,7 @@ class SimpleSMTP {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 2: api/register.php (UPDATE: Pakai SimpleSMTP)
+FILE 2: api/register.php (UPDATE: Pass Secure Param)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -163,7 +169,10 @@ if(isset($input['username']) && isset($input['password'])) {
         $sendMsg = null;
         if ($requireVerification && $smtpConfig) {
             try {
-                $mail = new SimpleSMTP($smtpConfig['host'], $smtpConfig['port'], $smtpConfig['user'], $smtpConfig['pass']);
+                // PASSING PARAMETER $secure ('tls', 'ssl', 'none')
+                $secure = isset($smtpConfig['secure']) ? $smtpConfig['secure'] : 'tls';
+                $mail = new SimpleSMTP($smtpConfig['host'], $smtpConfig['port'], $smtpConfig['user'], $smtpConfig['pass'], $secure);
+                
                 $body = "
                     <div style='font-family: sans-serif; padding: 20px; border: 1px solid #ddd;'>
                         <h2>Welcome to QiosLink</h2>
@@ -187,7 +196,7 @@ if(isset($input['username']) && isset($input['password'])) {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 3: api/test_smtp.php (UPDATE: Pakai SimpleSMTP)
+FILE 3: api/test_smtp.php (UPDATE: Pass Secure Param)
 --------------------------------------------------------------------------------
 <?php
 require 'simple_smtp.php';
@@ -200,9 +209,10 @@ if (!isset($input['config']) || !isset($input['recipient'])) {
 }
 
 $conf = $input['config'];
+$secure = isset($conf['secure']) ? $conf['secure'] : 'tls';
 
 try {
-    $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass']);
+    $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass'], $secure);
     $body = "<h1>It Works!</h1><p>Your SMTP configuration (SimpleSMTP) is correct.</p>";
     
     $mail->send($input['recipient'], "QiosLink SMTP Test", $body, $conf['fromEmail'], $conf['fromName'] ?: 'QiosLink');
@@ -213,7 +223,7 @@ try {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 4: api/resend_otp.php (UPDATE: Pakai SimpleSMTP)
+FILE 4: api/resend_otp.php (UPDATE: Pass Secure Param)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
@@ -244,7 +254,9 @@ if (isset($input['user_id'])) {
         if (isset($creatorConf['smtp'])) {
             $conf = $creatorConf['smtp'];
             try {
-                $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass']);
+                $secure = isset($conf['secure']) ? $conf['secure'] : 'tls';
+                $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass'], $secure);
+                
                 $body = "<h3>New Verification Code</h3><p>Your code is: <b>$new_code</b></p>";
                 $mail->send($email, "Resend OTP", $body, $conf['fromEmail'], $conf['fromName']);
                 echo json_encode(['success' => true, 'message' => 'OTP Resent']);

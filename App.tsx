@@ -69,7 +69,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.3.0 (Universal Edition)";
+const APP_VERSION = "4.3.1 (Universal Edition)";
 
 const getEnv = () => {
   try {
@@ -585,7 +585,22 @@ export default function App() {
                          <div className={`space-y-4 transition-opacity duration-200 ${config.smtp?.useSystemSmtp ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div><label className="block text-sm font-medium mb-1">SMTP Host</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.host || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})} placeholder="smtp.gmail.com" /></div>
-                                 <div><label className="block text-sm font-medium mb-1">SMTP Port</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} placeholder="587" /></div>
+                                 
+                                 <div>
+                                   <label className="block text-sm font-medium mb-1">SMTP Port</label>
+                                   <input type="text" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} placeholder="587" />
+                                   <p className="text-xs text-gray-400 mt-1">Common ports: <strong>587</strong> (TLS), <strong>465</strong> (SSL), 25 (None)</p>
+                                 </div>
+                                 
+                                 <div>
+                                    <label className="block text-sm font-medium mb-1">Encryption Protocol</label>
+                                    <select className="w-full border p-2 rounded bg-white" value={config.smtp?.secure || 'tls'} onChange={e => setConfig({...config, smtp: {...config.smtp!, secure: e.target.value as any}})}>
+                                        <option value="tls">TLS (Recommended)</option>
+                                        <option value="ssl">SSL</option>
+                                        <option value="none">None</option>
+                                    </select>
+                                 </div>
+
                                  <div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} placeholder="email@gmail.com" /></div>
                                  <div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} placeholder="App Password" /></div>
                              </div>
