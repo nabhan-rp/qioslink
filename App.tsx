@@ -1329,7 +1329,7 @@ export default function App() {
             </Card>
           )}
 
-          {/* USER MANAGEMENT VIEW */}
+          {/* USER MANAGEMENT VIEW (FIXED) */}
           {view === 'users' && (
             <Card>
                 <div className="flex justify-between items-center mb-6">
@@ -1342,26 +1342,30 @@ export default function App() {
                             <tr><th className="p-4">User</th><th className="p-4">Role</th><th className="p-4">Status</th><th className="p-4">KYC</th><th className="p-4">Action</th></tr>
                         </thead>
                         <tbody className="text-sm divide-y">
-                            {users.map(u => (
-                                <tr key={u.id} className="hover:bg-gray-50">
-                                    <td className="p-4">
-                                        <div className="font-bold text-gray-800">{u.username}</div>
-                                        <div className="text-xs text-gray-500">{u.email}</div>
-                                    </td>
-                                    <td className="p-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs uppercase font-bold">{u.role}</span></td>
-                                    <td className="p-4">
-                                        {u.isVerified ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 size={14}/> Email</span> : <button onClick={() => handleManualVerifyUser(u.id)} className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200">Verify Email</button>}
-                                    </td>
-                                    <td className="p-4">
-                                        {u.isKycVerified ? <span className="text-blue-600 flex items-center gap-1"><ScanFace size={14}/> KYC</span> : (u.role !== 'superadmin' && <button onClick={() => handleManualApproveKyc(u.id)} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-blue-50 hover:text-blue-600">Approve KYC</button>)}
-                                    </td>
-                                    <td className="p-4 flex gap-2">
-                                        <button onClick={() => { setEditingUser(u); setUserFormData({username:u.username, email:u.email||'', password:'', role:u.role, merchantName:u.merchantConfig?.merchantName||'', merchantCode:u.merchantConfig?.merchantCode||'', apiKey:u.merchantConfig?.qiospayApiKey||'', qrisString:u.merchantConfig?.qrisString||''}); setUserModalOpen(true); }} className="p-1 text-gray-500 hover:text-indigo-600"><Pencil size={16}/></button>
-                                        <button onClick={() => { setEditingUser(u); setUserAuthModalOpen(true); }} className="p-1 text-gray-500 hover:text-green-600" title="Security Settings"><Shield size={16}/></button>
-                                        <button onClick={() => handleDeleteUser(u)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={16}/></button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {users && users.length > 0 ? (
+                                users.map(u => (
+                                    <tr key={u.id} className="hover:bg-gray-50">
+                                        <td className="p-4">
+                                            <div className="font-bold text-gray-800">{u.username}</div>
+                                            <div className="text-xs text-gray-500">{u.email}</div>
+                                        </td>
+                                        <td className="p-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs uppercase font-bold">{u.role}</span></td>
+                                        <td className="p-4">
+                                            {u.isVerified ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 size={14}/> Email</span> : <button onClick={() => handleManualVerifyUser(u.id)} className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200">Verify Email</button>}
+                                        </td>
+                                        <td className="p-4">
+                                            {u.isKycVerified ? <span className="text-blue-600 flex items-center gap-1"><ScanFace size={14}/> KYC</span> : (u.role !== 'superadmin' && <button onClick={() => handleManualApproveKyc(u.id)} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-blue-50 hover:text-blue-600">Approve KYC</button>)}
+                                        </td>
+                                        <td className="p-4 flex gap-2">
+                                            <button onClick={() => { setEditingUser(u); setUserFormData({username:u.username, email:u.email||'', password:'', role:u.role, merchantName:u.merchantConfig?.merchantName||'', merchantCode:u.merchantConfig?.merchantCode||'', apiKey:u.merchantConfig?.qiospayApiKey||'', qrisString:u.merchantConfig?.qrisString||''}); setUserModalOpen(true); }} className="p-1 text-gray-500 hover:text-indigo-600"><Pencil size={16}/></button>
+                                            <button onClick={() => { setEditingUser(u); setUserAuthModalOpen(true); }} className="p-1 text-gray-500 hover:text-green-600" title="Security Settings"><Shield size={16}/></button>
+                                            <button onClick={() => handleDeleteUser(u)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={16}/></button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr><td colSpan={5} className="p-8 text-center text-gray-400">No users found or loading...</td></tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -1470,7 +1474,8 @@ export default function App() {
             </div>
           )}
           
-          {/* --- SETTINGS TAB (UPDATED) --- */}
+          {/* ... (Settings Tab Logic remains same, truncated for brevity) ... */}
+          {/* ... (Rest of views) ... */}
           {view === 'settings' && (
              <div className="max-w-4xl mx-auto w-full">
                  {/* ... (Settings Navigation) ... */}
