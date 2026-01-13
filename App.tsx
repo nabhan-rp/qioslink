@@ -1258,9 +1258,217 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20">
           <VerificationBanner user={currentUser} onVerifyClick={() => { setView('settings'); setSettingsTab('account'); }} />
           
-          {/* ... (Keep existing views: dashboard, terminal, history, etc) ... */}
-          {view === 'dashboard' && <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-none"><div className="flex justify-between items-start"><div><p className="text-indigo-100 font-medium">Total Transactions</p><h3 className="text-4xl font-bold mt-2">{transactions.length}</h3></div><div className="bg-white/20 p-2 rounded-lg"><Wallet className="text-white" size={24}/></div></div></Card><Card><p className="text-gray-500 font-medium">Total Revenue {IS_DEMO_MODE ? '(Demo)' : ''}</p><h3 className="text-3xl font-bold text-gray-800 mt-2">{formatRupiah(transactions.reduce((acc, curr) => acc + (curr.status === 'paid' ? Number(curr.amount) : 0), 0))}</h3></Card><Card><p className="text-gray-500 font-medium">Pending</p><h3 className="text-3xl font-bold text-orange-600 mt-2">{transactions.filter(t => t.status === 'pending').length}</h3></Card></div><Card className="h-80"><h3 className="font-bold text-gray-700 mb-4">Transaction Volume</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={transactions.slice(0, 10).reverse()}><defs><linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e7ff" /><XAxis dataKey="createdAt" hide /><YAxis hide /><RechartsTooltip /><Area type="monotone" dataKey="amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorAmt)" /></AreaChart></ResponsiveContainer></Card></div>}
-          {view === 'terminal' && <div className="flex flex-col lg:flex-row gap-8"><Card className="flex-1"><h3 className="text-lg font-bold text-gray-800 mb-4">Create Payment Link</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-600 mb-1">Amount (IDR)</label><div className="relative"><span className="absolute left-3 top-3 text-gray-400 font-bold">Rp</span><input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} /></div></div><div><label className="block text-sm font-medium text-gray-600 mb-1">Description (Optional)</label><input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={tempDesc} onChange={e=>setTempDesc(e.target.value)} placeholder="e.g. Order #123" /></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Advanced Options</p><div><label className="block text-sm font-medium text-gray-600 mb-1">Expiry Time (Minutes)</label><input type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white" value={expiryMinutes} onChange={e=>setExpiryMinutes(e.target.value)} placeholder="e.g. 60 (Leave empty for no expiry)" /></div><div className="flex items-center gap-2"><input type="checkbox" id="singleUse" checked={singleUse} onChange={e=>setSingleUse(e.target.checked)} className="h-4 w-4 text-indigo-600 rounded" /><label htmlFor="singleUse" className="text-sm text-gray-700">One-time Use (Link expires after payment)</label></div></div><button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">{apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate Payment Link</span></>}</button></div></Card><Card className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-dashed border-2 border-gray-200">{generatedQR ? <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300 w-full"><div className="flex justify-center"><QRCodeDisplay data={generatedQR} width={200} logoUrl={config.branding?.logoUrl} /></div><div><h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2><p className="text-sm text-gray-500 mt-1">{tempDesc}</p></div>{generatedLink && <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-2 text-left"><div className="flex-1 truncate text-xs text-gray-500 font-mono">{generatedLink}</div><button onClick={() => copyToClipboard(generatedLink)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Copy size={16}/></button><a href={generatedLink} target="_blank" className="text-gray-500 hover:bg-gray-50 p-2 rounded"><ExternalLink size={16}/></a></div>}</div> : <div className="text-center text-gray-400 py-12"><QrCode size={48} className="mx-auto mb-4 opacity-50" /><p>Generate to create QR & Link</p></div>}</Card></div>}
+          {/* DASHBOARD VIEW */}
+          {view === 'dashboard' && (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-none">
+                        <div className="flex justify-between items-start">
+                            <div><p className="text-indigo-100 font-medium">Total Transactions</p><h3 className="text-4xl font-bold mt-2">{transactions.length}</h3></div>
+                            <div className="bg-white/20 p-2 rounded-lg"><Wallet className="text-white" size={24}/></div>
+                        </div>
+                    </Card>
+                    <Card>
+                        <p className="text-gray-500 font-medium">Total Revenue {IS_DEMO_MODE ? '(Demo)' : ''}</p>
+                        <h3 className="text-3xl font-bold text-gray-800 mt-2">{formatRupiah(transactions.reduce((acc, curr) => acc + (curr.status === 'paid' ? Number(curr.amount) : 0), 0))}</h3>
+                    </Card>
+                    <Card>
+                        <p className="text-gray-500 font-medium">Pending</p>
+                        <h3 className="text-3xl font-bold text-orange-600 mt-2">{transactions.filter(t => t.status === 'pending').length}</h3>
+                    </Card>
+                </div>
+                <Card className="h-80">
+                    <h3 className="font-bold text-gray-700 mb-4">Transaction Volume</h3>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={transactions.slice(0, 10).reverse()}>
+                            <defs>
+                                <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e7ff" />
+                            <XAxis dataKey="createdAt" hide />
+                            <YAxis hide />
+                            <RechartsTooltip />
+                            <Area type="monotone" dataKey="amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorAmt)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </Card>
+            </div>
+          )}
+
+          {/* HISTORY / TRANSACTIONS VIEW */}
+          {view === 'history' && (
+            <Card className="overflow-hidden">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-gray-700">Transaction History</h3>
+                    <div className="flex gap-2">
+                        <input type="text" placeholder="Search ID..." className="border p-2 rounded-lg text-sm" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                            <tr><th className="p-4">ID</th><th className="p-4">Date</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
+                        </thead>
+                        <tbody className="text-sm divide-y">
+                            {transactions.filter(t => t.id.toLowerCase().includes(searchQuery.toLowerCase())).map(t => (
+                                <tr key={t.id} className="hover:bg-gray-50">
+                                    <td className="p-4 font-mono text-xs text-gray-500">{t.id}</td>
+                                    <td className="p-4 text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</td>
+                                    <td className="p-4 font-bold text-gray-800">{formatRupiah(t.amount)}</td>
+                                    <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${t.status==='paid'?'bg-green-100 text-green-700':t.status==='pending'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{t.status.toUpperCase()}</span></td>
+                                    <td className="p-4">
+                                        <button onClick={() => setSelectedTransaction(t)} className="text-indigo-600 hover:underline mr-3">View</button>
+                                        {t.status === 'pending' && <button onClick={() => handleCheckStatus(t)} className="text-gray-500 hover:text-indigo-600"><RefreshCw size={14}/></button>}
+                                    </td>
+                                </tr>
+                            ))}
+                            {transactions.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No transactions found</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+          )}
+
+          {/* USER MANAGEMENT VIEW */}
+          {view === 'users' && (
+            <Card>
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-gray-700">User Management</h3>
+                    <button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role:'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><Plus size={16}/> Add User</button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                            <tr><th className="p-4">User</th><th className="p-4">Role</th><th className="p-4">Status</th><th className="p-4">KYC</th><th className="p-4">Action</th></tr>
+                        </thead>
+                        <tbody className="text-sm divide-y">
+                            {users.map(u => (
+                                <tr key={u.id} className="hover:bg-gray-50">
+                                    <td className="p-4">
+                                        <div className="font-bold text-gray-800">{u.username}</div>
+                                        <div className="text-xs text-gray-500">{u.email}</div>
+                                    </td>
+                                    <td className="p-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs uppercase font-bold">{u.role}</span></td>
+                                    <td className="p-4">
+                                        {u.isVerified ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 size={14}/> Email</span> : <button onClick={() => handleManualVerifyUser(u.id)} className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200">Verify Email</button>}
+                                    </td>
+                                    <td className="p-4">
+                                        {u.isKycVerified ? <span className="text-blue-600 flex items-center gap-1"><ScanFace size={14}/> KYC</span> : (u.role !== 'superadmin' && <button onClick={() => handleManualApproveKyc(u.id)} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-blue-50 hover:text-blue-600">Approve KYC</button>)}
+                                    </td>
+                                    <td className="p-4 flex gap-2">
+                                        <button onClick={() => { setEditingUser(u); setUserFormData({username:u.username, email:u.email||'', password:'', role:u.role, merchantName:u.merchantConfig?.merchantName||'', merchantCode:u.merchantConfig?.merchantCode||'', apiKey:u.merchantConfig?.qiospayApiKey||'', qrisString:u.merchantConfig?.qrisString||''}); setUserModalOpen(true); }} className="p-1 text-gray-500 hover:text-indigo-600"><Pencil size={16}/></button>
+                                        <button onClick={() => { setEditingUser(u); setUserAuthModalOpen(true); }} className="p-1 text-gray-500 hover:text-green-600" title="Security Settings"><Shield size={16}/></button>
+                                        <button onClick={() => handleDeleteUser(u)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={16}/></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+          )}
+
+          {/* TERMINAL VIEW */}
+          {view === 'terminal' && (
+            <div className="flex flex-col lg:flex-row gap-8">
+                <Card className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Create Payment Link</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Amount (IDR)</label>
+                            <div className="relative"><span className="absolute left-3 top-3 text-gray-400 font-bold">Rp</span><input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} /></div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Description (Optional)</label>
+                            <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={tempDesc} onChange={e=>setTempDesc(e.target.value)} placeholder="e.g. Order #123" />
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+                            <p className="text-xs font-bold text-gray-500 uppercase">Advanced Options</p>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">Expiry Time (Minutes)</label>
+                                <input type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white" value={expiryMinutes} onChange={e=>setExpiryMinutes(e.target.value)} placeholder="e.g. 60 (Leave empty for no expiry)" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="singleUse" checked={singleUse} onChange={e=>setSingleUse(e.target.checked)} className="h-4 w-4 text-indigo-600 rounded" />
+                                <label htmlFor="singleUse" className="text-sm text-gray-700">One-time Use (Link expires after payment)</label>
+                            </div>
+                        </div>
+                        <button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">{apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate Payment Link</span></>}</button>
+                    </div>
+                </Card>
+                <Card className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-dashed border-2 border-gray-200">
+                    {generatedQR ? <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300 w-full"><div className="flex justify-center"><QRCodeDisplay data={generatedQR} width={200} logoUrl={config.branding?.logoUrl} /></div><div><h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2><p className="text-sm text-gray-500 mt-1">{tempDesc}</p></div>{generatedLink && <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-2 text-left"><div className="flex-1 truncate text-xs text-gray-500 font-mono">{generatedLink}</div><button onClick={() => copyToClipboard(generatedLink)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Copy size={16}/></button><a href={generatedLink} target="_blank" className="text-gray-500 hover:bg-gray-50 p-2 rounded"><ExternalLink size={16}/></a></div>}</div> : <div className="text-center text-gray-400 py-12"><QrCode size={48} className="mx-auto mb-4 opacity-50" /><p>Generate to create QR & Link</p></div>}
+                </Card>
+            </div>
+          )}
+
+          {/* PAYMENT LINKS VIEW */}
+          {view === 'links' && (
+            <Card>
+                <h3 className="font-bold text-gray-700 mb-6">Active Payment Links</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                            <tr><th className="p-4">Created</th><th className="p-4">Amount</th><th className="p-4">Description</th><th className="p-4">Link</th><th className="p-4">Action</th></tr>
+                        </thead>
+                        <tbody className="text-sm divide-y">
+                            {transactions.filter(t => t.status === 'pending').map(t => (
+                                <tr key={t.id} className="hover:bg-gray-50">
+                                    <td className="p-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td>
+                                    <td className="p-4 font-bold">{formatRupiah(t.amount)}</td>
+                                    <td className="p-4 text-gray-600">{t.description}</td>
+                                    <td className="p-4"><a href={t.paymentUrl} target="_blank" className="text-indigo-600 hover:underline truncate max-w-[200px] block">{t.paymentUrl}</a></td>
+                                    <td className="p-4">
+                                        <button onClick={() => copyToClipboard(t.paymentUrl || '')} className="text-gray-500 hover:text-indigo-600 mr-3"><Copy size={16}/></button>
+                                        <button onClick={() => handleRevokeLink(t)} className="text-red-400 hover:text-red-600"><Ban size={16}/></button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {transactions.filter(t => t.status === 'pending').length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No active links</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+          )}
+
+          {/* INTEGRATION VIEW */}
+          {view === 'integration' && (
+            <div className="space-y-6">
+                <Card>
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600"><Code2 size={24}/></div>
+                        <div><h3 className="text-lg font-bold">Integration Modules</h3><p className="text-gray-500 text-sm">Download ready-to-use plugins for your platform.</p></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="border p-4 rounded-xl hover:border-indigo-500 transition-colors cursor-pointer group" onClick={() => window.open('https://github.com/nabhan-rp/qioslink', '_blank')}>
+                            <div className="flex justify-between items-start mb-2"><h4 className="font-bold text-gray-800">WHMCS Module</h4><Download size={18} className="text-gray-400 group-hover:text-indigo-600"/></div>
+                            <p className="text-xs text-gray-500">Automated payment gateway for WHMCS billing system. Supports auto-activation.</p>
+                        </div>
+                        <div className="border p-4 rounded-xl hover:border-indigo-500 transition-colors cursor-pointer group" onClick={() => window.open('https://github.com/nabhan-rp/qioslink', '_blank')}>
+                            <div className="flex justify-between items-start mb-2"><h4 className="font-bold text-gray-800">WooCommerce Plugin</h4><Download size={18} className="text-gray-400 group-hover:text-indigo-600"/></div>
+                            <p className="text-xs text-gray-500">WordPress plugin for online stores. Seamless checkout experience.</p>
+                        </div>
+                    </div>
+                </Card>
+                <Card>
+                    <h3 className="text-lg font-bold mb-4">API Credentials</h3>
+                    <div className="space-y-4">
+                        <div className="bg-gray-900 text-gray-300 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                            <p className="text-gray-500 mb-2"># API Endpoint</p>
+                            <p className="text-white">{window.location.origin}/api/create_payment.php</p>
+                            <br/>
+                            <p className="text-gray-500 mb-2"># Example JSON Payload</p>
+                            <pre>{`{
+  "merchant_id": "${currentUser?.id}",
+  "amount": 50000,
+  "description": "Invoice #100",
+  "callback_url": "https://your-site.com/callback"
+}`}</pre>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+          )}
           
           {/* --- SETTINGS TAB (UPDATED) --- */}
           {view === 'settings' && (
