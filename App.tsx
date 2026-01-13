@@ -79,7 +79,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.5 (Enterprise Beta)";
+const APP_VERSION = "4.8.6 (Enterprise Beta)";
 
 const getEnv = () => {
   try {
@@ -510,11 +510,8 @@ export default function App() {
   const [publicData, setPublicData] = useState<any>(null);
   const [isCheckingPublic, setIsCheckingPublic] = useState(false);
   
-  // LOGIN SCREEN LOGIC FIX:
-  // To verify if social login is enabled in the *current system configuration*,
-  // we cannot rely on static MOCK_USERS[0]. We must check the admin user in the `users` state.
-  // The `users` state is initialized from localStorage in initialize(), ensuring it's up to date with dashboard changes in Demo mode.
-  const adminConfig = users.find(u => u.role === 'superadmin')?.merchantConfig || DEFAULT_MERCHANT_CONFIG;
+  // SYSTEM CONFIG STATE (Loaded from API/Public, separate from User Auth)
+  const [systemConfig, setSystemConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
   
   const [loginMode, setLoginMode] = useState<'standard' | 'whatsapp' | 'social'>('standard'); 
 
@@ -531,10 +528,10 @@ export default function App() {
 
   // Use Effect to sync global login method with local state
   useEffect(() => {
-      if (adminConfig.auth?.loginMethod === 'whatsapp_otp') {
+      if (systemConfig?.loginMethod === 'whatsapp_otp') {
           setLoginMode('whatsapp');
       }
-  }, [adminConfig]); // Depend on adminConfig
+  }, [systemConfig]); // Depend on systemConfig
 
   // --- REFRESH SESSION ON TAB CHANGE (Fix Sync Issue) ---
   useEffect(() => {
@@ -577,27 +574,36 @@ export default function App() {
   const initialize = async () => {
     setAuthLoading(true);
     
-    // IMPORTANT: LOAD USERS FIRST (For Config Persistence in Login Screen)
+    // 1. FETCH PUBLIC SYSTEM CONFIG (Domain wide settings)
     if (IS_DEMO_MODE) {
+        // In Demo/Localhost, we prioritize what's saved in LocalStorage specific for system config
+        const savedSysConfig = localStorage.getItem('qios_system_config');
+        if (savedSysConfig) {
+            setSystemConfig(JSON.parse(savedSysConfig));
+        } else {
+            // Fallback to MOCK user config if no system config saved yet
+            const mockAdminConfig = MOCK_USERS.find(u => u.role === 'superadmin')?.merchantConfig?.auth;
+            if(mockAdminConfig) setSystemConfig(mockAdminConfig);
+        }
+        
+        // Also load users for login simulation
         const savedUsers = localStorage.getItem('qios_users');
         if (savedUsers) {
             const parsed = JSON.parse(savedUsers);
-            // Merge Mock and Saved
             const combined = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))];
-            
-            // If the saved users contain an update to the admin (ID 1), use that config!
-            const savedAdmin = parsed.find((u:User) => u.id === '1');
-            if (savedAdmin) {
-                // Update MOCK_USERS[0] in state context essentially
-                const newUsersState = combined.map(u => u.id === '1' ? savedAdmin : u);
-                setUsers(newUsersState);
-            } else {
-                setUsers(combined);
-            }
+            setUsers(combined);
         }
     } else {
-        // Production: Attempt to fetch public config or users if session exists
-        // Not strictly necessary for login screen dynamic config unless we have a public config endpoint.
+        // PRODUCTION: Fetch config from special public endpoint
+        try {
+            const res = await fetch(`${API_BASE}/get_public_config.php`);
+            const data = await res.json();
+            if (data.success && data.config) {
+                setSystemConfig(data.config);
+            }
+        } catch (e) {
+            console.error("Failed to load public config", e);
+        }
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -733,7 +739,33 @@ export default function App() {
       setApiLoading(false);
   };
 
-  const handleUpdateConfig = async () => { setApiLoading(true); if (currentUser) { const updatedUser = { ...currentUser, merchantConfig: config }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert('Saved'); } else { try { const res = await fetch(`${API_BASE}/update_config.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: currentUser.id, config: config }) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert('Saved'); } else alert(data.message); } catch (e) { alert('Error'); } } } setApiLoading(false); };
+  const handleUpdateConfig = async () => { 
+      setApiLoading(true); 
+      if (currentUser) { 
+          const updatedUser = { ...currentUser, merchantConfig: config }; 
+          if (IS_DEMO_MODE) { 
+              setCurrentUser(updatedUser); 
+              sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
+              // IF SUPERADMIN, Save to Public System Config persistence for DEMO
+              if (currentUser.role === 'superadmin' && config.auth) {
+                  localStorage.setItem('qios_system_config', JSON.stringify(config.auth));
+                  setSystemConfig(config.auth); // Update state immediately
+              }
+              alert('Saved'); 
+          } else { 
+              try { 
+                  const res = await fetch(`${API_BASE}/update_config.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: currentUser.id, config: config }) }); 
+                  const data = await res.json(); 
+                  if (data.success) { 
+                      setCurrentUser(updatedUser); 
+                      sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
+                      alert('Saved'); 
+                  } else alert(data.message); 
+              } catch (e) { alert('Error'); } 
+          } 
+      } 
+      setApiLoading(false); 
+  };
   
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
@@ -869,7 +901,20 @@ export default function App() {
   if (showLanding && !currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
   if (!currentUser) { 
       // ... (Register/Login Forms) ...
-      if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button></form></div></div></div>; } 
+      if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button>
+      
+      {/* SOCIAL LOGIN FOR REGISTER - USING SYSTEM CONFIG */}
+      {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
+          <>
+              <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or sign up with</span></div></div>
+              <div className="grid grid-cols-3 gap-3">
+                  {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
+                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
+                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+              </div>
+          </>
+      )}
+      </form></div></div></div>; } 
       
       // --- LOGIN SCREEN UPDATE ---
       return (
@@ -880,7 +925,7 @@ export default function App() {
                   <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
                   
                   {/* AUTH TOGGLE IF ENABLED */}
-                  {(adminConfig.auth?.loginMethod === 'hybrid' || adminConfig.auth?.loginMethod === 'whatsapp_otp') && (
+                  {(systemConfig?.loginMethod === 'hybrid' || systemConfig?.loginMethod === 'whatsapp_otp') && (
                       <div className="flex justify-center gap-2 mt-4 bg-indigo-700/50 p-1 rounded-lg inline-flex">
                           <button onClick={() => setLoginMode('standard')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'standard' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>Email</button>
                           <button onClick={() => setLoginMode('whatsapp')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'whatsapp' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>WhatsApp</button>
@@ -903,14 +948,14 @@ export default function App() {
                       </div>
                   )}
                   
-                  {/* SOCIAL LOGIN - Using adminConfig derived from state */}
-                  {(adminConfig.auth?.socialLogin?.google || adminConfig.auth?.socialLogin?.github || adminConfig.auth?.socialLogin?.facebook) && (
+                  {/* SOCIAL LOGIN - Using systemConfig derived from API/LocalStorage */}
+                  {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
                       <>
                           <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
                           <div className="grid grid-cols-3 gap-3">
-                              {adminConfig.auth?.socialLogin?.google && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
-                              {adminConfig.auth?.socialLogin?.github && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
-                              {adminConfig.auth?.socialLogin?.facebook && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+                              {systemConfig.socialLogin?.google && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
+                              {systemConfig.socialLogin?.github && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
+                              {systemConfig.socialLogin?.facebook && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
                           </div>
                       </>
                   )}
