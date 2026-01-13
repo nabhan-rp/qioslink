@@ -79,7 +79,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.4 (Enterprise Beta)";
+const APP_VERSION = "4.8.5 (Enterprise Beta)";
 
 const getEnv = () => {
   try {
@@ -143,7 +143,6 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
 
 // --- LANDING PAGE COMPONENT ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
-  // ... (No changes to Landing Page code) ...
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-indigo-100 selection:text-indigo-700">
       {/* Navbar */}
@@ -255,41 +254,84 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           </div>
         </section>
 
-        {/* Hosting Options Section */}
-        <section id="options" className="py-20 bg-white">
+        {/* Updated Pricing / Hosting Options Section */}
+        <section id="options" className="py-20 bg-gray-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-4">
+              <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span>
+            </div>
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900">Deployment Options</h2>
-              <p className="mt-4 text-gray-500">Choose how you want to run QiosLink.</p>
+              <h2 className="text-4xl font-extrabold text-white mb-4">Cloud Service vs Self-Hosted</h2>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Cloud Option */}
-              <div className="p-8 rounded-3xl border border-gray-200 hover:border-indigo-500 transition-colors relative overflow-hidden group">
-                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">POPULAR</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Cloud SaaS</h3>
-                <p className="text-gray-500 mb-6">Hosted by us. Instant setup. Automatic updates.</p>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-green-500"/> <span>No Server Required</span></li>
-                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-green-500"/> <span>Global CDN Acceleration</span></li>
-                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-green-500"/> <span>Managed Security & Backups</span></li>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              
+              {/* Card 1: Cloud SaaS */}
+              <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/50">
+                <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120} /></div>
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm">
+                  <Cloud size={24} className="text-white"/>
+                </div>
+                <h3 className="text-2xl font-bold mb-1">Cloud SaaS</h3>
+                <p className="text-indigo-200 text-sm font-mono mb-6">bayar.jajanan.online</p>
+                <p className="text-indigo-100 mb-8 flex-grow leading-relaxed">
+                  The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.
+                </p>
+                <ul className="space-y-3 mb-8 text-sm font-medium text-indigo-100">
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Zero Maintenance</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Instant Activation</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Free & Pro Plans</li>
                 </ul>
-                <button onClick={onRegister} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">Start Free Trial</button>
+                <button onClick={onRegister} className="w-full py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">
+                  Register Now
+                </button>
               </div>
 
-              {/* Self-Hosted Option */}
-              <div className="p-8 rounded-3xl border border-gray-200 hover:border-gray-400 transition-colors bg-gray-50">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Self-Hosted</h3>
-                <p className="text-gray-500 mb-6">Host on your own cPanel or VPS. Full data control.</p>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-gray-400"/> <span>One-time Setup</span></li>
-                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-gray-400"/> <span>Source Code Access (PHP + React)</span></li>
-                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-gray-400"/> <span>White Label Branding</span></li>
+              {/* Card 2: Self-Host (Free) */}
+              <div className="bg-slate-800 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col border border-slate-700 hover:border-slate-600 transition-colors">
+                <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120} /></div>
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-500/20 rounded-xl mb-6 text-emerald-400">
+                  <Zap size={24}/>
+                </div>
+                <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
+                <p className="text-slate-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
+                <p className="text-slate-300 mb-8 flex-grow leading-relaxed">
+                  Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.
+                </p>
+                <ul className="space-y-3 mb-8 text-sm font-medium text-slate-300">
+                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-400"/> 0 Cost / Lifetime</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-400"/> Free SSL Certificate</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-400"/> Open Source Control</li>
                 </ul>
-                <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noreferrer" className="block w-full py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors text-center">
-                  Download Source
+                <a href="https://freehosting.jajanserver.com" target="_blank" rel="noreferrer" className="w-full py-4 bg-transparent border border-emerald-500 text-emerald-400 font-bold rounded-xl hover:bg-emerald-500/10 transition-colors text-center">
+                  Get Free Host
                 </a>
               </div>
+
+              {/* Card 3: Self-Host (Paid) */}
+              <div className="bg-slate-800 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col border border-slate-700 hover:border-yellow-500/30 transition-colors">
+                <div className="absolute top-4 right-4"><span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-1 rounded border border-yellow-500/30">ENTERPRISE</span></div>
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-500/20 rounded-xl mb-6 text-yellow-400">
+                  <Rocket size={24}/>
+                </div>
+                <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
+                <p className="text-slate-400 text-sm font-mono mb-6">jajanserver.com</p>
+                <p className="text-slate-300 mb-8 flex-grow leading-relaxed">
+                  For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.
+                </p>
+                <ul className="space-y-3 mb-8 text-sm font-medium text-slate-300">
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> 99.9% Uptime SLA</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Priority Support</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Daily Backups</li>
+                </ul>
+                <a href="https://jajanserver.com" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-slate-900 font-bold rounded-xl hover:bg-yellow-400 transition-colors text-center shadow-lg shadow-yellow-500/20">
+                  View Plans
+                </a>
+              </div>
+
             </div>
           </div>
         </section>
@@ -432,6 +474,12 @@ export default function App() {
   const [publicData, setPublicData] = useState<any>(null);
   const [isCheckingPublic, setIsCheckingPublic] = useState(false);
   
+  // LOGIN SCREEN LOGIC FIX:
+  // To verify if social login is enabled in the *current system configuration*,
+  // we cannot rely on static MOCK_USERS[0]. We must check the admin user in the `users` state.
+  // The `users` state is initialized from localStorage in initialize(), ensuring it's up to date with dashboard changes in Demo mode.
+  const adminConfig = users.find(u => u.role === 'superadmin')?.merchantConfig || DEFAULT_MERCHANT_CONFIG;
+  
   const [loginMode, setLoginMode] = useState<'standard' | 'whatsapp' | 'social'>('standard'); 
 
   useEffect(() => {
@@ -447,10 +495,10 @@ export default function App() {
 
   // Use Effect to sync global login method with local state
   useEffect(() => {
-      if (MOCK_USERS[0].merchantConfig?.auth?.loginMethod === 'whatsapp_otp') {
+      if (adminConfig.auth?.loginMethod === 'whatsapp_otp') {
           setLoginMode('whatsapp');
       }
-  }, []);
+  }, [adminConfig]); // Depend on adminConfig
 
   // --- REFRESH SESSION ON TAB CHANGE (Fix Sync Issue) ---
   useEffect(() => {
@@ -462,21 +510,12 @@ export default function App() {
   const refreshSession = async () => {
       if (!currentUser) return;
       try {
-          // Fetch user list (since admin can see it) OR specific profile logic
-          // For simplicity, we reuse manage_users.php logic if role is high enough, 
-          // OR we just rely on page refresh. 
-          // BETTER: Re-fetch the current user's profile specifically.
-          
-          // Since we don't have a dedicated /me endpoint in the simple bundle,
-          // We will search for ourselves in the 'manage_users' list if we have access.
           if (['superadmin', 'merchant', 'cs'].includes(currentUser.role)) {
               const res = await fetch(`${API_BASE}/manage_users.php?action=list`);
               const data = await res.json();
               if (data.success && data.users) {
                   const me = data.users.find((u: User) => u.id === currentUser.id);
                   if (me) {
-                      // Update Session Storage & State
-                      // Merge with existing merchantConfig to not lose local changes
                       const updatedUser = { ...me, merchantConfig: me.merchantConfig || currentUser.merchantConfig };
                       sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
                       setCurrentUser(updatedUser);
@@ -489,7 +528,6 @@ export default function App() {
   };
 
   // ... (Keep existing Initialize and Poll Logic) ...
-  // --- CLIENT-SIDE POLLING FOR FREE HOSTING SUPPORT ---
   useEffect(() => {
     let interval: any;
     if (isPublicMode && publicData?.status === 'pending' && !IS_DEMO_MODE) {
@@ -502,6 +540,30 @@ export default function App() {
 
   const initialize = async () => {
     setAuthLoading(true);
+    
+    // IMPORTANT: LOAD USERS FIRST (For Config Persistence in Login Screen)
+    if (IS_DEMO_MODE) {
+        const savedUsers = localStorage.getItem('qios_users');
+        if (savedUsers) {
+            const parsed = JSON.parse(savedUsers);
+            // Merge Mock and Saved
+            const combined = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))];
+            
+            // If the saved users contain an update to the admin (ID 1), use that config!
+            const savedAdmin = parsed.find((u:User) => u.id === '1');
+            if (savedAdmin) {
+                // Update MOCK_USERS[0] in state context essentially
+                const newUsersState = combined.map(u => u.id === '1' ? savedAdmin : u);
+                setUsers(newUsersState);
+            } else {
+                setUsers(combined);
+            }
+        }
+    } else {
+        // Production: Attempt to fetch public config or users if session exists
+        // Not strictly necessary for login screen dynamic config unless we have a public config endpoint.
+    }
+
     const params = new URLSearchParams(window.location.search);
     if (params.get('pay')) {
         setIsPublicMode(true); setShowLanding(false);
@@ -540,7 +602,6 @@ export default function App() {
   };
 
   const handlePublicCheck = async (silent = false) => {
-      // Validasi data awal
       if (!publicData?.trx_id || !publicData?.merchant_id) {
           if(!silent) alert("Please wait for payment details to load fully.");
           return;
@@ -553,7 +614,6 @@ export default function App() {
       
       if (!silent) setIsCheckingPublic(true);
       try {
-          // 1. Trigger Check Mutation
           const res = await fetch(`${API_BASE}/check_mutation.php`, {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -565,7 +625,6 @@ export default function App() {
           
           if(!res.ok) throw new Error(`Server Error: ${res.status}`);
           
-          // 2. Refresh Status
           const params = new URLSearchParams(window.location.search);
           const token = params.get('pay');
           if (token) {
@@ -656,7 +715,6 @@ export default function App() {
           if (data.success && data.verification_url) {
               window.location.href = data.verification_url;
           } else {
-              // ENHANCED ALERT: Show detail error from backend debug
               const errorDetail = data.debug ? "\nDetail: " + JSON.stringify(data.debug) : "";
               alert("Failed to start KYC: " + (data.message || "Unknown error") + errorDetail);
           }
@@ -674,7 +732,6 @@ export default function App() {
   const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
   
-  // NEW: Update User Auth Security (Wa Login / 2FA per user)
   const handleUserAuthUpdate = async (userId: string, waEnabled: boolean, twoFaEnabled: boolean) => {
       setApiLoading(true);
       if(IS_DEMO_MODE) {
@@ -787,7 +844,7 @@ export default function App() {
                   <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
                   
                   {/* AUTH TOGGLE IF ENABLED */}
-                  {(MOCK_USERS[0].merchantConfig?.auth?.loginMethod === 'hybrid' || MOCK_USERS[0].merchantConfig?.auth?.loginMethod === 'whatsapp_otp') && (
+                  {(adminConfig.auth?.loginMethod === 'hybrid' || adminConfig.auth?.loginMethod === 'whatsapp_otp') && (
                       <div className="flex justify-center gap-2 mt-4 bg-indigo-700/50 p-1 rounded-lg inline-flex">
                           <button onClick={() => setLoginMode('standard')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'standard' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>Email</button>
                           <button onClick={() => setLoginMode('whatsapp')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'whatsapp' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>WhatsApp</button>
@@ -810,14 +867,14 @@ export default function App() {
                       </div>
                   )}
                   
-                  {/* SOCIAL LOGIN */}
-                  {(MOCK_USERS[0].merchantConfig?.auth?.socialLogin?.google || MOCK_USERS[0].merchantConfig?.auth?.socialLogin?.github || MOCK_USERS[0].merchantConfig?.auth?.socialLogin?.facebook) && (
+                  {/* SOCIAL LOGIN - Using adminConfig derived from state */}
+                  {(adminConfig.auth?.socialLogin?.google || adminConfig.auth?.socialLogin?.github || adminConfig.auth?.socialLogin?.facebook) && (
                       <>
                           <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
                           <div className="grid grid-cols-3 gap-3">
-                              {MOCK_USERS[0].merchantConfig?.auth?.socialLogin?.google && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
-                              {MOCK_USERS[0].merchantConfig?.auth?.socialLogin?.github && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
-                              {MOCK_USERS[0].merchantConfig?.auth?.socialLogin?.facebook && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+                              {adminConfig.auth?.socialLogin?.google && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
+                              {adminConfig.auth?.socialLogin?.github && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
+                              {adminConfig.auth?.socialLogin?.facebook && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
                           </div>
                       </>
                   )}
@@ -1188,36 +1245,6 @@ export default function App() {
                                          </p>
                                      )}
                                  </div>
-                             </div>
-                         </Card>
-
-                         {/* 3. WHATSAPP GATEWAY */}
-                         <Card>
-                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Phone size={20}/> WhatsApp Gateway</h3>
-                             <div className="space-y-4">
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Provider</label>
-                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.waProvider || 'fonnte'} onChange={e => setConfig({...config, auth: {...config.auth!, waProvider: e.target.value as any}})}>
-                                         <option value="fonnte">Unofficial (Fonnte) - Easiest</option>
-                                         <option value="meta">Official (Meta Cloud API) - Enterprise</option>
-                                     </select>
-                                 </div>
-
-                                 {config.auth?.waProvider === 'fonnte' ? (
-                                     <div>
-                                         <label className="block text-sm font-medium mb-1">Fonnte Token</label>
-                                         <div className="flex gap-2">
-                                             <input type="password" className="w-full border p-2 rounded" value={config.auth?.fonnteToken || ''} onChange={e => setConfig({...config, auth: {...config.auth!, fonnteToken: e.target.value}})} placeholder="Enter Fonnte Token" />
-                                             <a href="https://fonnte.com" target="_blank" className="px-3 py-2 bg-gray-100 rounded text-gray-600 text-sm hover:bg-gray-200 whitespace-nowrap">Get Token</a>
-                                         </div>
-                                     </div>
-                                 ) : (
-                                     <div className="space-y-3 p-4 bg-gray-50 rounded border">
-                                         <div><label className="block text-xs font-bold text-gray-500 uppercase">App ID</label><input type="text" className="w-full border p-2 rounded" value={config.auth?.metaAppId} onChange={e => setConfig({...config, auth: {...config.auth!, metaAppId: e.target.value}})}/></div>
-                                         <div><label className="block text-xs font-bold text-gray-500 uppercase">Phone Number ID</label><input type="text" className="w-full border p-2 rounded" value={config.auth?.metaPhoneId} onChange={e => setConfig({...config, auth: {...config.auth!, metaPhoneId: e.target.value}})}/></div>
-                                         <div><label className="block text-xs font-bold text-gray-500 uppercase">Access Token</label><input type="password" className="w-full border p-2 rounded" value={config.auth?.metaToken} onChange={e => setConfig({...config, auth: {...config.auth!, metaToken: e.target.value}})}/></div>
-                                     </div>
-                                 )}
                              </div>
                          </Card>
 
