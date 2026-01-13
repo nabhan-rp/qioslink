@@ -1,22 +1,18 @@
 
 ================================================================================
-BUNDLE PHP BACKEND V4.3 (UNIVERSAL SMTP ENGINE - FULL PACK)
+BUNDLE PHP BACKEND V4.4 (SMTP FIX & ROBUST INCLUDE)
 ================================================================================
 INSTRUKSI:
-File ini khusus untuk pengguna yang ingin menggunakan SMTP Bawaan Hosting (Universal).
-Engine ini tidak membutuhkan Composer atau Library PHPMailer eksternal.
-Cocok untuk Shared Hosting, Free Hosting (Byet/InfinityFree), dan cPanel biasa.
-
-CARA PAKAI:
-1. Buat file-file di bawah ini di dalam folder: /public_html/api/
-2. Copas isinya sesuai nama file.
+1. File ini berisi modul SMTP Universal.
+2. Update file `api/test_smtp.php` Anda dengan kode di bawah ini agar path-nya benar.
+3. Pastikan `simple_smtp.php` juga sudah terupload.
 
 --------------------------------------------------------------------------------
-FILE 1: api/simple_smtp.php (CORE ENGINE - V2 SSL FIX)
+FILE 1: api/simple_smtp.php (ENGINE SMTP)
 --------------------------------------------------------------------------------
 <?php
-// CLASS SimpleSMTP - V2 (Robust Connection)
-// Menggunakan stream_socket_client untuk support bypass SSL Verification (Self-Signed Certs)
+// CLASS SimpleSMTP - V2 (Robust Connection with SSL Bypass)
+// Mendukung Shared Hosting yang memblokir fungsi mail() standar
 
 class SimpleSMTP {
     private $host;
@@ -63,14 +59,12 @@ class SimpleSMTP {
 
     public function send($to, $subject, $bodyHTML, $fromEmail, $fromName) {
         try {
-            // 1. Setup Protocol Prefix
             $protocol = "tcp://";
             if ($this->secure === 'ssl') {
                 $protocol = "ssl://";
             }
 
-            // 2. Setup Context (THE FIX: Allow Self-Signed Certs)
-            // Penting untuk hosting dimana Mail Server & Web Server ada di jaringan lokal yang sama
+            // FIX: Allow Self-Signed Certs (Penting untuk Local Mail Server)
             $context = stream_context_create([
                 'ssl' => [
                     'verify_peer' => false,
@@ -79,7 +73,6 @@ class SimpleSMTP {
                 ]
             ]);
 
-            // 3. Connect using stream_socket_client
             $socketUrl = $protocol . $this->host . ":" . $this->port;
             $this->conn = stream_socket_client(
                 $socketUrl, 
@@ -94,29 +87,23 @@ class SimpleSMTP {
                 throw new Exception("Could not connect to SMTP host ($socketUrl): $errstr ($errno)");
             }
             
-            // 4. Handshake
-            $this->getResponse(); // Read banner
+            $this->getResponse(); // Banner
             $this->sendCmd("EHLO " . $_SERVER['HTTP_HOST']);
 
-            // 5. STARTTLS Logic (Only if using TLS mode on port 587/25)
             if ($this->secure === 'tls') {
                 $this->sendCmd("STARTTLS", "220");
-                // Upgrade socket to secure
                 stream_socket_enable_crypto($this->conn, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
                 $this->sendCmd("EHLO " . $_SERVER['HTTP_HOST']);
             }
 
-            // 6. AUTH LOGIN
             $this->sendCmd("AUTH LOGIN", "334");
             $this->sendCmd(base64_encode($this->user), "334");
             $this->sendCmd(base64_encode($this->pass), "235");
 
-            // 7. Send Headers
             $this->sendCmd("MAIL FROM: <$fromEmail>", "250");
             $this->sendCmd("RCPT TO: <$to>", "250");
             $this->sendCmd("DATA", "354");
 
-            // 8. Send Body
             $headers  = "MIME-Version: 1.0\r\n";
             $headers .= "Content-type: text/html; charset=utf-8\r\n";
             $headers .= "From: $fromName <$fromEmail>\r\n";
@@ -127,11 +114,8 @@ class SimpleSMTP {
             fwrite($this->conn, $headers . "\r\n" . $bodyHTML . "\r\n.\r\n");
             
             $response = $this->getResponse();
-            if (substr($response, 0, 3) != "250") {
-                 throw new Exception("Failed to send data: $response");
-            }
+            if (substr($response, 0, 3) != "250") throw new Exception("Failed to send data: $response");
 
-            // 9. Quit
             $this->sendCmd("QUIT");
             fclose($this->conn);
             return true;
@@ -145,10 +129,11 @@ class SimpleSMTP {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 2: api/test_smtp.php (TESTER)
+FILE 2: api/test_smtp.php (FIXED PATH INCLUDE)
 --------------------------------------------------------------------------------
 <?php
-require 'simple_smtp.php'; // Load Engine
+// GUNAKAN __DIR__ UNTUK MENGHINDARI ERROR 'NO SUCH FILE'
+require_once __DIR__ . '/simple_smtp.php';
 
 header("Content-Type: application/json");
 $input = json_decode(file_get_contents("php://input"), true);
@@ -166,14 +151,13 @@ try {
         <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
             <h2 style='color: #4f46e5;'>QiosLink SMTP Test</h2>
             <p><strong>Success!</strong> Your SMTP configuration is correct.</p>
-            <p>Protocol: $secure</p>
             <p>Host: {$conf['host']}</p>
             <hr>
-            <small>Sent via QiosLink Universal Engine</small>
+            <small>Sent via QiosLink Universal Engine (V2)</small>
         </div>
     ";
     
-    $mail->send($input['recipient'], "QiosLink SMTP Test (Success)", $body, $conf['fromEmail'], $conf['fromName'] ?: 'QiosLink');
+    $mail->send($input['recipient'], "QiosLink SMTP Test", $body, $conf['fromEmail'], $conf['fromName'] ?: 'QiosLink');
     echo json_encode(['success' => true, 'message' => 'Test email sent successfully via SimpleSMTP']);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => "Send Failed: " . $e->getMessage()]);
@@ -181,90 +165,11 @@ try {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 3: api/register.php (REGISTRASI DENGAN EMAIL VERIFIKASI)
+FILE 3: api/resend_otp.php (USING UNIVERSAL ENGINE)
 --------------------------------------------------------------------------------
 <?php
 require 'db_connect.php';
-require 'simple_smtp.php'; // Load Engine
-
-$input = json_decode(file_get_contents("php://input"), true);
-
-if(isset($input['username']) && isset($input['password'])) {
-    $username = $conn->real_escape_string($input['username']);
-    $email = isset($input['email']) ? $conn->real_escape_string($input['email']) : '';
-    $password = $input['password'];
-    $confirmPass = isset($input['confirmPassword']) ? $input['confirmPassword'] : $password;
-    
-    if ($password !== $confirmPass) {
-        echo json_encode(['success' => false, 'message' => 'Passwords do not match']); exit;
-    }
-
-    $role = 'user'; 
-    $creator_id = 1; // Default Superadmin
-
-    // Cek Duplicate
-    $check = $conn->query("SELECT id FROM users WHERE username = '$username'");
-    if($check->num_rows > 0) {
-        echo json_encode(['success' => false, 'message' => 'Username already exists']); exit;
-    }
-
-    // Ambil Config SMTP dari Superadmin
-    $stmtConfig = $conn->prepare("SELECT merchant_config FROM users WHERE id = ?");
-    $stmtConfig->bind_param("i", $creator_id);
-    $stmtConfig->execute();
-    $resConfig = $stmtConfig->get_result();
-    $creatorData = $resConfig->fetch_assoc();
-    $creatorConf = json_decode($creatorData['merchant_config'], true);
-
-    $requireVerification = false;
-    $smtpConfig = null;
-
-    if (isset($creatorConf['smtp']) && isset($creatorConf['smtp']['requireEmailVerification']) && $creatorConf['smtp']['requireEmailVerification'] === true) {
-        $requireVerification = true;
-        $smtpConfig = $creatorConf['smtp'];
-    }
-
-    $is_verified = $requireVerification ? 0 : 1;
-    $otp_code = $requireVerification ? rand(100000, 999999) : null;
-
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, creator_id, is_verified, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssiss", $username, $email, $password, $role, $creator_id, $is_verified, $otp_code);
-    
-    if($stmt->execute()) {
-        $sendMsg = null;
-        if ($requireVerification && $smtpConfig) {
-            try {
-                $secure = isset($smtpConfig['secure']) ? $smtpConfig['secure'] : 'tls';
-                $mail = new SimpleSMTP($smtpConfig['host'], $smtpConfig['port'], $smtpConfig['user'], $smtpConfig['pass'], $secure);
-                
-                $body = "
-                    <div style='font-family: sans-serif; padding: 20px; border: 1px solid #ddd;'>
-                        <h2>Welcome to QiosLink</h2>
-                        <p>Your verification code is:</p>
-                        <h1 style='color: #4f46e5; letter-spacing: 5px;'>$otp_code</h1>
-                        <p>Please enter this code in the dashboard.</p>
-                    </div>
-                ";
-                $mail->send($email, "Verify Your Account", $body, $smtpConfig['fromEmail'], $smtpConfig['fromName']);
-            } catch (Exception $e) {
-                $sendMsg = " (Email Failed: " . $e->getMessage() . ")";
-            }
-        }
-        echo json_encode(['success' => true, 'message' => 'Registration successful' . $sendMsg]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error']);
-    }
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid input']);
-}
-?>
-
---------------------------------------------------------------------------------
-FILE 4: api/resend_otp.php (KIRIM ULANG OTP)
---------------------------------------------------------------------------------
-<?php
-require 'db_connect.php';
-require 'simple_smtp.php'; // Load Engine
+require_once __DIR__ . '/simple_smtp.php'; 
 
 $input = json_decode(file_get_contents("php://input"), true);
 
