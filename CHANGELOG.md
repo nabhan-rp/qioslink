@@ -3,20 +3,21 @@
 
 Semua perubahan penting pada proyek **QiosLink** (Dynamic QRIS Engine) didokumentasikan di file ini.
 
-**Current Version:** `v4.5 (Public Beta)`
-**Release Date:** 13 Januari 2026
+**Current Version:** `v4.6 (Public Beta)`
+**Release Date:** 14 Januari 2026
 
 ---
 
-## [v4.5] - 2026-01-13 (Current / Public Beta)
+## [v4.6] - 2026-01-14 (Current / Public Beta)
+### Added
+- **KYC Verification Support:** Pemisahan status verifikasi antara "Email Verified" dan "KYC Verified".
+- **Didit.me Integration UI:** Penambahan form konfigurasi untuk API Didit.me pada panel Admin.
+- **Verification Badges:** Indikator visual status KYC pada dashboard User dan Admin.
+- **Manual KYC Approval:** Fitur bagi admin untuk menyetujui KYC pengguna secara manual.
+
 ### Fixed
 - **Critical DB Connection:** Perbaikan cara penulisan password database yang mengandung karakter spesial pada `db_connect.php`.
 - **Universal SMTP Path:** Perbaikan penggunaan `__DIR__` pada include path untuk mencegah error "No such file" pada server Linux/Shared Hosting.
-- **Undefined Array Keys:** Penambahan validasi `isset()` pada konfigurasi SMTP untuk mencegah PHP Warning.
-
-### Changed
-- Status aplikasi ditingkatkan menjadi **Public Beta**.
-- Update SEO Meta Tags pada `index.html` untuk mencerminkan kapabilitas SaaS.
 
 ---
 
@@ -67,7 +68,3 @@ Semua perubahan penting pada proyek **QiosLink** (Dynamic QRIS Engine) didokumen
 - Integrasi QR Code Library.
 - Statis QRIS Display.
 - Mock Data structure.
-
----
-
-> **Note:** Versi ini adalah **Public Beta**. Meskipun fitur inti sudah berjalan stabil, disarankan untuk melakukan pengujian transaksi nominal kecil sebelum digunakan untuk transaksi bervolume besar.
