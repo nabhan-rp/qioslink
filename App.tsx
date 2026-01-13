@@ -79,7 +79,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.3 (Enterprise Beta)";
+const APP_VERSION = "4.8.4 (Enterprise Beta)";
 
 const getEnv = () => {
   try {
@@ -209,7 +209,90 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             </p>
           </div>
         </section>
-        {/* ... (Keep existing Landing Page sections) ... */}
+
+        {/* Features Section */}
+        <section id="features" className="py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900">What's New in v4.8</h2>
+              <p className="mt-4 text-gray-500">Major security and usability updates for enterprise needs.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Feature 1: KYC */}
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6">
+                  <ScanFace size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Automated KYC</h3>
+                <p className="text-gray-500">
+                  Verify merchant identities instantly using Didit.me integration. Support for ID Cards and Liveness check.
+                </p>
+              </div>
+
+              {/* Feature 2: Social Auth */}
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-6">
+                  <Globe size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Social Login</h3>
+                <p className="text-gray-500">
+                  Seamless login experience using Google, Facebook, and GitHub accounts. Zero friction onboarding.
+                </p>
+              </div>
+
+              {/* Feature 3: WhatsApp Security */}
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6">
+                  <Phone size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp 2FA</h3>
+                <p className="text-gray-500">
+                  Secure your dashboard with OTP sent via WhatsApp. Supports passwordless login flow.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Hosting Options Section */}
+        <section id="options" className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900">Deployment Options</h2>
+              <p className="mt-4 text-gray-500">Choose how you want to run QiosLink.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* Cloud Option */}
+              <div className="p-8 rounded-3xl border border-gray-200 hover:border-indigo-500 transition-colors relative overflow-hidden group">
+                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">POPULAR</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Cloud SaaS</h3>
+                <p className="text-gray-500 mb-6">Hosted by us. Instant setup. Automatic updates.</p>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-green-500"/> <span>No Server Required</span></li>
+                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-green-500"/> <span>Global CDN Acceleration</span></li>
+                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-green-500"/> <span>Managed Security & Backups</span></li>
+                </ul>
+                <button onClick={onRegister} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">Start Free Trial</button>
+              </div>
+
+              {/* Self-Hosted Option */}
+              <div className="p-8 rounded-3xl border border-gray-200 hover:border-gray-400 transition-colors bg-gray-50">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Self-Hosted</h3>
+                <p className="text-gray-500 mb-6">Host on your own cPanel or VPS. Full data control.</p>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-gray-400"/> <span>One-time Setup</span></li>
+                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-gray-400"/> <span>Source Code Access (PHP + React)</span></li>
+                  <li className="flex items-center gap-2 text-sm text-gray-700"><CheckCircle2 size={16} className="text-gray-400"/> <span>White Label Branding</span></li>
+                </ul>
+                <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noreferrer" className="block w-full py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors text-center">
+                  Download Source
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
       <footer className="bg-white py-12 border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
