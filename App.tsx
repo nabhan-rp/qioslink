@@ -430,6 +430,7 @@ export default function App() {
   const [regError, setRegError] = useState('');
   const [isPublicMode, setIsPublicMode] = useState(false);
   const [publicData, setPublicData] = useState<any>(null);
+  const [isCheckingPublic, setIsCheckingPublic] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -441,6 +442,17 @@ export default function App() {
   }, []);
 
   useEffect(() => { initialize(); }, []);
+
+  // --- CLIENT-SIDE POLLING FOR FREE HOSTING SUPPORT ---
+  useEffect(() => {
+    let interval: any;
+    if (isPublicMode && publicData?.status === 'pending' && !IS_DEMO_MODE) {
+      interval = setInterval(() => {
+        handlePublicCheck(true); // Silent check (no alert)
+      }, 10000); // Check every 10 seconds
+    }
+    return () => clearInterval(interval);
+  }, [isPublicMode, publicData?.status]);
 
   const initialize = async () => {
     setAuthLoading(true);
@@ -481,7 +493,49 @@ export default function App() {
     setAuthLoading(false);
   };
 
-  // --- NEW: CHECK MUTATION STATUS MANUALLY ---
+  // --- PUBLIC CHECK FUNCTION ---
+  const handlePublicCheck = async (silent = false) => {
+      if (!publicData?.trx_id || !publicData?.merchant_id) return;
+      if (IS_DEMO_MODE) {
+          if (!silent) alert("Check Status Demo");
+          return;
+      }
+      
+      if (!silent) setIsCheckingPublic(true);
+      try {
+          // 1. Trigger Check Mutation
+          await fetch(`${API_BASE}/check_mutation.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ 
+                  trx_id: publicData.trx_id, 
+                  merchant_id: publicData.merchant_id 
+              })
+          });
+          
+          // 2. Refresh Status
+          const params = new URLSearchParams(window.location.search);
+          const token = params.get('pay');
+          if (token) {
+               const resDetails = await fetch(`${API_BASE}/get_payment_details.php?token=${token}`);
+               const data = await resDetails.json();
+               if (data.success) {
+                   setPublicData(data.data);
+                   if (data.data.status === 'paid' && !silent) {
+                       alert("Payment Confirmed!");
+                   } else if (data.data.status === 'pending' && !silent) {
+                       alert("Payment not found yet. Please wait a moment.");
+                   }
+               }
+          }
+      } catch (e) {
+          if (!silent) console.error("Auto check failed");
+      } finally {
+          if (!silent) setIsCheckingPublic(false);
+      }
+  };
+
+  // --- NEW: CHECK MUTATION STATUS MANUALLY (ADMIN) ---
   const handleCheckStatus = async (trx: Transaction) => {
       if(IS_DEMO_MODE) {
           // Fake update
@@ -563,7 +617,47 @@ export default function App() {
      if (publicData?.error) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full"><AlertCircle className="mx-auto text-red-500 mb-4" size={48} /><h2 className="text-xl font-bold text-gray-800">Invalid Link</h2><p className="text-gray-500 mt-2">{publicData.error}</p></div></div> }
      const isPaid = publicData?.status === 'paid';
      const isExpired = publicData?.status === 'expired' || publicData?.status === 'cancelled';
-     return ( <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4"><div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6 relative overflow-hidden">{isPaid && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><CheckCircle2 className="text-green-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Payment Successful!</h2><p className="text-gray-500 mt-2">Thank you for your payment.</p><p className="font-bold text-lg mt-4">{formatRupiah(publicData.amount)}</p></div>}{isExpired && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><Ban className="text-red-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Link Expired</h2><p className="text-gray-500 mt-2">This payment link is no longer active.</p></div>}<div className="flex justify-center mb-2">{logo ? <img src={logo} alt="Merchant Logo" className="h-16 w-auto object-contain" /> : <div style={{backgroundColor: brandColor}} className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg"><QrCode size={32} /></div>}</div><div><h1 className="text-2xl font-bold text-gray-800">{config.merchantName || publicData?.merchant_name}</h1><p className="text-gray-500 text-sm mt-1">{publicData?.description}</p>{publicData?.expires_at && <p className="text-xs text-orange-500 font-bold mt-2 flex justify-center items-center gap-1"><Clock size={12}/> Expires: {new Date(publicData.expires_at).toLocaleString()}</p>}</div><div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative"><div className="flex justify-center">{generatedQR && <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />}</div></div><div style={{color: brandColor}} className="text-4xl font-extrabold">{formatRupiah(Number(tempAmount))}</div></div>{config.branding?.customDomain && <p className="mt-8 text-gray-400 text-xs">Powered by {config.branding.customDomain}</p>}</div> );
+     return ( 
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+            <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6 relative overflow-hidden">
+                {isPaid && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><CheckCircle2 className="text-green-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Payment Successful!</h2><p className="text-gray-500 mt-2">Thank you for your payment.</p><p className="font-bold text-lg mt-4">{formatRupiah(publicData.amount)}</p></div>}
+                {isExpired && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><Ban className="text-red-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Link Expired</h2><p className="text-gray-500 mt-2">This payment link is no longer active.</p></div>}
+                <div className="flex justify-center mb-2">{logo ? <img src={logo} alt="Merchant Logo" className="h-16 w-auto object-contain" /> : <div style={{backgroundColor: brandColor}} className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg"><QrCode size={32} /></div>}</div>
+                <div><h1 className="text-2xl font-bold text-gray-800">{config.merchantName || publicData?.merchant_name}</h1><p className="text-gray-500 text-sm mt-1">{publicData?.description}</p>{publicData?.expires_at && <p className="text-xs text-orange-500 font-bold mt-2 flex justify-center items-center gap-1"><Clock size={12}/> Expires: {new Date(publicData.expires_at).toLocaleString()}</p>}</div>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative"><div className="flex justify-center">{generatedQR && <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />}</div></div>
+                <div style={{color: brandColor}} className="text-4xl font-extrabold">{formatRupiah(Number(tempAmount))}</div>
+                
+                {/* NEW: PUBLIC ACTION BUTTONS */}
+                {!isPaid && !isExpired && (
+                    <div className="flex flex-col gap-3 w-full mt-4 animate-in fade-in slide-in-from-bottom-4">
+                        {/* Check Status Button (Sync) */}
+                        <button 
+                            onClick={() => handlePublicCheck(false)} 
+                            disabled={isCheckingPublic}
+                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                            {isCheckingPublic ? <Loader2 className="animate-spin" size={20}/> : <RefreshCw size={20}/>}
+                            <span>Check Payment Status</span>
+                        </button>
+                        
+                        {/* Download QR Button */}
+                        {generatedQR && (
+                            <a 
+                                href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(generatedQR)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <Download size={20}/>
+                                <span>Download QR Image</span>
+                            </a>
+                        )}
+                    </div>
+                )}
+            </div>
+            {config.branding?.customDomain && <p className="mt-8 text-gray-400 text-xs">Powered by {config.branding.customDomain}</p>}
+        </div> 
+     );
   }
   
   if (showLanding && !currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
