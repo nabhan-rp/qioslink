@@ -44,9 +44,13 @@ export interface SmtpConfig {
 export interface KycConfig {
   enabled: boolean; 
   provider: 'manual' | 'didit';
-  diditClientId?: string;
-  diditClientSecret?: string;
-  diditCallbackUrl?: string; 
+  // Didit Config
+  diditAppId?: string;         // NEW: App ID from Didit Console
+  diditApiKey?: string;        // CHANGED: API Key
+  diditWebhookSecret?: string; // CHANGED: Webhook Secret
+  // Manual Config
+  manualContactType?: 'whatsapp' | 'email'; // NEW
+  manualContactValue?: string;              // NEW (Number or Email)
 }
 
 // NEW: WhatsApp & Social Login Configuration
