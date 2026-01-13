@@ -96,7 +96,6 @@ const IS_DEMO_MODE = env.VITE_USE_DEMO_DATA !== 'false';
 const API_BASE = env.VITE_API_BASE_URL || './api';
 
 // --- HELPER: CHECK BOOLEAN LOOSELY ---
-// Mengatasi masalah DB mengembalikan "1" atau 1 sedangkan React butuh true
 const isTrue = (val: any) => val === true || val === '1' || val === 1 || val === 'true';
 
 // --- DEFAULT AUTH CONFIG ---
@@ -105,7 +104,7 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
     verifyWhatsapp: false,
     verifyKyc: false,
     waProvider: 'fonnte',
-    loginMethod: 'standard', // standard (email/pass), whatsapp_otp, hybrid
+    loginMethod: 'standard',
     waLoginScope: 'universal_except_admin',
     allowedRoles: ['user'],
     allowedSpecificUsers: [],
@@ -146,7 +145,7 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
   );
 };
 
-// --- LANDING PAGE COMPONENT ---
+// --- LANDING PAGE COMPONENT (RESTORED V4.8 DESIGN) ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -163,46 +162,34 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               <span className="font-bold text-xl tracking-tight text-gray-800">QiosLink <span className="text-indigo-600 text-xs px-1 border border-indigo-200 rounded">Beta</span></span>
             </div>
             
-            {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
-              <a href="#options" className="hover:text-indigo-600 transition-colors" title="Deployment Options">Pricing & Hosting</a>
-              <a href="#features" className="hover:text-indigo-600 transition-colors" title="View Key Features">Features</a>
+              <a href="#options" className="hover:text-indigo-600 transition-colors">Pricing & Hosting</a>
+              <a href="#features" className="hover:text-indigo-600 transition-colors">Features</a>
               <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
                 <Github size={16} /> Open Source
               </a>
             </div>
 
-            {/* Desktop Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <button onClick={onLogin} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors" aria-label="Login to Dashboard">
-                Log In
-              </button>
-              <button onClick={onRegister} className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2" aria-label="Register New Account">
+              <button onClick={onLogin} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">Log In</button>
+              <button onClick={onRegister} className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2">
                 Get Started <ArrowRight size={16}/>
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
-            <button 
-                className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
+            <button className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
             <div className="md:hidden bg-white border-b border-gray-100 animate-in slide-in-from-top-2 shadow-xl">
                 <div className="px-4 pt-2 pb-6 space-y-2">
-                    <a href="#options" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-transparent hover:border-indigo-100">Pricing & Hosting</a>
-                    <a href="#features" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-transparent hover:border-indigo-100">Features</a>
-                    <a href="https://github.com/nabhan-rp/qioslink" target="_blank" className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-transparent hover:border-indigo-100">Open Source</a>
-                    <div className="pt-4 flex flex-col gap-3">
-                        <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-gray-600 border border-gray-200 rounded-xl">Log In</button>
-                        <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-lg">Get Started</button>
-                    </div>
+                    <a href="#options" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">Pricing & Hosting</a>
+                    <a href="#features" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">Features</a>
+                    <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-gray-600 border border-gray-200 rounded-xl mt-2">Log In</button>
+                    <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-lg mt-2">Get Started</button>
                 </div>
             </div>
         )}
@@ -210,17 +197,17 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
 
       <main>
         {/* Hero Section */}
-        <section id="home" className="relative pt-32 pb-20 overflow-hidden" aria-labelledby="hero-heading">
-          <div className="absolute inset-0 -z-10" aria-hidden="true">
+        <section id="home" className="relative pt-32 pb-20 overflow-hidden">
+          <div className="absolute inset-0 -z-10">
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-blue-50 rounded-full blur-3xl opacity-60"></div>
           </div>
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold mb-6 border border-indigo-200 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase tracking-wide">
-              <Zap size={12} fill="currentColor" /> Universal SMTP Engine Added
+              <Zap size={12} fill="currentColor" /> UNIVERSAL SMTP ENGINE ADDED
             </div>
-            <h1 id="hero-heading" className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 leading-tight">
               Dynamic QRIS Engine. <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
                 Self-Hosted & SaaS Ready.
@@ -242,10 +229,116 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             </p>
           </div>
         </section>
-        {/* ... (Features & Options Sections Truncated for Brevity - Keeping Structure) ... */}
+
+        {/* FEATURES GRID (V4.8 Design) */}
+        <section id="features" className="py-20 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.8</h2>
+                    <p className="mt-4 text-gray-500">Major security and usability updates for enterprise needs.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6"><ScanFace size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Automated KYC</h3>
+                        <p className="text-gray-500">Verify merchant identities instantly using Didit.me integration. Support for ID Cards and Liveness check.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-6"><Globe size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Social Login</h3>
+                        <p className="text-gray-500">Seamless login experience using Google, Facebook, and GitHub accounts. Zero friction onboarding.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6"><Phone size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp 2FA</h3>
+                        <p className="text-gray-500">Secure your dashboard with OTP sent via WhatsApp. Supports passwordless login flow.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* PRICING/DEPLOYMENT OPTIONS (V4.8 Design) */}
+        <section id="options" className="py-20 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-4"><span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span></div>
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Cloud Service vs Self-Hosted</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto text-lg">Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
+                    {/* Cloud SaaS Card */}
+                    <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/20">
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120}/></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm"><Cloud size={24} className="text-white"/></div>
+                        <h3 className="text-2xl font-bold mb-1">Cloud SaaS</h3>
+                        <p className="text-indigo-200 text-sm font-mono mb-6">bayar.jajanan.online</p>
+                        <p className="text-indigo-100 mb-8 flex-grow leading-relaxed">The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-indigo-100">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Zero Maintenance</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Instant Activation</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Free & Pro Plans</li>
+                        </ul>
+                        <button onClick={onRegister} className="w-full py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">Register Now</button>
+                    </div>
+
+                    {/* Self Host Free Card */}
+                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120}/></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-6 text-emerald-600"><Zap size={24}/></div>
+                        <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
+                        <p className="text-gray-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
+                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> 0 Cost / Lifetime</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Free SSL Certificate</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Open Source Control</li>
+                        </ul>
+                        <a href="https://freehosting.jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-white border border-emerald-500 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-center">Get Free Host</a>
+                    </div>
+
+                    {/* Self Host Paid Card */}
+                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-yellow-400 transition-colors">
+                        <div className="absolute top-4 right-4"><span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded border border-yellow-200">ENTERPRISE</span></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl mb-6 text-yellow-600"><Rocket size={24}/></div>
+                        <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
+                        <p className="text-gray-400 text-sm font-mono mb-6">jajanserver.com</p>
+                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> 99.9% Uptime SLA</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Priority Support</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Daily Backups</li>
+                        </ul>
+                        <a href="https://jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-colors text-center shadow-lg shadow-yellow-500/20">View Plans</a>
+                    </div>
+                </div>
+
+                <div className="text-center mb-16 pt-8 border-t border-gray-200">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Why QiosLink?</h2>
+                    <p className="text-gray-500">The ultimate payment solution.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6"><Server size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Self Hosted</h3>
+                        <p className="text-gray-500 leading-relaxed">Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6"><Palette size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">White Label Branding</h3>
+                        <p className="text-gray-500 leading-relaxed">Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6"><Code2 size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Integration</h3>
+                        <p className="text-gray-500 leading-relaxed">Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
       </main>
       <footer className="bg-white py-12 border-t border-gray-100">
-        {/* ... Footer Content ... */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex flex-col gap-2">
              <div className="flex items-center gap-2">
@@ -257,6 +350,10 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
              <p className="text-sm text-gray-500">
                 &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
              </p>
+          </div>
+          <div className="flex items-center gap-6 text-sm font-medium">
+              <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors"><PlayCircle size={16}/> Live Demo</a>
+              <a href="https://bayar.jajanan.online/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors"><Cloud size={16}/> Cloud Service</a>
           </div>
         </div>
       </footer>
@@ -644,7 +741,6 @@ export default function App() {
 
   // ... (Render Logic) ...
   if (isPublicMode) {
-     // ... (Public Mode Render) ...
      const brandColor = config.branding?.brandColor || '#4f46e5';
      const logo = config.branding?.logoUrl;
      if (publicData?.error) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full"><AlertCircle className="mx-auto text-red-500 mb-4" size={48} /><h2 className="text-xl font-bold text-gray-800">Invalid Link</h2><p className="text-gray-500 mt-2">{publicData.error}</p></div></div> }
@@ -674,8 +770,135 @@ export default function App() {
      );
   }
   
+  // RESTORED: LOGIC LOGIN & REGISTER PAGE
   if (showLanding && !currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
-  if (!currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
+  
+  if (!currentUser) { 
+      if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button>
+      
+      {/* SOCIAL LOGIN FOR REGISTER - USING SYSTEM CONFIG */}
+      {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
+          <>
+              <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or sign up with</span></div></div>
+              <div className="grid grid-cols-3 gap-3">
+                  {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
+                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
+                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+              </div>
+          </>
+      )}
+      </form></div></div></div>; } 
+      
+      // --- LOGIN SCREEN RESTORED ---
+      return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          
+          {/* FORGOT PASSWORD MODAL */}
+          {showForgotPass && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden relative">
+                      <button onClick={()=>setShowForgotPass(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                      <div className="p-6">
+                          <h3 className="text-xl font-bold mb-4 text-center">Reset Password</h3>
+                          
+                          {/* Step 1: Input Identifier */}
+                          {forgotStep === 'input' && (
+                              <form onSubmit={handleForgotCheck} className="space-y-4">
+                                  <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">Username or Email</label>
+                                      <input type="text" className="w-full border p-2 rounded-lg" value={forgotIdentifier} onChange={e=>setForgotIdentifier(e.target.value)} required />
+                                  </div>
+                                  <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">
+                                      {apiLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Check Account'}
+                                  </button>
+                              </form>
+                          )}
+
+                          {/* Step 2: Select Method */}
+                          {forgotStep === 'method' && forgotMethods && (
+                              <div className="space-y-4">
+                                  <p className="text-sm text-gray-600">Select verifcation method:</p>
+                                  {forgotMethods.has_email && <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${selectedMethod==='email'?'border-indigo-500 bg-indigo-50':''}`}><input type="radio" name="method" value="email" checked={selectedMethod==='email'} onChange={()=>setSelectedMethod('email')} /><div><p className="font-bold text-sm">Email Verification</p><p className="text-xs text-gray-500">Send link to {forgotMethods.email_masked}</p></div></label>}
+                                  {forgotMethods.has_wa && <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${selectedMethod==='wa'?'border-green-500 bg-green-50':''}`}><input type="radio" name="method" value="wa" checked={selectedMethod==='wa'} onChange={()=>setSelectedMethod('wa')} /><div><p className="font-bold text-sm">WhatsApp OTP</p><p className="text-xs text-gray-500">Send code to {forgotMethods.phone_masked}</p></div></label>}
+                                  <button onClick={handleForgotSend} disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">{apiLoading ? <Loader2 className="animate-spin mx-auto"/> : (selectedMethod==='wa' ? 'Send OTP Code' : 'Send Reset Link')}</button>
+                              </div>
+                          )}
+
+                          {/* Step 3: Verify OTP (WA Only) */}
+                          {forgotStep === 'verify' && (
+                              <div className="space-y-4">
+                                  <p className="text-sm text-gray-600 text-center">Enter the code sent to your WhatsApp</p>
+                                  <input type="text" className="w-full border p-2 rounded-lg text-center text-2xl tracking-widest" maxLength={6} value={forgotOtp} onChange={e=>setForgotOtp(e.target.value)} placeholder="000000" />
+                                  <button onClick={handleForgotVerify} disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">{apiLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Verify Code'}</button>
+                              </div>
+                          )}
+
+                          {/* Step 4: Reset Password */}
+                          {forgotStep === 'reset' && (
+                              <form onSubmit={handleForgotReset} className="space-y-4">
+                                  <div><label className="block text-sm font-medium mb-1">New Password</label><input type="password" className="w-full border p-2 rounded-lg" value={newPass} onChange={e=>setNewPass(e.target.value)} required /></div>
+                                  <div><label className="block text-sm font-medium mb-1">Confirm New Password</label><input type="password" className="w-full border p-2 rounded-lg" value={confirmNewPass} onChange={e=>setConfirmNewPass(e.target.value)} required /></div>
+                                  <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">{apiLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Change Password'}</button>
+                              </form>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+              <div className="bg-indigo-600 p-8 text-center relative">
+                  <button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button>
+                  <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
+                  
+                  {/* AUTH TOGGLE IF ENABLED */}
+                  {(systemConfig?.loginMethod === 'hybrid' || systemConfig?.loginMethod === 'whatsapp_otp') && (
+                      <div className="flex justify-center gap-2 mt-4 bg-indigo-700/50 p-1 rounded-lg inline-flex">
+                          <button onClick={() => setLoginMode('standard')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'standard' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>Email</button>
+                          <button onClick={() => setLoginMode('whatsapp')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'whatsapp' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>WhatsApp</button>
+                      </div>
+                  )}
+              </div>
+              <div className="p-8">
+                  {loginMode === 'standard' && (
+                      <form onSubmit={handleLogin} className="space-y-6">
+                          <div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div>
+                          <div>
+                              <div className="flex justify-between items-center mb-2">
+                                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                                  <button type="button" onClick={() => setShowForgotPass(true)} className="text-xs text-indigo-600 font-bold hover:underline">Forgot?</button>
+                              </div>
+                              <div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-3 border border-gray-200 rounded-lg pr-10" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
+                          </div>
+                          {loginError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2"/>{loginError}</div>}
+                          <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button>
+                      </form>
+                  )}
+                  {loginMode === 'whatsapp' && (
+                      <div className="space-y-6">
+                          <div><label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label><div className="flex gap-2"><div className="px-3 py-3 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 font-bold">+62</div><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="812345678" /></div></div>
+                          <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2"><Send size={18}/> Send OTP</button>
+                      </div>
+                  )}
+                  
+                  {/* SOCIAL LOGIN - Using systemConfig derived from API/LocalStorage */}
+                  {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
+                      <>
+                          <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
+                          <div className="grid grid-cols-3 gap-3">
+                              {systemConfig.socialLogin?.google && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
+                              {systemConfig.socialLogin?.github && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
+                              {systemConfig.socialLogin?.facebook && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+                          </div>
+                      </>
+                  )}
+
+                  <div className="text-center text-sm mt-6"><span className="text-gray-500">New here? </span><button type="button" onClick={()=>{setShowRegister(true);}} className="text-indigo-600 font-bold hover:underline">Create Account</button></div>
+              </div>
+          </div>
+      </div>
+      ); 
+  }
 
   // ... (Main Dashboard Return) ...
   return (

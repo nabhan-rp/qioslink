@@ -32,6 +32,13 @@ if ($res->num_rows > 0) {
     $kycConf = $config['kyc'] ?? [];
 
     $apiKey = isset($kycConf['diditApiKey']) ? trim($kycConf['diditApiKey']) : '';
+    
+    // CLEAN API KEY: Remove 'Bearer ' prefix if user pasted it
+    // Some users accidentally copy "Bearer eyJ..." from docs
+    if (stripos($apiKey, 'bearer ') === 0) {
+        $apiKey = trim(substr($apiKey, 7)); // Cut first 7 chars
+    }
+
     // NEW: Get App ID
     $appId = isset($kycConf['diditAppId']) ? trim($kycConf['diditAppId']) : '';
     
@@ -75,7 +82,7 @@ $headers = [
     "Authorization: Bearer " . $apiKey
 ];
 
-logDebug("Sending to Didit: " . json_encode($body));
+logDebug("Sending to Didit...");
 
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
