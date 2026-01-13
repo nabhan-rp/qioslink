@@ -255,22 +255,22 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
         </section>
 
         {/* Updated Pricing / Hosting Options Section */}
-        <section id="options" className="py-20 bg-gray-900">
+        <section id="options" className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-4">
               <span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span>
             </div>
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-extrabold text-white mb-4">Cloud Service vs Self-Hosted</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+              <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Cloud Service vs Self-Hosted</h2>
+              <p className="text-gray-500 max-w-2xl mx-auto text-lg">
                 Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
               
               {/* Card 1: Cloud SaaS */}
-              <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/50">
+              <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/20">
                 <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120} /></div>
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm">
                   <Cloud size={24} className="text-white"/>
@@ -291,48 +291,84 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               </div>
 
               {/* Card 2: Self-Host (Free) */}
-              <div className="bg-slate-800 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col border border-slate-700 hover:border-slate-600 transition-colors">
+              <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-gray-300 transition-colors">
                 <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120} /></div>
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-500/20 rounded-xl mb-6 text-emerald-400">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-6 text-emerald-600">
                   <Zap size={24}/>
                 </div>
                 <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
-                <p className="text-slate-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
-                <p className="text-slate-300 mb-8 flex-grow leading-relaxed">
+                <p className="text-gray-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
+                <p className="text-gray-500 mb-8 flex-grow leading-relaxed">
                   Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.
                 </p>
-                <ul className="space-y-3 mb-8 text-sm font-medium text-slate-300">
-                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-400"/> 0 Cost / Lifetime</li>
-                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-400"/> Free SSL Certificate</li>
-                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-400"/> Open Source Control</li>
+                <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> 0 Cost / Lifetime</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Free SSL Certificate</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Open Source Control</li>
                 </ul>
-                <a href="https://freehosting.jajanserver.com" target="_blank" rel="noreferrer" className="w-full py-4 bg-transparent border border-emerald-500 text-emerald-400 font-bold rounded-xl hover:bg-emerald-500/10 transition-colors text-center">
+                <a href="https://freehosting.jajanserver.com" target="_blank" rel="noreferrer" className="w-full py-4 bg-white border border-emerald-500 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-center">
                   Get Free Host
                 </a>
               </div>
 
               {/* Card 3: Self-Host (Paid) */}
-              <div className="bg-slate-800 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col border border-slate-700 hover:border-yellow-500/30 transition-colors">
-                <div className="absolute top-4 right-4"><span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-1 rounded border border-yellow-500/30">ENTERPRISE</span></div>
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-500/20 rounded-xl mb-6 text-yellow-400">
+              <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-yellow-400 transition-colors">
+                <div className="absolute top-4 right-4"><span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded border border-yellow-200">ENTERPRISE</span></div>
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl mb-6 text-yellow-600">
                   <Rocket size={24}/>
                 </div>
                 <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
-                <p className="text-slate-400 text-sm font-mono mb-6">jajanserver.com</p>
-                <p className="text-slate-300 mb-8 flex-grow leading-relaxed">
+                <p className="text-gray-400 text-sm font-mono mb-6">jajanserver.com</p>
+                <p className="text-gray-500 mb-8 flex-grow leading-relaxed">
                   For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.
                 </p>
-                <ul className="space-y-3 mb-8 text-sm font-medium text-slate-300">
-                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> 99.9% Uptime SLA</li>
-                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Priority Support</li>
-                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Daily Backups</li>
+                <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> 99.9% Uptime SLA</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Priority Support</li>
+                  <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Daily Backups</li>
                 </ul>
-                <a href="https://jajanserver.com" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-slate-900 font-bold rounded-xl hover:bg-yellow-400 transition-colors text-center shadow-lg shadow-yellow-500/20">
+                <a href="https://jajanserver.com" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-colors text-center shadow-lg shadow-yellow-500/20">
                   View Plans
                 </a>
               </div>
-
             </div>
+
+            {/* Why QiosLink Section */}
+            <div className="text-center mb-16 pt-8 border-t border-gray-200">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Why QiosLink?</h2>
+                <p className="text-gray-500">The ultimate payment solution.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6">
+                        <Server size={24}/>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">Self Hosted</h3>
+                    <p className="text-gray-500 leading-relaxed">
+                        Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers.
+                    </p>
+                </div>
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6">
+                        <Palette size={24}/>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">White Label Branding</h3>
+                    <p className="text-gray-500 leading-relaxed">
+                        Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank.
+                    </p>
+                </div>
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6">
+                        <Code2 size={24}/>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Integration</h3>
+                    <p className="text-gray-500 leading-relaxed">
+                        Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps.
+                    </p>
+                </div>
+            </div>
+
           </div>
         </section>
       </main>
