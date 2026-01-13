@@ -67,7 +67,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.2.1 (Debug Mode)";
+const APP_VERSION = "4.2.2 (Debug Fix)";
 
 const getEnv = () => {
   try {
@@ -698,18 +698,25 @@ export default function App() {
                   body: JSON.stringify({ username: loginUser, password: loginPass }) 
               });
               
-              // CRITICAL FIX: Handle non-JSON responses (HTML errors)
+              // CRITICAL FIX: Handle empty or invalid response gracefully
               const text = await res.text();
+              
+              // 1. Check if empty (White screen of death)
+              if (!text || text.trim() === '') {
+                 throw new Error("Server returned empty response. Possibly PHP Fatal Error (Check tables exist?)");
+              }
+
+              // 2. Try parse JSON
               let data;
               try {
                   data = JSON.parse(text);
               } catch (e) {
-                  // If JSON parse fails, it means server returned HTML error (404, 500, etc.)
                   console.error("Server Raw Response:", text);
                   if (text.includes("<!DOCTYPE html>")) {
-                      throw new Error("Server returned HTML instead of JSON. Check .htaccess or file path. (See Console)");
+                      throw new Error("Server returned HTML (404/SPA). Check .htaccess.");
                   }
-                  throw new Error(`Invalid JSON response: ${text.substring(0, 100)}...`);
+                  // Show first 100 chars of error for debugging
+                  throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`);
               }
 
               if (data.success) {
@@ -742,6 +749,8 @@ export default function App() {
               }); 
               
               const text = await res.text();
+              if(!text) throw new Error("Empty Response from Server");
+              
               let data;
               try { data = JSON.parse(text); } 
               catch(e) { throw new Error(`Invalid Response: ${text.substring(0, 50)}`); }

@@ -1,23 +1,21 @@
 
 ================================================================================
-FIX DATABASE CONNECTION V2 (SOLUSI FINAL)
+FIX DATABASE CONNECTION V3 (SOLUSI FINAL)
 ================================================================================
 Instruksi:
 1. Edit file ini di notepad, MASUKKAN PASSWORD DATABASE ANDA DI BAGIAN "$password".
 2. Upload/Replace file `api/db_connect.php` di hosting dengan kode ini.
-3. Kode ini menggunakan "ob_start()" untuk membuang spasi kosong/error HTML yang merusak JSON.
+3. Versi ini TIDAK MENGGUNAKAN ob_start untuk menghindari konflik buffer, 
+   tapi memastikan header JSON selalu dikirim.
 ================================================================================
 
 <?php
-// Mencegah output apapun keluar sebelum JSON siap (mengatasi whitespace problem)
-ob_start();
-
-// Matikan Error Reporting yang tampil di layar (biar JSON bersih)
+// Matikan tampilan error HTML kasar
 error_reporting(0);
 mysqli_report(MYSQLI_REPORT_OFF);
 
 // =======================================================================
-// KONFIGURASI CORS YANG LEBIH KUAT (KOMPATIBEL CLOUDFLARE)
+// KONFIGURASI CORS
 // =======================================================================
 if (isset($_SERVER['HTTP_ORIGIN'])) {
     header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
@@ -27,35 +25,27 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
     header("Access-Control-Allow-Origin: *");
 }
 
-// Handle Request OPTIONS (Preflight Browser)
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS");         
-
     if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
         header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
-
-    // Bersihkan buffer dan stop script agar browser senang
-    ob_end_clean();
     exit(0);
 }
 
-header("Content-Type: application/json; charset=UTF-8");
+// Header JSON (Hapus jika file lain sudah set header ini)
+// header("Content-Type: application/json; charset=UTF-8");
 
 // =======================================================================
 // KREDENSIAL DATABASE (SILAKAN ISI DISINI)
 // =======================================================================
 
 $host = "localhost";
-
-// Ganti ini dengan USERNAME DATABASE asli Anda (contoh: jajanserver_u888_masterjajan)
+// Ganti dengan USERNAME DATABASE asli Anda
 $username = "USERNAME_DB_ANDA"; 
-
-// Ganti ini dengan PASSWORD DATABASE asli Anda.
-// Jika password mengandung persen (%), pastikan ditulis apa adanya sesuai di cPanel.
+// Ganti dengan PASSWORD DATABASE asli Anda.
 $password = "PASSWORD_DB_ANDA"; 
-
-// Ganti ini dengan NAMA DATABASE asli Anda (contoh: jajanserver_qioslinkjajan)
+// Ganti dengan NAMA DATABASE asli Anda
 $dbname = "NAMA_DB_ANDA";    
 
 // =======================================================================
@@ -68,15 +58,13 @@ try {
         throw new Exception($conn->connect_error);
     }
 } catch (Exception $e) {
-    // Jika gagal, bersihkan output sebelumnya (html error) dan kirim JSON rapi
-    ob_end_clean(); 
-    http_response_code(500); // Internal Server Error
+    http_response_code(500);
+    // Kita kirim JSON manual karena koneksi gagal
+    header("Content-Type: application/json");
     echo json_encode([
         "success" => false, 
-        "message" => "Database Connection Failed: " . $e->getMessage()
+        "message" => "Database Connection Failed. Check db_connect.php"
     ]);
     exit();
 }
-
-// Jangan pernah pakai closing tag php (tanda tanya lebih besar) di akhir file 
-// untuk menghindari whitespace error.
+// Tidak ada closing tag php untuk keamanan whitespace
