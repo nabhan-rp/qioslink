@@ -1,0 +1,80 @@
+
+<?php
+// FILE: api/create_kyc_session.php
+// INSTRUKSI: Upload ke folder /api/. 
+// File ini dipanggil oleh tombol "Start Automated Verification" di React.
+
+require 'db_connect.php';
+
+header('Content-Type: application/json');
+
+$input = json_decode(file_get_contents("php://input"), true);
+$userId = $input['user_id'] ?? null;
+
+if (!$userId) {
+    echo json_encode(['success' => false, 'message' => 'User ID required']);
+    exit;
+}
+
+// 1. Ambil Config Didit dari Superadmin (atau Merchant terkait)
+// Asumsi configurasi ada di user ID 1 (Superadmin) atau di user itu sendiri jika dia merchant
+$sql = "SELECT merchant_config FROM users WHERE id = 1"; // Ambil config global dari Superadmin
+$res = $conn->query($sql);
+$admin = $res->fetch_assoc();
+$config = json_decode($admin['merchant_config'], true);
+$kycConf = $config['kyc'] ?? [];
+
+$clientId = $kycConf['diditClientId'] ?? '';
+$clientSecret = $kycConf['diditClientSecret'] ?? '';
+
+if (empty($clientId) || empty($clientSecret)) {
+    echo json_encode(['success' => false, 'message' => 'KYC Configuration Missing on Server']);
+    exit;
+}
+
+// 2. Request Token / Session ke Didit API
+// Dokumentasi Didit: https://docs.didit.me
+// Contoh sederhana Create Verification Session
+
+$url = "https://api.didit.me/v3/verifications"; // Sesuaikan endpoint Didit v3
+
+$body = [
+    "callback_url" => "https://" . $_SERVER['HTTP_HOST'] . "/api/kyc_callback.php",
+    "vendor_data" => (string)$userId, // Penting! Kirim ID User kita agar kembali saat webhook
+    "metadata" => [
+        "internal_user_id" => (string)$userId
+    ],
+    "features" => ["document", "face"] // Fitur verifikasi yang diinginkan
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "Authorization: Basic " . base64_encode("$clientId:$clientSecret") // Auth Basic biasanya
+]);
+
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+$resData = json_decode($response, true);
+
+if ($httpCode >= 200 && $httpCode < 300 && isset($resData['url'])) {
+    echo json_encode([
+        'success' => true,
+        'verification_url' => $resData['url'] // URL redirect ke halaman verifikasi Didit
+    ]);
+} else {
+    // Log error untuk debug
+    file_put_contents('kyc_error_log.txt', date('Y-m-d H:i:s') . " - Error: " . $response . "\n", FILE_APPEND);
+    
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Failed to create session with Didit',
+        'debug' => $resData
+    ]);
+}
+?>
