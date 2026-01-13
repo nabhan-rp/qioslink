@@ -61,7 +61,9 @@ import {
   Phone,
   Facebook,
   Chrome,
-  Fingerprint
+  Fingerprint,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -77,7 +79,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.0 (Enterprise Beta)";
+const APP_VERSION = "4.8.1 (Enterprise Beta)";
 
 const getEnv = () => {
   try {
@@ -101,6 +103,7 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
     loginMethod: 'standard', // standard (email/pass), whatsapp_otp, hybrid
     waLoginScope: 'universal_except_admin',
     allowedRoles: ['user'],
+    allowedSpecificUsers: [],
     twoFactorLogic: 'user_opt_in',
     socialLogin: {
         google: false,
@@ -111,7 +114,6 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
 
 // --- COMPONENT: VERIFICATION BANNER ---
 const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick: () => void }) => {
-  // Logic: Show banner if ANY required verification is missing
   const needsEmail = user.merchantConfig?.auth?.verifyEmail && !user.isVerified;
   const needsPhone = user.merchantConfig?.auth?.verifyWhatsapp && !user.isPhoneVerified;
   
@@ -206,151 +208,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             </p>
           </div>
         </section>
-
-        {/* OPTIONS SECTION (Cloud vs Free Host vs Premium Host) */}
-        <section id="options" className="py-20 bg-gradient-to-b from-gray-900 to-indigo-900 text-white relative overflow-hidden">
-             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                 <div className="inline-block px-3 py-1 bg-indigo-500/30 rounded-full text-indigo-200 text-xs font-bold mb-4 border border-indigo-500/50">CHOOSE YOUR DEPLOYMENT</div>
-                 <h2 className="text-3xl md:text-5xl font-bold mb-6">Cloud Service vs Self-Hosted</h2>
-                 <p className="text-indigo-100 max-w-2xl mx-auto text-lg mb-12">
-                     Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.
-                 </p>
-                 
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                     
-                     {/* CARD 1: CLOUD SAAS */}
-                     <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-8 border border-indigo-400 shadow-2xl text-left flex flex-col relative transform hover:scale-105 transition-transform duration-300">
-                         <div className="absolute top-4 right-4 bg-white text-indigo-700 text-xs font-bold px-2 py-1 rounded shadow-sm">INSTANT</div>
-                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-                             <Cloud size={24} className="text-white" />
-                         </div>
-                         <h3 className="text-2xl font-bold mb-2">Cloud SaaS</h3>
-                         <p className="text-indigo-100 text-sm mb-4 font-mono">bayar.jajanan.online</p>
-                         <p className="text-indigo-100 text-sm mb-6 flex-1 opacity-90">
-                             The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.
-                         </p>
-                         <ul className="space-y-2 mb-8 text-sm text-indigo-100">
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Zero Maintenance</li>
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Instant Activation</li>
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Free & Pro Plans</li>
-                         </ul>
-                         <button onClick={onRegister} className="w-full py-3 bg-white text-indigo-700 font-bold rounded-lg text-center hover:bg-gray-100 transition-colors shadow-lg">
-                             Register Now
-                         </button>
-                     </div>
-
-                     {/* CARD 2: FREE SELF-HOST */}
-                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-green-400 transition-all text-left flex flex-col hover:-translate-y-1">
-                         <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 border border-green-500/30">
-                             <Zap size={24} className="text-green-400" />
-                         </div>
-                         <h3 className="text-2xl font-bold mb-2">Self-Host (Free)</h3>
-                         <p className="text-gray-300 text-sm mb-4 font-mono">freehosting.jajanserver.com</p>
-                         <p className="text-gray-300 text-sm mb-6 flex-1">
-                             Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.
-                         </p>
-                         <ul className="space-y-2 mb-8 text-sm text-gray-400">
-                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> 0 Cost / Lifetime</li>
-                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Free SSL Certificate</li>
-                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Open Source Control</li>
-                         </ul>
-                         <a href="https://freehosting.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-transparent border border-green-500 text-green-400 font-bold rounded-lg text-center hover:bg-green-500 hover:text-white transition-colors">
-                             Get Free Host
-                         </a>
-                     </div>
-
-                     {/* CARD 3: PREMIUM SELF-HOST */}
-                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-yellow-400 transition-all text-left flex flex-col hover:-translate-y-1">
-                         <div className="absolute top-4 right-4 bg-yellow-500/20 text-yellow-300 text-xs font-bold px-2 py-1 rounded border border-yellow-500/30">ENTERPRISE</div>
-                         <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-4 border border-yellow-500/30">
-                             <Rocket size={24} className="text-yellow-400" />
-                         </div>
-                         <h3 className="text-2xl font-bold mb-2">Self-Host (Paid)</h3>
-                         <p className="text-gray-300 text-sm mb-4 font-mono">jajanserver.com</p>
-                         <p className="text-gray-300 text-sm mb-6 flex-1">
-                             For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.
-                         </p>
-                         <ul className="space-y-2 mb-8 text-sm text-gray-400">
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 99.9% Uptime SLA</li>
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Priority Support</li>
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Daily Backups</li>
-                         </ul>
-                         <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-lg text-center hover:bg-yellow-300 transition-colors">
-                             View Plans
-                         </a>
-                     </div>
-
-                 </div>
-
-                 <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-indigo-300">
-                     <span>Need help installing? Check the GitHub Documentation.</span>
-                 </div>
-             </div>
-        </section>
-
-        {/* Features Grid */}
-        <section id="features" className="py-24 bg-gray-50/50" aria-labelledby="features-heading">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 id="features-heading" className="text-3xl font-bold text-gray-900">Why QiosLink?</h2>
-              <p className="text-gray-500 mt-4">The ultimate payment solution.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: <Server className="text-indigo-600" size={24} />,
-                  title: "Self Hosted",
-                  desc: "Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers."
-                },
-                {
-                  icon: <Palette className="text-blue-600" size={24} />,
-                  title: "White Label Branding",
-                  desc: "Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank."
-                },
-                {
-                  icon: <Code2 className="text-purple-600" size={24} />,
-                  title: "Easy Integration",
-                  desc: "Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps."
-                }
-              ].map((f, i) => (
-                <article key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-6" aria-hidden="true">
-                    {f.icon}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{f.title}</h3>
-                  <p className="text-gray-500 leading-relaxed">{f.desc}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
-
-      <footer className="bg-white py-12 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col gap-2">
-             <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                    <QrCode size={18} />
-                 </div>
-                 <span className="font-bold text-gray-900">QiosLink</span>
-             </div>
-             <p className="text-sm text-gray-500">
-                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
-                Licensed under MIT. Sponsored by <a href="https://www.jajanserver.com" target="_blank" className="text-indigo-600 font-bold hover:underline">JajanServer</a>.
-             </p>
-          </div>
-          
-          <div className="flex items-center gap-6 text-sm font-medium">
-              <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
-                  <PlayCircle size={16} /> Live Demo
-              </a>
-              <a href="https://bayar.jajanan.online" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
-                  <Cloud size={16} /> Cloud Service
-              </a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
@@ -449,6 +307,7 @@ export default function App() {
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmNewPass, setShowConfirmNewPass] = useState(false);
   const [isUserModalOpen, setUserModalOpen] = useState(false);
+  const [isUserAuthModalOpen, setUserAuthModalOpen] = useState(false); // NEW
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userFormData, setUserFormData] = useState({ username: '', email: '', password: '', role: 'user' as UserRole, merchantName: '', merchantCode: '', apiKey: '', qrisString: '' });
   const [loginUser, setLoginUser] = useState('');
@@ -667,6 +526,21 @@ export default function App() {
   const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
   const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
+  
+  // NEW: Update User Auth Security (Wa Login / 2FA per user)
+  const handleUserAuthUpdate = async (userId: string, waEnabled: boolean, twoFaEnabled: boolean) => {
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          setUsers(users.map(u => u.id === userId ? {...u, waLoginEnabled: waEnabled, twoFactorEnabled: twoFaEnabled} : u));
+          alert("Auth Settings Updated (Demo)");
+      } else {
+          // Implement backend endpoint for this
+          alert("Backend endpoint for updating per-user auth settings is needed.");
+      }
+      setApiLoading(false);
+      setUserAuthModalOpen(false);
+  };
+
   const handleUpdateAccount = async () => { 
     if (!accountForm.username) return alert("Username required"); 
     if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); 
@@ -809,8 +683,35 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
       <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} onCheckStatus={handleCheckStatus} />
       
+      {/* USER MANAGEMENT MODAL */}
       {isUserModalOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"><div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">{editingUser?'Edit User':'Add New User'}</h3><button onClick={()=>setUserModalOpen(false)}><X size={20}/></button></div><form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4"><div><label className="block text-sm font-medium mb-1">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData,role:e.target.value as UserRole})}>{currentUser.role==='superadmin'&&<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>}{currentUser.role==='merchant'&&<><option value="user">User</option><option value="cs">CS</option></>}{currentUser.role==='cs'&&<option value="user">User</option>}</select></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData,username:e.target.value})}/></div><div><label className="block text-sm font-medium mb-1">Password</label><input type={editingUser?"text":"password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData,password:e.target.value})} placeholder={editingUser?"Blank to keep":"Password"}/></div></div><div><label className="block text-sm font-medium mb-1">Email Address</label><input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData,email:e.target.value})} placeholder="user@example.com"/></div>{(userFormData.role==='merchant'||userFormData.role==='superadmin')&&<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p><input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData,merchantName:e.target.value})} placeholder="Merchant Name"/><textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData,qrisString:e.target.value})} placeholder="QRIS String"/></div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading?<Loader2 className="animate-spin"/>:'Save User'}</button></form></div> </div> )}
       
+      {/* USER AUTH MODAL (NEW) */}
+      {isUserAuthModalOpen && editingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                  <div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">Security Settings</h3><button onClick={()=>setUserAuthModalOpen(false)}><X size={20}/></button></div>
+                  <div className="p-6 space-y-4">
+                      <p className="text-sm text-gray-500 mb-2">Manage security for <strong>{editingUser.username}</strong></p>
+                      
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-2"><Phone size={18}/> <span className="text-sm font-medium">Allow Login via WhatsApp</span></div>
+                          <button onClick={()=>handleUserAuthUpdate(editingUser.id, !editingUser.waLoginEnabled, !!editingUser.twoFactorEnabled)} className={`${editingUser.waLoginEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+                              {editingUser.waLoginEnabled ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
+                          </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-2"><Fingerprint size={18}/> <span className="text-sm font-medium">Force 2FA (WhatsApp)</span></div>
+                          <button onClick={()=>handleUserAuthUpdate(editingUser.id, !!editingUser.waLoginEnabled, !editingUser.twoFactorEnabled)} className={`${editingUser.twoFactorEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+                              {editingUser.twoFactorEnabled ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 lg:hidden transition-opacity"
@@ -917,22 +818,6 @@ export default function App() {
                                             </div>
                                             <div>{currentUser.isPhoneVerified ? <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase">YES</span> : <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase">NO</span>}</div>
                                         </div>
-                                        {/* 2FA Toggle */}
-                                        {(currentUser.isPhoneVerified && config.auth?.twoFactorLogic === 'user_opt_in') && (
-                                            <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <Fingerprint className="text-indigo-600"/>
-                                                    <div>
-                                                        <p className="font-bold text-gray-800">Two-Factor Authentication</p>
-                                                        <p className="text-xs text-gray-500">Secure your account with WhatsApp OTP on login.</p>
-                                                    </div>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" className="sr-only peer" checked={currentUser.twoFactorEnabled} onChange={() => alert("Toggle 2FA")} />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                                </label>
-                                            </div>
-                                        )}
                                     </>
                                 )}
 
@@ -1080,13 +965,56 @@ export default function App() {
                                  
                                  {(config.auth?.loginMethod !== 'standard') && (
                                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 animate-in fade-in">
-                                         <label className="block text-sm font-medium mb-1">WhatsApp Login Scope</label>
-                                         <select className="w-full border p-2 rounded bg-white mb-2" value={config.auth?.waLoginScope || 'universal_except_admin'} onChange={e => setConfig({...config, auth: {...config.auth!, waLoginScope: e.target.value as any}})}>
+                                         <label className="block text-sm font-medium mb-2">WhatsApp Login Scope</label>
+                                         <select className="w-full border p-2 rounded bg-white mb-4" value={config.auth?.waLoginScope || 'universal_except_admin'} onChange={e => setConfig({...config, auth: {...config.auth!, waLoginScope: e.target.value as any}})}>
                                              <option value="universal_except_admin">Universal (Except Admin)</option>
                                              <option value="role_based">Role Based (Specific Roles)</option>
-                                             <option value="specific_users">Specific Users (By ID)</option>
+                                             <option value="specific_users">Specific Users (By Username)</option>
                                              <option value="all_users_dangerous">All Users incl. Admin (DANGEROUS)</option>
                                          </select>
+                                         
+                                         {/* Role Based Configuration UI */}
+                                         {config.auth?.waLoginScope === 'role_based' && (
+                                             <div className="space-y-2 pl-2 border-l-4 border-indigo-200">
+                                                 <p className="text-xs font-bold text-gray-500 uppercase mb-2">Select Allowed Roles:</p>
+                                                 {['superadmin', 'merchant', 'cs', 'user'].map((role) => (
+                                                     <label key={role} className="flex items-center gap-2 cursor-pointer">
+                                                         <input 
+                                                             type="checkbox" 
+                                                             checked={config.auth?.allowedRoles?.includes(role as UserRole)} 
+                                                             onChange={(e) => {
+                                                                 const currentRoles = config.auth?.allowedRoles || [];
+                                                                 if(e.target.checked) {
+                                                                     setConfig({...config, auth: {...config.auth!, allowedRoles: [...currentRoles, role as UserRole]}});
+                                                                 } else {
+                                                                     setConfig({...config, auth: {...config.auth!, allowedRoles: currentRoles.filter(r => r !== role)}});
+                                                                 }
+                                                             }}
+                                                             className="h-4 w-4 text-indigo-600 rounded" 
+                                                         />
+                                                         <span className="text-sm capitalize">{role}</span>
+                                                     </label>
+                                                 ))}
+                                             </div>
+                                         )}
+
+                                         {/* Specific User Configuration UI */}
+                                         {config.auth?.waLoginScope === 'specific_users' && (
+                                             <div className="space-y-2">
+                                                 <label className="block text-xs font-bold text-gray-500 uppercase">Allowed Usernames (Comma Separated)</label>
+                                                 <textarea 
+                                                     className="w-full border p-2 rounded text-sm h-24 font-mono"
+                                                     placeholder="admin, budi, siska_99"
+                                                     value={config.auth?.allowedSpecificUsers?.join(', ') || ''}
+                                                     onChange={(e) => {
+                                                         const users = e.target.value.split(',').map(u => u.trim()).filter(u => u !== '');
+                                                         setConfig({...config, auth: {...config.auth!, allowedSpecificUsers: users}});
+                                                     }}
+                                                 />
+                                                 <p className="text-xs text-gray-400">Enter usernames manually here, or use the User Management table to toggle specific permissions.</p>
+                                             </div>
+                                         )}
+
                                          {config.auth?.waLoginScope === 'all_users_dangerous' && (
                                              <p className="text-red-600 text-xs font-bold flex items-center gap-1"><AlertTriangle size={12}/> Warning: If WhatsApp API fails, Admin cannot login!</p>
                                          )}
@@ -1152,6 +1080,20 @@ export default function App() {
                                      )}
                                  </div>
 
+                                 {/* Facebook */}
+                                 <div className="border rounded-xl p-4">
+                                     <div className="flex items-center justify-between mb-4">
+                                         <div className="flex items-center gap-2 font-bold text-gray-700"><Facebook size={20} className="text-blue-600"/> Facebook Login</div>
+                                         <input type="checkbox" className="toggle h-6 w-10" checked={config.auth?.socialLogin?.facebook} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebook: e.target.checked}}})} />
+                                     </div>
+                                     {config.auth?.socialLogin?.facebook && (
+                                         <div className="grid grid-cols-2 gap-4 animate-in fade-in">
+                                             <input type="text" className="border p-2 rounded text-sm" placeholder="App ID" value={config.auth?.socialLogin?.facebookAppId} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppId: e.target.value}}})} />
+                                             <input type="password" className="border p-2 rounded text-sm" placeholder="App Secret" value={config.auth?.socialLogin?.facebookAppSecret} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppSecret: e.target.value}}})} />
+                                         </div>
+                                     )}
+                                 </div>
+
                                  {/* Github */}
                                  <div className="border rounded-xl p-4">
                                      <div className="flex items-center justify-between mb-4">
@@ -1186,7 +1128,12 @@ export default function App() {
             <td className="px-4 py-3">{(currentUser.role === 'superadmin' || (currentUser.role === 'merchant' && ['cs','user'].includes(u.role))) && (<div className="flex space-x-2">
                 {!u.isVerified && <button onClick={() => handleManualVerifyUser(u.id)} title="Approve Email" className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"><Check size={16} /></button>}
                 {config.kyc?.enabled && !u.isKycVerified && <button onClick={() => handleManualApproveKyc(u.id)} title="Approve KYC" className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><ScanFace size={16} /></button>}
-                <button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg"><Pencil size={18} /></button><button onClick={() => handleDeleteUser(u)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg" title="Delete User"><Trash2 size={18} /></button></div>)}</td></tr>))}</tbody></table></Card>}
+                
+                {/* NEW: AUTH SETTINGS BUTTON */}
+                <button onClick={() => { setEditingUser(u); setUserAuthModalOpen(true); }} className="text-gray-600 hover:bg-gray-100 p-2 rounded-lg" title="Auth Security"><Lock size={16}/></button>
+                
+                <button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg"><Pencil size={18} /></button>
+                <button onClick={() => handleDeleteUser(u)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg" title="Delete User"><Trash2 size={18} /></button></div>)}</td></tr>))}</tbody></table></Card>}
           {view === 'links' && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Active Payment Links</h3><button onClick={()=>fetchTransactions(currentUser!)} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><RefreshCw size={18}/></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Created At</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Description</th><th className="py-4 font-medium">Link</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.filter(t => t.paymentUrl).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4 text-gray-600 max-w-[150px] truncate">{t.description}</td><td className="py-4"><button onClick={() => copyToClipboard(t.paymentUrl || '')} className="flex items-center gap-1 text-indigo-600 hover:underline text-xs"><LinkIcon size={12}/> Copy Link</button></td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{t.status}</span></td><td className="py-4 text-right flex justify-end gap-2">{t.status === 'pending' && <button onClick={() => handleRevokeLink(t)} title="Revoke/Cancel Link" className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Ban size={18} /></button>}<button onClick={() => { setGeneratedQR(t.qrString); setGeneratedLink(t.paymentUrl || ''); setTempAmount(t.amount.toString()); setTempDesc(t.description); setView('terminal'); }} title="View QR" className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
           {view === 'integration' && <Card><h3 className="text-xl font-bold mb-4">Integration API</h3><p className="text-gray-500 mb-6">Use these endpoints to integrate QiosLink with your custom application.</p><div className="bg-gray-900 rounded-xl p-6 text-gray-300 font-mono text-sm overflow-x-auto"><p className="text-green-400">// Create Dynamic Payment (With Options)</p><p>POST {window.location.origin}/api/create_payment.php</p><p className="mb-4">Content-Type: application/json</p><pre>{`{\n  "merchant_id": "${currentUser.id}",\n  "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",\n  "amount": 10000,\n  "description": "Invoice #123",\n  "expiry_minutes": 60, // Optional: Expire in 60 mins\n  "single_use": true,   // Optional: Link becomes invalid after payment\n  "callback_url": "https://your-site.com/webhook"\n}`}</pre></div></Card>}
         </div>

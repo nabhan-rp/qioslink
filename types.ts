@@ -15,6 +15,7 @@ export interface User {
   isPhoneVerified?: boolean;// NEW: WhatsApp Verified
   isKycVerified?: boolean;  // KYC Verified
   twoFactorEnabled?: boolean; // NEW: 2FA Status
+  waLoginEnabled?: boolean;   // NEW: Specific Permission
   authProvider?: 'local' | 'google' | 'github' | 'facebook'; // NEW: Login Provider
   supportEmail?: string;    
 }
@@ -66,6 +67,7 @@ export interface AuthConfig {
   loginMethod: 'standard' | 'whatsapp_otp' | 'hybrid'; // Standard = Email/Pass, Hybrid = Both
   waLoginScope: 'universal_except_admin' | 'role_based' | 'specific_users' | 'all_users_dangerous';
   allowedRoles?: UserRole[]; // If scope is role_based
+  allowedSpecificUsers?: string[]; // If scope is specific_users (store Usernames)
 
   // 2FA Logic
   twoFactorLogic: 'disabled' | 'admin_forced' | 'user_opt_in';

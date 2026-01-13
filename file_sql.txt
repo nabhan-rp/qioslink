@@ -1,37 +1,40 @@
 
 -- =============================================================================
--- DATABASE SCHEMA (UPDATE V4.8 - WHATSAPP & SOCIAL AUTH)
--- Rename file ini menjadi "database.sql" sebelum import.
+-- DATABASE SCHEMA (FULL DUMP V4.8)
+-- Import file ini ke phpMyAdmin untuk instalasi baru.
+-- Jika update, lihat bagian "ALTER TABLE" di bawah.
 -- =============================================================================
 
--- 1. Buat Tabel Users
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) DEFAULT NULL,
-  `phone` varchar(20) DEFAULT NULL, -- NEW
-  `password` varchar(255) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL, -- Nullable for Social Login
   `role` enum('superadmin','merchant','cs','user') NOT NULL DEFAULT 'user',
-  `merchant_config` text, -- Disini data Branding, Settings, & Auth Config disimpan (JSON)
+  `merchant_config` text, 
   `creator_id` int(11) DEFAULT 1,
   
-  -- Verification Columns
-  `is_verified` tinyint(1) DEFAULT 0, -- Email
-  `is_phone_verified` tinyint(1) DEFAULT 0, -- WhatsApp (NEW)
-  `is_kyc_verified` tinyint(1) DEFAULT 0, -- KYC
-  
-  -- Security Columns
+  -- Verification & Security
+  `is_verified` tinyint(1) DEFAULT 0,
+  `is_phone_verified` tinyint(1) DEFAULT 0,
+  `is_kyc_verified` tinyint(1) DEFAULT 0,
   `verification_code` varchar(6) DEFAULT NULL,
-  `two_factor_enabled` tinyint(1) DEFAULT 0, -- NEW
-  `auth_provider` varchar(20) DEFAULT 'local', -- local, google, github, facebook (NEW)
-  `provider_id` varchar(255) DEFAULT NULL, -- Google/FB ID (NEW)
+  `two_factor_enabled` tinyint(1) DEFAULT 0,
+  `wa_login_enabled` tinyint(1) DEFAULT 0,
+  
+  -- Social Auth
+  `auth_provider` varchar(20) DEFAULT 'local', -- local, google, github, facebook
+  `provider_id` varchar(255) DEFAULT NULL,
   
   `kyc_data` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
+  UNIQUE KEY `username` (`username`),
+  KEY `phone` (`phone`),
+  KEY `auth_provider` (`auth_provider`,`provider_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2. Buat Tabel Transactions
 CREATE TABLE IF NOT EXISTS `transactions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `trx_id` varchar(50) NOT NULL,
@@ -52,6 +55,22 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   UNIQUE KEY `payment_token` (`payment_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. Data Awal (Default Superadmin)
-INSERT INTO `users` (`username`, `email`, `phone`, `password`, `role`, `merchant_config`, `creator_id`, `is_verified`, `is_phone_verified`, `is_kyc_verified`) VALUES
-('admin', 'admin@qioslink.com', '628123456789', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","auth":{"loginMethod":"standard","waLoginScope":"universal_except_admin"}}', 0, 1, 1, 1);
+-- DEFAULT SUPERADMIN (Password: admin)
+INSERT INTO `users` (`username`, `email`, `phone`, `password`, `role`, `merchant_config`, `is_verified`, `is_phone_verified`) VALUES
+('admin', 'admin@qioslink.com', '628123456789', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","auth":{"verifyEmail":true,"verifyWhatsapp":true,"loginMethod":"hybrid","waLoginScope":"universal_except_admin"}}', 1, 1);
+
+-- =============================================================================
+-- PERINTAH UPDATE UNTUK PENGGUNA LAMA (Jalankan ini jika tabel users sudah ada)
+-- =============================================================================
+/*
+ALTER TABLE `users` 
+ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL AFTER `email`,
+ADD COLUMN `is_phone_verified` TINYINT(1) DEFAULT 0 AFTER `is_verified`,
+ADD COLUMN `wa_login_enabled` TINYINT(1) DEFAULT 0 AFTER `is_phone_verified`,
+ADD COLUMN `two_factor_enabled` TINYINT(1) DEFAULT 0 AFTER `wa_login_enabled`,
+ADD COLUMN `auth_provider` VARCHAR(20) DEFAULT 'local' AFTER `two_factor_enabled`,
+ADD COLUMN `provider_id` VARCHAR(255) DEFAULT NULL AFTER `auth_provider`;
+
+ALTER TABLE `users` ADD INDEX(`phone`);
+ALTER TABLE `users` ADD INDEX(`auth_provider`, `provider_id`);
+*/
