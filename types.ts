@@ -7,11 +7,15 @@ export interface User {
   id: string;
   username: string;
   email?: string;
+  phone?: string;           // NEW: WhatsApp Number
   role: UserRole;
   merchantConfig?: MerchantConfig;
   creatorId?: string;       
   isVerified?: boolean;     // Email Verified
-  isKycVerified?: boolean;  // KYC Verified (New)
+  isPhoneVerified?: boolean;// NEW: WhatsApp Verified
+  isKycVerified?: boolean;  // KYC Verified
+  twoFactorEnabled?: boolean; // NEW: 2FA Status
+  authProvider?: 'local' | 'google' | 'github' | 'facebook'; // NEW: Login Provider
   supportEmail?: string;    
 }
 
@@ -36,13 +40,48 @@ export interface SmtpConfig {
   requireEmailVerification?: boolean; 
 }
 
-// NEW: Konfigurasi KYC (Didit.me)
 export interface KycConfig {
-  enabled: boolean; // Toggle On/Off Feature
+  enabled: boolean; 
   provider: 'manual' | 'didit';
   diditClientId?: string;
   diditClientSecret?: string;
-  diditCallbackUrl?: string; // Optional override
+  diditCallbackUrl?: string; 
+}
+
+// NEW: WhatsApp & Social Login Configuration
+export interface AuthConfig {
+  // Verification Columns
+  verifyEmail: boolean;
+  verifyWhatsapp: boolean;
+  verifyKyc: boolean;
+
+  // WhatsApp Gateway Config
+  waProvider: 'fonnte' | 'meta';
+  fonnteToken?: string;
+  metaAppId?: string;
+  metaPhoneId?: string;
+  metaToken?: string;
+
+  // WhatsApp Login Logic
+  loginMethod: 'standard' | 'whatsapp_otp' | 'hybrid'; // Standard = Email/Pass, Hybrid = Both
+  waLoginScope: 'universal_except_admin' | 'role_based' | 'specific_users' | 'all_users_dangerous';
+  allowedRoles?: UserRole[]; // If scope is role_based
+
+  // 2FA Logic
+  twoFactorLogic: 'disabled' | 'admin_forced' | 'user_opt_in';
+  
+  // Social Login Config
+  socialLogin: {
+    google: boolean;
+    googleClientId?: string;
+    googleClientSecret?: string;
+    github: boolean;
+    githubClientId?: string;
+    githubClientSecret?: string;
+    facebook: boolean;
+    facebookAppId?: string;
+    facebookAppSecret?: string;
+  }
 }
 
 export interface MerchantConfig {
@@ -54,7 +93,8 @@ export interface MerchantConfig {
   callbackUrl?: string; 
   branding?: WhitelabelConfig;
   smtp?: SmtpConfig;
-  kyc?: KycConfig; // Added KYC Config
+  kyc?: KycConfig;
+  auth?: AuthConfig; // NEW: Auth Configuration
 }
 
 export interface Transaction {
