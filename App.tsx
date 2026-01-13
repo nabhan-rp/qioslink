@@ -1058,11 +1058,34 @@ export default function App() {
                                      </div>
                                      {config.kyc?.provider === 'didit' && (
                                          <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
-                                             <div className="bg-white border p-4 rounded-lg">
-                                                 <h4 className="font-bold text-gray-800 mb-2">Didit.me API Credentials</h4>
-                                                 <div className="space-y-3">
+                                             {/* Didit Info Box (NEW) */}
+                                             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 flex gap-3 items-start">
+                                                 <div className="text-blue-600 mt-1"><AlertCircle size={20}/></div>
+                                                 <div className="text-sm text-blue-800">
+                                                     <p className="font-bold mb-1">What is Didit.me?</p>
+                                                     <p className="mb-2">Didit is an automated identity verification platform. It allows users to verify their KTP/ID Card and Selfie instantly using AI.</p>
+                                                     <a href="https://business.didit.me" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 font-bold hover:underline">
+                                                         Go to Didit Business Dashboard <ExternalLink size={12}/>
+                                                     </a>
+                                                 </div>
+                                             </div>
+
+                                             {/* Credentials Form */}
+                                             <div className="bg-white border p-4 rounded-lg shadow-sm">
+                                                 <h4 className="font-bold text-gray-800 mb-4 border-b pb-2">Didit.me API Credentials</h4>
+                                                 <div className="space-y-4">
                                                      <div><label className="block text-sm font-medium mb-1">Client ID</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditClientId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientId: e.target.value}})} placeholder="Enter Client ID"/></div>
                                                      <div><label className="block text-sm font-medium mb-1">Client Secret</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditClientSecret || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientSecret: e.target.value}})} placeholder="Enter Client Secret"/></div>
+                                                     
+                                                     {/* Webhook URL Display (NEW) */}
+                                                     <div className="pt-2">
+                                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Webhook URL (Callback)</label>
+                                                         <div className="flex gap-2">
+                                                             <input type="text" readOnly className="w-full bg-gray-50 border p-2 rounded text-gray-600 font-mono text-xs" value={window.location.origin + "/api/kyc_callback.php"} />
+                                                             <button onClick={() => copyToClipboard(window.location.origin + "/api/kyc_callback.php")} className="px-3 bg-gray-100 border rounded hover:bg-gray-200 text-gray-600"><Copy size={16}/></button>
+                                                         </div>
+                                                         <p className="text-xs text-gray-400 mt-1">Copy this URL and paste it into your Didit Dashboard settings.</p>
+                                                     </div>
                                                  </div>
                                              </div>
                                          </div>
@@ -1172,6 +1195,11 @@ export default function App() {
                                          <option value="user_opt_in">User Defined (Opt-in via Settings)</option>
                                          <option value="admin_forced">Admin Forced (Mandatory for All)</option>
                                      </select>
+                                     {config.auth?.twoFactorLogic === 'admin_forced' && (
+                                         <p className="text-red-500 text-xs mt-1 font-bold flex items-center gap-1">
+                                             <AlertTriangle size={12}/> Warning: This applies to SUPERADMIN as well. Ensure WhatsApp Gateway is active to avoid lockout.
+                                         </p>
+                                     )}
                                  </div>
                              </div>
                          </Card>
