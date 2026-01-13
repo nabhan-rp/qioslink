@@ -41,7 +41,7 @@ export interface MerchantConfig {
   qiospayApiKey: string; 
   appSecretKey: string; 
   qrisString: string; 
-  callbackUrl?: string;
+  callbackUrl?: string; // RESTORED: Default callback URL for UI
   branding?: WhitelabelConfig;
   smtp?: SmtpConfig;
 }

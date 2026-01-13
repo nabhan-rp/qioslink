@@ -67,7 +67,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.2.2 (Debug Fix)";
+const APP_VERSION = "4.2.3 (Stable UI)";
 
 const getEnv = () => {
   try {
@@ -897,6 +897,12 @@ export default function App() {
                                     <input type="text" readOnly className="w-full bg-white border border-yellow-300 p-2 rounded text-gray-600 font-mono" value={config.appSecretKey || 'Not Generated'} />
                                     <button onClick={() => setConfig({...config, appSecretKey: 'QIOS_SEC_' + Math.random().toString(36).substring(2, 12).toUpperCase()})} className="px-3 bg-white border border-yellow-300 rounded hover:bg-yellow-100 text-yellow-700"><RefreshCw size={16}/></button>
                                 </div>
+                             </div>
+                             
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Default Callback URL (Optional)</label>
+                                 <input type="text" className="w-full border p-2 rounded" value={config.callbackUrl || ''} onChange={e => setConfig({...config, callbackUrl: e.target.value})} placeholder="https://your-website.com/callback" disabled={currentUser.role === 'user'} />
+                                 <p className="text-xs text-gray-400 mt-1">Used if no callback URL is provided in the API request.</p>
                              </div>
 
                              <div>
