@@ -206,7 +206,151 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             </p>
           </div>
         </section>
+
+        {/* OPTIONS SECTION (Cloud vs Free Host vs Premium Host) */}
+        <section id="options" className="py-20 bg-gradient-to-b from-gray-900 to-indigo-900 text-white relative overflow-hidden">
+             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+                 <div className="inline-block px-3 py-1 bg-indigo-500/30 rounded-full text-indigo-200 text-xs font-bold mb-4 border border-indigo-500/50">CHOOSE YOUR DEPLOYMENT</div>
+                 <h2 className="text-3xl md:text-5xl font-bold mb-6">Cloud Service vs Self-Hosted</h2>
+                 <p className="text-indigo-100 max-w-2xl mx-auto text-lg mb-12">
+                     Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.
+                 </p>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                     
+                     {/* CARD 1: CLOUD SAAS */}
+                     <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-8 border border-indigo-400 shadow-2xl text-left flex flex-col relative transform hover:scale-105 transition-transform duration-300">
+                         <div className="absolute top-4 right-4 bg-white text-indigo-700 text-xs font-bold px-2 py-1 rounded shadow-sm">INSTANT</div>
+                         <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                             <Cloud size={24} className="text-white" />
+                         </div>
+                         <h3 className="text-2xl font-bold mb-2">Cloud SaaS</h3>
+                         <p className="text-indigo-100 text-sm mb-4 font-mono">bayar.jajanan.online</p>
+                         <p className="text-indigo-100 text-sm mb-6 flex-1 opacity-90">
+                             The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.
+                         </p>
+                         <ul className="space-y-2 mb-8 text-sm text-indigo-100">
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Zero Maintenance</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Instant Activation</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Free & Pro Plans</li>
+                         </ul>
+                         <button onClick={onRegister} className="w-full py-3 bg-white text-indigo-700 font-bold rounded-lg text-center hover:bg-gray-100 transition-colors shadow-lg">
+                             Register Now
+                         </button>
+                     </div>
+
+                     {/* CARD 2: FREE SELF-HOST */}
+                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-green-400 transition-all text-left flex flex-col hover:-translate-y-1">
+                         <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 border border-green-500/30">
+                             <Zap size={24} className="text-green-400" />
+                         </div>
+                         <h3 className="text-2xl font-bold mb-2">Self-Host (Free)</h3>
+                         <p className="text-gray-300 text-sm mb-4 font-mono">freehosting.jajanserver.com</p>
+                         <p className="text-gray-300 text-sm mb-6 flex-1">
+                             Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.
+                         </p>
+                         <ul className="space-y-2 mb-8 text-sm text-gray-400">
+                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> 0 Cost / Lifetime</li>
+                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Free SSL Certificate</li>
+                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Open Source Control</li>
+                         </ul>
+                         <a href="https://freehosting.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-transparent border border-green-500 text-green-400 font-bold rounded-lg text-center hover:bg-green-500 hover:text-white transition-colors">
+                             Get Free Host
+                         </a>
+                     </div>
+
+                     {/* CARD 3: PREMIUM SELF-HOST */}
+                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-yellow-400 transition-all text-left flex flex-col hover:-translate-y-1">
+                         <div className="absolute top-4 right-4 bg-yellow-500/20 text-yellow-300 text-xs font-bold px-2 py-1 rounded border border-yellow-500/30">ENTERPRISE</div>
+                         <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-4 border border-yellow-500/30">
+                             <Rocket size={24} className="text-yellow-400" />
+                         </div>
+                         <h3 className="text-2xl font-bold mb-2">Self-Host (Paid)</h3>
+                         <p className="text-gray-300 text-sm mb-4 font-mono">jajanserver.com</p>
+                         <p className="text-gray-300 text-sm mb-6 flex-1">
+                             For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.
+                         </p>
+                         <ul className="space-y-2 mb-8 text-sm text-gray-400">
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 99.9% Uptime SLA</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Priority Support</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Daily Backups</li>
+                         </ul>
+                         <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-lg text-center hover:bg-yellow-300 transition-colors">
+                             View Plans
+                         </a>
+                     </div>
+
+                 </div>
+
+                 <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-indigo-300">
+                     <span>Need help installing? Check the GitHub Documentation.</span>
+                 </div>
+             </div>
+        </section>
+
+        {/* Features Grid */}
+        <section id="features" className="py-24 bg-gray-50/50" aria-labelledby="features-heading">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 id="features-heading" className="text-3xl font-bold text-gray-900">Why QiosLink?</h2>
+              <p className="text-gray-500 mt-4">The ultimate payment solution.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: <Server className="text-indigo-600" size={24} />,
+                  title: "Self Hosted",
+                  desc: "Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers."
+                },
+                {
+                  icon: <Palette className="text-blue-600" size={24} />,
+                  title: "White Label Branding",
+                  desc: "Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank."
+                },
+                {
+                  icon: <Code2 className="text-purple-600" size={24} />,
+                  title: "Easy Integration",
+                  desc: "Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps."
+                }
+              ].map((f, i) => (
+                <article key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-6" aria-hidden="true">
+                    {f.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">{f.title}</h3>
+                  <p className="text-gray-500 leading-relaxed">{f.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
+
+      <footer className="bg-white py-12 border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col gap-2">
+             <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                    <QrCode size={18} />
+                 </div>
+                 <span className="font-bold text-gray-900">QiosLink</span>
+             </div>
+             <p className="text-sm text-gray-500">
+                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
+                Licensed under MIT. Sponsored by <a href="https://www.jajanserver.com" target="_blank" className="text-indigo-600 font-bold hover:underline">JajanServer</a>.
+             </p>
+          </div>
+          
+          <div className="flex items-center gap-6 text-sm font-medium">
+              <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
+                  <PlayCircle size={16} /> Live Demo
+              </a>
+              <a href="https://bayar.jajanan.online" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
+                  <Cloud size={16} /> Cloud Service
+              </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
