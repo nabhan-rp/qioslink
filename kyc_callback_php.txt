@@ -9,50 +9,39 @@ require 'db_connect.php';
 $input = file_get_contents("php://input");
 $event = json_decode($input, true);
 
-// 2. Logging untuk Debugging (Cek file kyc_log.txt di hosting nanti untuk lihat struktur datanya)
+// 2. Logging
 $logMsg = date('Y-m-d H:i:s') . " | WEBHOOK: " . $input . "\n";
 file_put_contents('kyc_log.txt', $logMsg, FILE_APPEND);
 
-// 3. Validasi Keamanan (Cek Signature Header jika perlu, untuk tahap awal kita cek isi body)
 if (!$event) {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'Invalid JSON']);
     exit;
 }
 
-// 4. Proses Logika Didit.me (Structure v3)
-// Biasanya event type adalah 'verification.updated' atau 'decision.created'
-// Status sukses biasanya: 'approved'
-
-$type = $event['type'] ?? '';
+// 3. Proses Logika Didit.me
 $data = $event['data'] ?? [];
-$status = $data['status'] ?? ''; // approved, declined, etc
-$decision = $data['decision'] ?? ''; // approved, declined
+$status = $data['status'] ?? ''; 
+$decision = $data['decision'] ?? '';
 
 // Cek apakah verifikasi disetujui
 $isApproved = ($status === 'approved' || $decision === 'approved');
 
 if ($isApproved) {
-    // Cari User ID. 
-    // Saat inisiasi sesi KYC, kita biasanya kirim User ID kita sebagai 'vendor_data' atau 'metadata'.
-    // Jika Didit mengirimkan kembali ID tersebut:
-    
     $userId = null;
     
-    // Coba ambil dari metadata (sesuaikan dengan cara Anda mengirim request nanti)
     if (isset($data['metadata']['internal_user_id'])) {
         $userId = $data['metadata']['internal_user_id'];
     } 
-    // Atau jika Anda menggunakan session_id untuk mencocokkan (opsional query DB tambahan)
     
     if ($userId) {
-        // Update Database QiosLink
-        $stmt = $conn->prepare("UPDATE users SET is_kyc_verified = 1, kyc_data = ? WHERE id = ?");
-        $kycDataStr = json_encode($data); // Simpan respon lengkap untuk arsip
+        // UPDATE LOGIC: Set is_kyc_verified = 1 DAN role = 'merchant'
+        $stmt = $conn->prepare("UPDATE users SET is_kyc_verified = 1, role = 'merchant', kyc_data = ? WHERE id = ?");
+        $kycDataStr = json_encode($data);
         $stmt->bind_param("si", $kycDataStr, $userId);
         
         if ($stmt->execute()) {
-            echo json_encode(['status' => 'success', 'message' => "User ID $userId verified"]);
+            echo json_encode(['status' => 'success', 'message' => "User ID $userId verified and upgraded to Merchant"]);
         } else {
             echo json_encode(['status' => 'error', 'message' => "DB Update Failed"]);
         }

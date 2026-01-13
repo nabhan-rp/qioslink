@@ -6,7 +6,7 @@ $input = json_decode(file_get_contents("php://input"), true);
 $action = isset($_GET['action']) ? $_GET['action'] : ($input['action'] ?? '');
 
 try {
-    // LIST USERS (UPDATED SELECT)
+    // LIST USERS
     if ($action === 'list') {
         $sql = "SELECT id, username, email, role, merchant_config, is_verified, is_kyc_verified, creator_id FROM users ORDER BY id ASC";
         $result = $conn->query($sql);
@@ -15,14 +15,14 @@ try {
             $row['merchantConfig'] = json_decode($row['merchant_config']);
             unset($row['merchant_config']);
             $row['isVerified'] = $row['is_verified'] == 1;
-            $row['isKycVerified'] = $row['is_kyc_verified'] == 1; // NEW
+            $row['isKycVerified'] = $row['is_kyc_verified'] == 1;
             $users[] = $row;
         }
         echo json_encode(['success' => true, 'users' => $users]);
         exit;
     }
 
-    // VERIFY USER MANUAL (EMAIL)
+    // VERIFY USER MANUAL (EMAIL ONLY)
     if ($action === 'verify') {
         if (!isset($input['id'])) throw new Exception("User ID required");
         
@@ -38,16 +38,17 @@ try {
         exit;
     }
     
-    // APPROVE KYC MANUAL (NEW)
+    // APPROVE KYC MANUAL (AND UPGRADE TO MERCHANT)
     if ($action === 'approve_kyc') {
         if (!isset($input['id'])) throw new Exception("User ID required");
         
         $user_id = $input['id'];
-        $stmt = $conn->prepare("UPDATE users SET is_kyc_verified = 1 WHERE id = ?");
+        // UPDATE: Ubah role jadi 'merchant' saat KYC diapprove manual
+        $stmt = $conn->prepare("UPDATE users SET is_kyc_verified = 1, role = 'merchant' WHERE id = ?");
         $stmt->bind_param("i", $user_id);
         
         if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'User KYC Approved']);
+            echo json_encode(['success' => true, 'message' => 'User KYC Approved & Upgraded to Merchant']);
         } else {
             throw new Exception("DB Error: " . $conn->error);
         }
@@ -58,18 +59,12 @@ try {
     if ($action === 'delete') {
         if (!isset($input['id'])) throw new Exception("User ID required");
         $id = $input['id'];
-        
-        // Prevent deleting Superadmin ID 1
         if ($id == 1) throw new Exception("Cannot delete root admin");
 
         $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
         $stmt->bind_param("i", $id);
-        
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
-        } else {
-            throw new Exception("Delete failed: " . $conn->error);
-        }
+        if ($stmt->execute()) echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
+        else throw new Exception("Delete failed: " . $conn->error);
         exit;
     }
 
