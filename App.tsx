@@ -53,7 +53,9 @@ import {
   Ban,
   AlertTriangle,
   Cloud,
-  Rocket
+  Rocket,
+  PlayCircle,
+  HardDrive
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -69,7 +71,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.3.2 (Mobile UX Fix)";
+const APP_VERSION = "4.4.0 (Cloud SaaS Update)";
 
 const getEnv = () => {
   try {
@@ -122,8 +124,8 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               <span className="font-bold text-xl tracking-tight text-gray-800">QiosLink <span className="text-indigo-600 text-xs px-1 border border-indigo-200 rounded">v4</span></span>
             </div>
             <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
+              <a href="#options" className="hover:text-indigo-600 transition-colors" title="Deployment Options">Pricing & Hosting</a>
               <a href="#features" className="hover:text-indigo-600 transition-colors" title="View Key Features">Features</a>
-              <a href="#hosting" className="hover:text-indigo-600 transition-colors text-indigo-600 font-bold" title="Hosting Partners">Hosting Partner</a>
               <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
                 <Github size={16} /> Open Source
               </a>
@@ -155,77 +157,103 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             <h1 id="hero-heading" className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 leading-tight">
               Dynamic QRIS Engine. <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
-                Self-Hosted & White Label.
+                Self-Hosted & SaaS Ready.
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-              Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Compatible with WHMCS, WooCommerce, and Shopify. Now runs on any hosting including Free Hosting!
+              Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Use our Cloud SaaS instantly or self-host it on your own server.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
-                Create Account <ArrowRight size={18} />
+                Start Using Cloud <ArrowRight size={18} />
               </button>
-              <a href="#hosting" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
-                <Cloud size={20} /> View Hosting Partners
+              <a href="#options" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
+                <HardDrive size={20} /> Self-Host Options
               </a>
             </div>
             <p className="mt-6 text-sm text-gray-400">
-                v4.3 Update: Fixed SMTP for InfinityFree/Byet/MyOwnFreeHost.
+                Compatible with WHMCS, WooCommerce, and Shopify.
             </p>
           </div>
         </section>
 
-        {/* HOSTING PARTNER SECTION */}
-        <section id="hosting" className="py-20 bg-gradient-to-b from-gray-900 to-indigo-900 text-white relative overflow-hidden">
+        {/* OPTIONS SECTION (Cloud vs Free Host vs Premium Host) */}
+        <section id="options" className="py-20 bg-gradient-to-b from-gray-900 to-indigo-900 text-white relative overflow-hidden">
              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                 <div className="inline-block px-3 py-1 bg-indigo-500/30 rounded-full text-indigo-200 text-xs font-bold mb-4 border border-indigo-500/50">OFFICIAL INFRASTRUCTURE PARTNER</div>
-                 <h2 className="text-3xl md:text-5xl font-bold mb-6">Powered by JajanServer</h2>
+                 <div className="inline-block px-3 py-1 bg-indigo-500/30 rounded-full text-indigo-200 text-xs font-bold mb-4 border border-indigo-500/50">CHOOSE YOUR DEPLOYMENT</div>
+                 <h2 className="text-3xl md:text-5xl font-bold mb-6">Cloud Service vs Self-Hosted</h2>
                  <p className="text-indigo-100 max-w-2xl mx-auto text-lg mb-12">
-                     QiosLink is optimized to run on JajanServer ecosystem. Whether you are testing with a free account or running a high-traffic business, we have the right server for you.
+                     Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.
                  </p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-indigo-400 transition-all text-left flex flex-col hover:transform hover:-translate-y-1">
-                         <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-green-500/20">
-                             <Zap size={24} className="text-white" />
-                         </div>
-                         <h3 className="text-2xl font-bold mb-2">Free Hosting</h3>
-                         <p className="text-gray-300 text-sm mb-6 flex-1">
-                             Perfect for testing QiosLink. Get free subdomain (jajanserver.com) and cPanel access without cost.
-                         </p>
-                         <ul className="space-y-2 mb-8 text-sm text-gray-300">
-                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Unlimited Bandwidth</li>
-                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Free SSL Certificate</li>
-                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Instant Activation</li>
-                         </ul>
-                         <a href="https://freehosting.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-white text-gray-900 font-bold rounded-lg text-center hover:bg-gray-100 transition-colors">
-                             Claim Free Account
-                         </a>
-                     </div>
-                     <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-8 border border-indigo-400 shadow-2xl text-left flex flex-col relative transform md:scale-105">
-                         <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded shadow-sm">RECOMMENDED</div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                     
+                     {/* CARD 1: CLOUD SAAS */}
+                     <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-8 border border-indigo-400 shadow-2xl text-left flex flex-col relative transform hover:scale-105 transition-transform duration-300">
+                         <div className="absolute top-4 right-4 bg-white text-indigo-700 text-xs font-bold px-2 py-1 rounded shadow-sm">INSTANT</div>
                          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-                             <Rocket size={24} className="text-white" />
+                             <Cloud size={24} className="text-white" />
                          </div>
-                         <h3 className="text-2xl font-bold mb-2">Premium Cloud</h3>
-                         <p className="text-indigo-100 text-sm mb-6 flex-1">
-                             High performance NVMe SSD servers for production use. Located in Indonesia/Singapore for low latency.
+                         <h3 className="text-2xl font-bold mb-2">Cloud SaaS</h3>
+                         <p className="text-indigo-100 text-sm mb-4 font-mono">bayar.jajanan.online</p>
+                         <p className="text-indigo-100 text-sm mb-6 flex-1 opacity-90">
+                             The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.
                          </p>
                          <ul className="space-y-2 mb-8 text-sm text-indigo-100">
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> 99.9% Uptime SLA</li>
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Priority WHMCS Support</li>
-                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Daily Auto Backup</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Zero Maintenance</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Instant Activation</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-300"/> Free & Pro Plans</li>
                          </ul>
-                         <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-lg text-center hover:bg-yellow-300 transition-colors shadow-lg">
-                             View Premium Plans
+                         <button onClick={onRegister} className="w-full py-3 bg-white text-indigo-700 font-bold rounded-lg text-center hover:bg-gray-100 transition-colors shadow-lg">
+                             Register Now
+                         </button>
+                     </div>
+
+                     {/* CARD 2: FREE SELF-HOST */}
+                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-green-400 transition-all text-left flex flex-col hover:-translate-y-1">
+                         <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 border border-green-500/30">
+                             <Zap size={24} className="text-green-400" />
+                         </div>
+                         <h3 className="text-2xl font-bold mb-2">Self-Host (Free)</h3>
+                         <p className="text-gray-300 text-sm mb-4 font-mono">freehosting.jajanserver.com</p>
+                         <p className="text-gray-300 text-sm mb-6 flex-1">
+                             Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.
+                         </p>
+                         <ul className="space-y-2 mb-8 text-sm text-gray-400">
+                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> 0 Cost / Lifetime</li>
+                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Free SSL Certificate</li>
+                             <li className="flex gap-2"><Check size={16} className="text-green-400"/> Open Source Control</li>
+                         </ul>
+                         <a href="https://freehosting.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-transparent border border-green-500 text-green-400 font-bold rounded-lg text-center hover:bg-green-500 hover:text-white transition-colors">
+                             Get Free Host
                          </a>
                      </div>
+
+                     {/* CARD 3: PREMIUM SELF-HOST */}
+                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 hover:border-yellow-400 transition-all text-left flex flex-col hover:-translate-y-1">
+                         <div className="absolute top-4 right-4 bg-yellow-500/20 text-yellow-300 text-xs font-bold px-2 py-1 rounded border border-yellow-500/30">ENTERPRISE</div>
+                         <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-4 border border-yellow-500/30">
+                             <Rocket size={24} className="text-yellow-400" />
+                         </div>
+                         <h3 className="text-2xl font-bold mb-2">Self-Host (Paid)</h3>
+                         <p className="text-gray-300 text-sm mb-4 font-mono">jajanserver.com</p>
+                         <p className="text-gray-300 text-sm mb-6 flex-1">
+                             For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.
+                         </p>
+                         <ul className="space-y-2 mb-8 text-sm text-gray-400">
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 99.9% Uptime SLA</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Priority Support</li>
+                             <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Daily Backups</li>
+                         </ul>
+                         <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-lg text-center hover:bg-yellow-300 transition-colors">
+                             View Plans
+                         </a>
+                     </div>
+
                  </div>
+
                  <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-indigo-300">
-                     <a href="https://dash.jajanserver.com" className="hover:text-white transition-colors flex items-center gap-1">Client Area <ExternalLink size={12}/></a>
-                     <span>•</span>
-                     <a href="http://cpanel.jajanserver.biz.id" className="hover:text-white transition-colors flex items-center gap-1">VistaPanel Login <ExternalLink size={12}/></a>
-                     <span>•</span>
-                     <span>Reseller Domain: jajanserver.biz.id</span>
+                     <span>Need help installing? Check the GitHub Documentation.</span>
                  </div>
              </div>
         </section>
@@ -235,7 +263,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 id="features-heading" className="text-3xl font-bold text-gray-900">Why QiosLink?</h2>
-              <p className="text-gray-500 mt-4">The ultimate self-hosted payment solution.</p>
+              <p className="text-gray-500 mt-4">The ultimate payment solution.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
@@ -270,16 +298,28 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
 
       <footer className="bg-white py-12 border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                <QrCode size={18} />
+          <div className="flex flex-col gap-2">
+             <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                    <QrCode size={18} />
+                 </div>
+                 <span className="font-bold text-gray-900">QiosLink</span>
              </div>
-             <span className="font-bold text-gray-900">QiosLink</span>
+             <p className="text-sm text-gray-500">
+                Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
+                Sponsored by <a href="https://www.jajanserver.com" target="_blank" className="text-indigo-600 font-bold hover:underline">JajanServer</a>.
+             </p>
           </div>
-          <p className="text-sm text-gray-500">
-            Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
-            Sponsored by <a href="https://www.jajanserver.com" target="_blank" className="text-indigo-600 font-bold hover:underline">JajanServer</a>.
-          </p>
+          
+          {/* ADDED LINKS TO FOOTER */}
+          <div className="flex items-center gap-6 text-sm font-medium">
+              <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
+                  <PlayCircle size={16} /> Live Demo
+              </a>
+              <a href="https://bayar.jajanan.online" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors">
+                  <Cloud size={16} /> Cloud Service
+              </a>
+          </div>
         </div>
       </footer>
     </div>
@@ -532,7 +572,7 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20">
           <VerificationBanner user={currentUser} onVerifyClick={() => { setView('settings'); setSettingsTab('account'); }} />
           
-          {view === 'dashboard' && <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-none"><div className="flex justify-between items-start"><div><p className="text-indigo-100 font-medium">Total Transactions</p><h3 className="text-4xl font-bold mt-2">{transactions.length}</h3></div><div className="bg-white/20 p-2 rounded-lg"><Wallet className="text-white" size={24}/></div></div></Card><Card><p className="text-gray-500 font-medium">Total Revenue (Demo)</p><h3 className="text-3xl font-bold text-gray-800 mt-2">{formatRupiah(transactions.reduce((acc, curr) => acc + (curr.status === 'paid' ? Number(curr.amount) : 0), 0))}</h3></Card><Card><p className="text-gray-500 font-medium">Pending</p><h3 className="text-3xl font-bold text-orange-600 mt-2">{transactions.filter(t => t.status === 'pending').length}</h3></Card></div><Card className="h-80"><h3 className="font-bold text-gray-700 mb-4">Transaction Volume</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={transactions.slice(0, 10).reverse()}><defs><linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e7ff" /><XAxis dataKey="createdAt" hide /><YAxis hide /><RechartsTooltip /><Area type="monotone" dataKey="amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorAmt)" /></AreaChart></ResponsiveContainer></Card></div>}
+          {view === 'dashboard' && <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-none"><div className="flex justify-between items-start"><div><p className="text-indigo-100 font-medium">Total Transactions</p><h3 className="text-4xl font-bold mt-2">{transactions.length}</h3></div><div className="bg-white/20 p-2 rounded-lg"><Wallet className="text-white" size={24}/></div></div></Card><Card><p className="text-gray-500 font-medium">Total Revenue {IS_DEMO_MODE ? '(Demo)' : ''}</p><h3 className="text-3xl font-bold text-gray-800 mt-2">{formatRupiah(transactions.reduce((acc, curr) => acc + (curr.status === 'paid' ? Number(curr.amount) : 0), 0))}</h3></Card><Card><p className="text-gray-500 font-medium">Pending</p><h3 className="text-3xl font-bold text-orange-600 mt-2">{transactions.filter(t => t.status === 'pending').length}</h3></Card></div><Card className="h-80"><h3 className="font-bold text-gray-700 mb-4">Transaction Volume</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={transactions.slice(0, 10).reverse()}><defs><linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e7ff" /><XAxis dataKey="createdAt" hide /><YAxis hide /><RechartsTooltip /><Area type="monotone" dataKey="amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorAmt)" /></AreaChart></ResponsiveContainer></Card></div>}
           {view === 'terminal' && <div className="flex flex-col lg:flex-row gap-8"><Card className="flex-1"><h3 className="text-lg font-bold text-gray-800 mb-4">Create Payment Link</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-600 mb-1">Amount (IDR)</label><div className="relative"><span className="absolute left-3 top-3 text-gray-400 font-bold">Rp</span><input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} /></div></div><div><label className="block text-sm font-medium text-gray-600 mb-1">Description (Optional)</label><input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={tempDesc} onChange={e=>setTempDesc(e.target.value)} placeholder="e.g. Order #123" /></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Advanced Options</p><div><label className="block text-sm font-medium text-gray-600 mb-1">Expiry Time (Minutes)</label><input type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white" value={expiryMinutes} onChange={e=>setExpiryMinutes(e.target.value)} placeholder="e.g. 60 (Leave empty for no expiry)" /></div><div className="flex items-center gap-2"><input type="checkbox" id="singleUse" checked={singleUse} onChange={e=>setSingleUse(e.target.checked)} className="h-4 w-4 text-indigo-600 rounded" /><label htmlFor="singleUse" className="text-sm text-gray-700">One-time Use (Link expires after payment)</label></div></div><button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">{apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate Payment Link</span></>}</button></div></Card><Card className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-dashed border-2 border-gray-200">{generatedQR ? <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300 w-full"><div className="flex justify-center"><QRCodeDisplay data={generatedQR} width={200} logoUrl={config.branding?.logoUrl} /></div><div><h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2><p className="text-sm text-gray-500 mt-1">{tempDesc}</p></div>{generatedLink && <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-2 text-left"><div className="flex-1 truncate text-xs text-gray-500 font-mono">{generatedLink}</div><button onClick={() => copyToClipboard(generatedLink)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Copy size={16}/></button><a href={generatedLink} target="_blank" className="text-gray-500 hover:bg-gray-50 p-2 rounded"><ExternalLink size={16}/></a></div>}</div> : <div className="text-center text-gray-400 py-12"><QrCode size={48} className="mx-auto mb-4 opacity-50" /><p>Generate to create QR & Link</p></div>}</Card></div>}
           
           {/* ... SETTINGS TAB (Keep existing content, just ensuring it fits) ... */}
@@ -612,6 +652,11 @@ export default function App() {
 
                                  <div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} placeholder="email@gmail.com" /></div>
                                  <div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} placeholder="App Password" /></div>
+                             </div>
+                             
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div><label className="block text-sm font-medium mb-1">From Email</label><input type="email" className="w-full border p-2 rounded" value={config.smtp?.fromEmail || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromEmail: e.target.value}})} placeholder="no-reply@domain.com" /></div>
+                                <div><label className="block text-sm font-medium mb-1">From Name</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.fromName || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromName: e.target.value}})} placeholder="My Store" /></div>
                              </div>
                          </div>
                          <div className="mt-6 pt-6 border-t border-gray-100">
