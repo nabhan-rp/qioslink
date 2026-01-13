@@ -4,8 +4,8 @@ BUNDLE PHP BACKEND V4.4 (SMTP FIX & ROBUST INCLUDE)
 ================================================================================
 INSTRUKSI:
 1. File ini berisi modul SMTP Universal.
-2. Update file `api/test_smtp.php` Anda dengan kode di bawah ini agar path-nya benar.
-3. Pastikan `simple_smtp.php` juga sudah terupload.
+2. Update file `api/test_smtp.php` dan `api/resend_otp.php` Anda dengan kode di bawah ini agar path-nya benar menggunakan __DIR__.
+3. Pastikan `simple_smtp.php` juga sudah terupload di folder /api/.
 
 --------------------------------------------------------------------------------
 FILE 1: api/simple_smtp.php (ENGINE SMTP)
@@ -129,7 +129,7 @@ class SimpleSMTP {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 2: api/test_smtp.php (FIXED PATH INCLUDE)
+FILE 2: api/test_smtp.php (FIXED PATH & UNDEFINED KEYS)
 --------------------------------------------------------------------------------
 <?php
 // GUNAKAN __DIR__ UNTUK MENGHINDARI ERROR 'NO SUCH FILE'
@@ -145,6 +145,10 @@ if (!isset($input['config']) || !isset($input['recipient'])) {
 $conf = $input['config'];
 $secure = isset($conf['secure']) ? $conf['secure'] : 'tls';
 
+// FIX UNDEFINED KEYS: Berikan nilai default jika tidak dikirim dari frontend
+$fromEmail = isset($conf['fromEmail']) && !empty($conf['fromEmail']) ? $conf['fromEmail'] : 'noreply@' . $_SERVER['HTTP_HOST'];
+$fromName = isset($conf['fromName']) && !empty($conf['fromName']) ? $conf['fromName'] : 'QiosLink Notification';
+
 try {
     $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass'], $secure);
     $body = "
@@ -152,12 +156,14 @@ try {
             <h2 style='color: #4f46e5;'>QiosLink SMTP Test</h2>
             <p><strong>Success!</strong> Your SMTP configuration is correct.</p>
             <p>Host: {$conf['host']}</p>
+            <p>Sent to: {$input['recipient']}</p>
             <hr>
             <small>Sent via QiosLink Universal Engine (V2)</small>
         </div>
     ";
     
-    $mail->send($input['recipient'], "QiosLink SMTP Test", $body, $conf['fromEmail'], $conf['fromName'] ?: 'QiosLink');
+    $mail->send($input['recipient'], "QiosLink SMTP Test", $body, $fromEmail, $fromName);
+    
     echo json_encode(['success' => true, 'message' => 'Test email sent successfully via SimpleSMTP']);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => "Send Failed: " . $e->getMessage()]);
@@ -165,12 +171,15 @@ try {
 ?>
 
 --------------------------------------------------------------------------------
-FILE 3: api/resend_otp.php (USING UNIVERSAL ENGINE)
+FILE 3: api/resend_otp.php (USING UNIVERSAL ENGINE & FIX PATH)
 --------------------------------------------------------------------------------
 <?php
-require 'db_connect.php';
+// Pastikan file db_connect.php ada di folder yang sama
+require_once __DIR__ . '/db_connect.php';
+// Pastikan file simple_smtp.php ada di folder yang sama
 require_once __DIR__ . '/simple_smtp.php'; 
 
+header("Content-Type: application/json");
 $input = json_decode(file_get_contents("php://input"), true);
 
 if (isset($input['user_id'])) {
@@ -185,6 +194,7 @@ if (isset($input['user_id'])) {
     if ($res->num_rows > 0) {
         $data = $res->fetch_assoc();
         $email = $data['email'];
+        // Config SMTP diambil dari Creator (Superadmin/Merchant)
         $creatorConf = json_decode($data['merchant_config'], true);
         
         $new_code = rand(100000, 999999);
@@ -196,19 +206,33 @@ if (isset($input['user_id'])) {
             $conf = $creatorConf['smtp'];
             try {
                 $secure = isset($conf['secure']) ? $conf['secure'] : 'tls';
+                
+                // Fallback jika fromEmail kosong
+                $fromEmail = isset($conf['fromEmail']) ? $conf['fromEmail'] : 'noreply@' . $_SERVER['HTTP_HOST'];
+                $fromName = isset($conf['fromName']) ? $conf['fromName'] : 'QiosLink Security';
+
                 $mail = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass'], $secure);
                 
-                $body = "<h3>New Verification Code</h3><p>Your code is: <b>$new_code</b></p>";
-                $mail->send($email, "Resend OTP", $body, $conf['fromEmail'], $conf['fromName']);
-                echo json_encode(['success' => true, 'message' => 'OTP Resent']);
+                $body = "
+                <div style='font-family: Arial, sans-serif;'>
+                    <h2>Verification Code</h2>
+                    <p>Use the code below to verify your account:</p>
+                    <h1 style='letter-spacing: 5px; color: #4f46e5;'>$new_code</h1>
+                    <p>If you didn't request this, please ignore.</p>
+                </div>";
+                
+                $mail->send($email, "Resend OTP", $body, $fromEmail, $fromName);
+                echo json_encode(['success' => true, 'message' => 'OTP Resent Successfully']);
             } catch (Exception $e) {
                 echo json_encode(['success' => false, 'message' => 'SMTP Error: ' . $e->getMessage()]);
             }
         } else {
-             echo json_encode(['success' => false, 'message' => 'SMTP not configured']);
+             echo json_encode(['success' => false, 'message' => 'SMTP not configured by Admin']);
         }
     } else {
         echo json_encode(['success' => false, 'message' => 'User not found']);
     }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid Request']);
 }
 ?>
