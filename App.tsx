@@ -7,28 +7,47 @@ import {
   Code2, 
   LogOut, 
   Menu, 
+  Wallet, 
   History,
   Copy,
   CheckCircle2,
   ExternalLink,
+  Smartphone,
   Search,
   Eye,
   EyeOff,
   Link as LinkIcon,
   Download,
+  Share2,
   X,
+  Users,
   Shield,
   Lock,
+  Headphones,
+  ShoppingBag,
   Server,
+  FileCode,
   AlertCircle,
+  HelpCircle,
+  Package,
+  ShoppingCart,
   Loader2,
+  Plus,
+  Trash2,
+  Pencil,
   Save,
   ArrowRight,
   Zap,
   Globe,
+  BarChart3,
   Check,
+  User as UserIcon,
   Palette,
+  CreditCard,
   Mail,
+  Send,
+  Github,
+  Key,
   RefreshCw,
   Clock,
   Ban,
@@ -37,10 +56,16 @@ import {
   Rocket,
   PlayCircle,
   HardDrive,
+  MessageCircle,
   ScanFace,
   Phone,
+  Facebook,
+  Chrome,
   Fingerprint,
-  Users
+  ToggleLeft,
+  ToggleRight,
+  MinusCircle,
+  Plug as PlugIcon
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -60,21 +85,9 @@ import { QRCodeDisplay } from './components/QRCodeDisplay';
 const GoogleIcon = ({ className = "" }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className={className} fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .533 5.347.533 12S5.867 24 12.48 24c3.44 0 6.04-1.133 8.16-3.293 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.133H12.48z" /></svg>
 );
-const FacebookIcon = ({ className = "" }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className={className} fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
-);
-const GithubIcon = ({ className = "" }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className={className} fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
-);
-const PlugIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" /><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" /></svg>
-);
-const Wallet = ({ size = 24, className = "" }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg>
-);
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.9.1 (Stable UI Restoration)";
+const APP_VERSION = "4.9.3 (Full Restoration + Features)";
 
 const getEnv = () => { try { return import.meta.env || {}; } catch { return {}; } };
 const env: any = getEnv();
@@ -120,7 +133,7 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
   );
 };
 
-// --- LANDING PAGE (With Mobile Menu Fixed) ---
+// --- LANDING PAGE (RESTORED MOBILE MENU & LAYOUT) ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -140,7 +153,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               <a href="#options" className="hover:text-indigo-600 transition-colors">Pricing & Hosting</a>
               <a href="#features" className="hover:text-indigo-600 transition-colors">Features</a>
               <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
-                <GithubIcon className="w-4 h-4" /> Open Source
+                <Github size={16} /> Open Source
               </a>
             </div>
 
@@ -172,24 +185,165 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
 
       <main>
         <section id="home" className="relative pt-32 pb-20 overflow-hidden">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
+            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-blue-50 rounded-full blur-3xl opacity-60"></div>
+          </div>
+          
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold mb-6 border border-indigo-200 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase tracking-wide">
+              <Zap size={12} fill="currentColor" /> UNIVERSAL SMTP ENGINE ADDED
+            </div>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 leading-tight">
               Dynamic QRIS Engine. <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
                 Self-Hosted & SaaS Ready.
               </span>
             </h1>
-            <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed">
+            <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
               Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Use our Cloud SaaS instantly or self-host it on your own server.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
                 Start Using Cloud <ArrowRight size={18} />
               </button>
+              <a href="#options" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
+                <HardDrive size={20} /> Self-Host Options
+              </a>
             </div>
+            <p className="mt-6 text-sm text-gray-400">
+                Compatible with WHMCS, WooCommerce, and Shopify.
+            </p>
           </div>
         </section>
+
+        {/* FEATURES GRID */}
+        <section id="features" className="py-20 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.8</h2>
+                    <p className="mt-4 text-gray-500">Major security and usability updates for enterprise needs.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6"><ScanFace size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Automated KYC</h3>
+                        <p className="text-gray-500">Verify merchant identities instantly using Didit.me integration. Support for ID Cards and Liveness check.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-6"><Globe size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Social Login</h3>
+                        <p className="text-gray-500">Seamless login experience using Google, Facebook, and GitHub accounts. Zero friction onboarding.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6"><Phone size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp 2FA</h3>
+                        <p className="text-gray-500">Secure your dashboard with OTP sent via WhatsApp. Supports passwordless login flow.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* PRICING/DEPLOYMENT OPTIONS */}
+        <section id="options" className="py-20 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-4"><span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span></div>
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Cloud Service vs Self-Hosted</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto text-lg">Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
+                    {/* Cloud SaaS Card */}
+                    <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/20">
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120}/></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm"><Cloud size={24} className="text-white"/></div>
+                        <h3 className="text-2xl font-bold mb-1">Cloud SaaS</h3>
+                        <p className="text-indigo-200 text-sm font-mono mb-6">bayar.jajanan.online</p>
+                        <p className="text-indigo-100 mb-8 flex-grow leading-relaxed">The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-indigo-100">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Zero Maintenance</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Instant Activation</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Free & Pro Plans</li>
+                        </ul>
+                        <button onClick={onRegister} className="w-full py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">Register Now</button>
+                    </div>
+
+                    {/* Self Host Free Card */}
+                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120}/></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-6 text-emerald-600"><Zap size={24}/></div>
+                        <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
+                        <p className="text-gray-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
+                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> 0 Cost / Lifetime</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Free SSL Certificate</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Open Source Control</li>
+                        </ul>
+                        <a href="https://freehosting.jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-white border border-emerald-500 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-center">Get Free Host</a>
+                    </div>
+
+                    {/* Self Host Paid Card */}
+                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-yellow-400 transition-colors">
+                        <div className="absolute top-4 right-4"><span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded border border-yellow-200">ENTERPRISE</span></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl mb-6 text-yellow-600"><Rocket size={24}/></div>
+                        <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
+                        <p className="text-gray-400 text-sm font-mono mb-6">jajanserver.com</p>
+                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> 99.9% Uptime SLA</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Priority Support</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Daily Backups</li>
+                        </ul>
+                        <a href="https://jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-colors text-center shadow-lg shadow-yellow-500/20">View Plans</a>
+                    </div>
+                </div>
+
+                <div className="text-center mb-16 pt-8 border-t border-gray-200">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Why QiosLink?</h2>
+                    <p className="text-gray-500">The ultimate payment solution.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6"><Server size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Self Hosted</h3>
+                        <p className="text-gray-500 leading-relaxed">Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6"><Palette size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">White Label Branding</h3>
+                        <p className="text-gray-500 leading-relaxed">Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6"><Code2 size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Integration</h3>
+                        <p className="text-gray-500 leading-relaxed">Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
       </main>
+      <footer className="bg-white py-12 border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col gap-2">
+             <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                    <QrCode size={18} />
+                 </div>
+                 <span className="font-bold text-gray-900">QiosLink</span>
+             </div>
+             <p className="text-sm text-gray-500">
+                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. Licensed under MIT. Sponsored by <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-bold">JajanServer</a>.
+             </p>
+          </div>
+          <div className="flex items-center gap-6 text-sm font-medium">
+              <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors"><PlayCircle size={16}/> Live Demo</a>
+              <a href="https://bayar.jajanan.online/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors"><Cloud size={16}/> Cloud Service</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
@@ -267,7 +421,7 @@ export default function App() {
   const [apiLoading, setApiLoading] = useState(false);
   const [view, setView] = useState<ViewState>('dashboard');
   const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding' | 'smtp' | 'kyc' | 'auth'>('config');
-  // RESTORED: SIDEBAR STATE LOGIC
+  // RESTORED: SIDEBAR STATE LOGIC (PENTING UNTUK MOBILE)
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
@@ -317,7 +471,7 @@ export default function App() {
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [twoFaPhoneMasked, setTwoFaPhoneMasked] = useState<string>('');
 
-  // RESTORED: RESIZE HANDLER FOR SIDEBAR
+  // RESTORED: RESIZE HANDLER FOR SIDEBAR (PENTING)
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) setSidebarOpen(true);
@@ -671,8 +825,8 @@ export default function App() {
               <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or sign up with</span></div></div>
               <div className="grid grid-cols-3 gap-3">
                   {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GoogleIcon className="text-red-500"/></button>}
-                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GithubIcon className="text-gray-900"/></button>}
-                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><FacebookIcon className="text-blue-600"/></button>}
+                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github className="text-gray-900"/></button>}
+                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook className="text-blue-600"/></button>}
               </div>
           </>
       )}
@@ -724,8 +878,8 @@ export default function App() {
                           <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
                           <div className="grid grid-cols-3 gap-3">
                               {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GoogleIcon className="text-red-500"/></button>}
-                              {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GithubIcon className="text-gray-900"/></button>}
-                              {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><FacebookIcon className="text-blue-600"/></button>}
+                              {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github className="text-gray-900"/></button>}
+                              {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook className="text-blue-600"/></button>}
                           </div>
                       </>
                   )}
@@ -739,11 +893,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
       
-      {/* SIDEBAR (With Mobile Overlay) */}
+      {/* SIDEBAR OVERLAY FOR MOBILE */}
       {isSidebarOpen && window.innerWidth < 1024 && (
         <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
+      {/* SIDEBAR (RESTORED OLD UI) */}
       <aside className={`fixed inset-y-0 left-0 z-40 bg-white w-64 border-r border-gray-100 flex flex-col h-full transform transition-transform duration-300 lg:translate-x-0 lg:static lg:h-screen ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center px-6 border-b border-gray-50 justify-between">
           <div className="flex items-center">
@@ -756,22 +911,22 @@ export default function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {currentUser?.role !== 'user' && <SidebarItem active={view === 'dashboard'} icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={() => setView('dashboard')} />}
-          <SidebarItem active={view === 'history'} icon={<History size={20} />} label="Transactions" onClick={() => setView('history')} />
-          {currentUser?.role !== 'user' && <SidebarItem active={view === 'terminal'} icon={<Code2 size={20} />} label="Payment Terminal" onClick={() => setView('terminal')} />}
-          <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Active Links" onClick={() => setView('links')} />
+          {currentUser?.role !== 'user' && <SidebarItem active={view === 'dashboard'} icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={() => { setView('dashboard'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
+          <SidebarItem active={view === 'history'} icon={<History size={20} />} label="Transactions" onClick={() => { setView('history'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
+          {currentUser?.role !== 'user' && <SidebarItem active={view === 'terminal'} icon={<Code2 size={20} />} label="Payment Terminal" onClick={() => { setView('terminal'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
+          <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Active Links" onClick={() => { setView('links'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
           
           {['superadmin', 'merchant'].includes(currentUser?.role || '') && (
             <div className="pt-4 mt-4 border-t border-gray-50">
               <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Management</p>
-              <SidebarItem active={view === 'users'} icon={<Users size={20} />} label="User Management" onClick={() => setView('users')} />
+              <SidebarItem active={view === 'users'} icon={<Users size={20} />} label="User Management" onClick={() => { setView('users'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
             </div>
           )}
 
           <div className="pt-4 mt-4 border-t border-gray-50">
             <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">System</p>
-            <SidebarItem active={view === 'integration'} icon={<PlugIcon size={20}/>} label="Integration" onClick={() => setView('integration')} />
-            <SidebarItem active={view === 'settings'} icon={<Settings size={20} />} label="Settings & Profile" onClick={() => setView('settings')} />
+            <SidebarItem active={view === 'integration'} icon={<PlugIcon size={20}/>} label="Integration" onClick={() => { setView('integration'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
+            <SidebarItem active={view === 'settings'} icon={<Settings size={20} />} label="Settings & Profile" onClick={() => { setView('settings'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
           </div>
         </div>
 
@@ -783,14 +938,14 @@ export default function App() {
         </div>
       </aside>
       
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
-        {/* DASHBOARD HEADER WITH MOBILE TOGGLE */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
-            <div className="flex items-center">
-                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 mr-4 text-gray-600 hover:bg-gray-100 rounded-lg">
+      <main className={`flex-1 flex flex-col h-screen overflow-hidden relative w-full transition-all duration-300`}>
+        {/* DASHBOARD HEADER */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
+             <div className="flex items-center gap-4">
+                <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 hover:bg-gray-100 rounded-lg lg:hidden text-gray-700">
                     <Menu size={24} />
                 </button>
-                <h2 className="text-xl font-bold text-gray-800 capitalize">{view}</h2>
+                <h2 className="text-xl font-bold text-gray-800 capitalize">{view.replace('_', ' ')}</h2>
             </div>
             <div className="flex items-center gap-3">
                  {isTrue(currentUser.isVerified) ? <span className="hidden md:flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full"><CheckCircle2 size={12}/> Verified</span> : null}
@@ -1113,6 +1268,19 @@ export default function App() {
                          <h3 className="text-lg font-bold mb-4">Merchant Configuration</h3>
                          <div className="space-y-4">
                              <div><label className="block text-sm font-medium text-gray-700 mb-1">Merchant Name</label><input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e=>setConfig({...config, merchantName: e.target.value})}/></div>
+                             
+                             {/* FIX: MERCHANT ID FIELD - Read Only for System ID, Editable for Qiospay Code */}
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Qiospay Merchant Code (Manual Input)</label>
+                                    <input type="text" className="w-full border p-2 rounded" value={config.merchantCode} onChange={e=>setConfig({...config, merchantCode: e.target.value})} placeholder="e.g. QP001"/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">System User ID (For WHMCS/Integration)</label>
+                                    <input type="text" className="w-full border p-2 rounded bg-gray-50 text-gray-500 font-mono" value={currentUser.id} readOnly/>
+                                </div>
+                             </div>
+
                              <div><label className="block text-sm font-medium text-gray-700 mb-1">Static QRIS String (Nobu/Qiospay)</label><textarea className="w-full border p-2 rounded h-32 font-mono text-xs" value={config.qrisString} onChange={e=>setConfig({...config, qrisString: e.target.value})}/></div>
                              <div><label className="block text-sm font-medium text-gray-700 mb-1">Callback URL (Webhook)</label><input type="text" className="w-full border p-2 rounded bg-gray-50" value={config.callbackUrl} readOnly/></div>
                              <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading?<Loader2 className="animate-spin"/>:<Save size={18}/>} Save Config</button>

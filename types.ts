@@ -61,6 +61,9 @@ export interface AuthConfig {
   verifyWhatsapp: boolean;
   verifyKyc: boolean;
 
+  // KYC Config (System-wide or overridden)
+  kyc?: KycConfig;
+
   // WhatsApp Gateway Config
   waProvider: 'fonnte' | 'meta';
   fonnteToken?: string;
