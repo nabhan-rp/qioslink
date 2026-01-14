@@ -47,6 +47,7 @@ export interface KycConfig {
   // Didit Config
   diditAppId?: string;         // NEW: App ID from Didit Console
   diditApiKey?: string;        // CHANGED: API Key
+  diditWorkflowId?: string;    // NEW: Workflow ID required for V2
   diditWebhookSecret?: string; // CHANGED: Webhook Secret
   // Manual Config
   manualContactType?: 'whatsapp' | 'email'; // NEW

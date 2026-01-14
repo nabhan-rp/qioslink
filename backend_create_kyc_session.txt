@@ -7,12 +7,9 @@ require 'db_connect.php';
 
 header('Content-Type: application/json');
 
-// --- DEBUG LOG FUNCTION ---
 function logDebug($msg) {
     file_put_contents('kyc_debug.log', date('Y-m-d H:i:s') . " - " . $msg . "\n", FILE_APPEND);
 }
-
-logDebug("--- NEW SESSION REQUEST (V2 Fix) ---");
 
 $input = json_decode(file_get_contents("php://input"), true);
 $userId = $input['user_id'] ?? null;
@@ -22,7 +19,7 @@ if (!$userId) {
     exit;
 }
 
-// 1. Ambil Config Didit DARI SUPERADMIN (ID 1)
+// 1. Ambil Config dari SUPERADMIN (ID 1)
 $sql = "SELECT merchant_config FROM users WHERE id = 1"; 
 $res = $conn->query($sql);
 
@@ -32,45 +29,44 @@ if ($res->num_rows > 0) {
     $kycConf = $config['kyc'] ?? [];
 
     $apiKey = isset($kycConf['diditApiKey']) ? trim($kycConf['diditApiKey']) : '';
-    
-    // DEEP CLEANING: Remove 'Bearer ' prefix just in case
+    // Clean Key
     $apiKey = preg_replace('/^bearer\s+/i', '', $apiKey);
     $apiKey = trim($apiKey);
 
-    $appId = isset($kycConf['diditAppId']) ? trim($kycConf['diditAppId']) : '';
+    // NEW: Get Workflow ID
+    $workflowId = isset($kycConf['diditWorkflowId']) ? trim($kycConf['diditWorkflowId']) : '';
 } else {
-    echo json_encode(['success' => false, 'message' => 'System Config Error: Admin Not Found']);
+    echo json_encode(['success' => false, 'message' => 'System Config Error']);
     exit;
 }
 
 if (empty($apiKey)) {
-    echo json_encode(['success' => false, 'message' => 'KYC API Key Missing on Server. Please Contact Admin.']);
+    echo json_encode(['success' => false, 'message' => 'KYC API Key Missing on Server']);
     exit;
 }
 
-// 2. Request Session ke Didit API V2 (Sesuai Dokumentasi User)
+if (empty($workflowId)) {
+    echo json_encode(['success' => false, 'message' => 'Didit Workflow ID Missing. Please set it in Admin KYC Settings.']);
+    exit;
+}
+
+// 2. Request Session ke Didit API V2
 $url = "https://verification.didit.me/v2/session/"; 
 
-// Create callback URL dynamically
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $callbackUrl = $protocol . "://" . $_SERVER['HTTP_HOST'] . "/api/kyc_callback.php";
 
 $body = [
     "callback" => $callbackUrl,
     "vendor_data" => (string)$userId, 
-    // V2 mungkin menggunakan struktur berbeda untuk fitur, kita gunakan default minimal
-    // Jika V2 support workflow_id, tambahkan di config nanti.
-    // Untuk saat ini kita kirim parameter standar V2
+    "workflow_id" => $workflowId // FIX: Menambahkan parameter wajib workflow_id
 ];
 
-// FIX 3: Gunakan Header x-api-key
 $headers = [
     "Content-Type: application/json",
     "Accept: application/json",
     "x-api-key: " . $apiKey
 ];
-
-logDebug("Sending to Didit V2...");
 
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -83,8 +79,6 @@ $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
 curl_close($ch);
 
-logDebug("Response ($httpCode): " . $response);
-
 if ($curlError) {
     echo json_encode(['success' => false, 'message' => 'Connection Error: ' . $curlError]);
     exit;
@@ -92,7 +86,7 @@ if ($curlError) {
 
 $resData = json_decode($response, true);
 
-// Success condition: HTTP 200/201 and URL is present
+// Success condition
 if (($httpCode >= 200 && $httpCode < 300) && isset($resData['url'])) {
     echo json_encode([
         'success' => true,
