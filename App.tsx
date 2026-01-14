@@ -509,17 +509,18 @@ export default function App() {
   const refreshSession = async () => {
       if (!currentUser) return;
       try {
-          if (['superadmin', 'merchant', 'cs'].includes(currentUser.role)) {
-              const res = await fetch(`${API_BASE}/manage_users.php?action=list`);
-              const data = await res.json();
-              if (data.success && data.users) {
-                  const me = data.users.find((u: User) => u.id === currentUser.id);
-                  if (me) {
-                      const updatedUser = { ...me, merchantConfig: me.merchantConfig || currentUser.merchantConfig };
-                      sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
-                      setCurrentUser(updatedUser);
-                  }
-              }
+          // BUG FIX 2: Use new endpoint specifically for refreshing user data
+          // This works for ALL roles (including 'user')
+          const res = await fetch(`${API_BASE}/refresh_user.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ user_id: currentUser.id })
+          });
+          const data = await res.json();
+          if (data.success && data.user) {
+              const updatedUser = { ...data.user, merchantConfig: data.user.merchantConfig || currentUser.merchantConfig };
+              sessionStorage.setItem('qios_user', JSON.stringify(updatedUser));
+              setCurrentUser(updatedUser);
           }
       } catch (e) {
           console.error("Failed to refresh session", e);
@@ -1377,7 +1378,7 @@ export default function App() {
                         </div>
 
                         {/* KYC STATUS LOGIC FIXED HERE */}
-                        {(config.kyc?.enabled || systemConfig.verifyKyc) && (
+                        {(isTrue(systemConfig.verifyKyc) || isTrue(config.kyc?.enabled) || isTrue(currentUser.merchantConfig?.kyc?.enabled)) && (
                             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                                 <div className="flex items-center gap-3"><ScanFace size={20} className="text-gray-500"/><div><p className="font-medium">Identity Verification (KYC)</p><p className="text-xs text-gray-500">Required for higher limits</p></div></div>
                                 {isTrue(currentUser.isKycVerified) ? 
@@ -1388,7 +1389,7 @@ export default function App() {
                         )}
                     </div>
 
-                    {!isTrue(currentUser.isKycVerified) && (config.kyc?.enabled || systemConfig.verifyKyc) && ( 
+                    {!isTrue(currentUser.isKycVerified) && (isTrue(systemConfig.verifyKyc) || isTrue(config.kyc?.enabled) || isTrue(currentUser.merchantConfig?.kyc?.enabled)) && ( 
                         <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
                             <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
                             <button onClick={(config.kyc?.provider === 'didit' || !config.kyc) ? handleStartDiditKyc : () => { const type = config.kyc?.manualContactType || 'whatsapp'; const value = config.kyc?.manualContactValue || '628123456789'; let url = type === 'whatsapp' ? `https://wa.me/${value.replace(/[^0-9]/g,'')}?text=Halo%20Admin,%20saya%20${currentUser.username}%20(ID:${currentUser.id})%20ingin%20verifikasi%20KYC%20manual.` : `mailto:${value}?subject=KYC%20Verification%20Request%20(${currentUser.username})&body=Hello%20Admin,%20I%20want%20to%20verify%20my%20account%20(ID:${currentUser.id}).`; window.open(url, '_blank'); }} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"><ScanFace size={18}/> {config.kyc?.provider === 'didit' || !config.kyc ? 'Start Automated Verification' : 'Contact Admin for Verification'}</button>
