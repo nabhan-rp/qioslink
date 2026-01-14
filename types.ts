@@ -9,9 +9,10 @@ export interface User {
   email?: string;
   role: UserRole;
   merchantConfig?: MerchantConfig;
-  creatorId?: string;       // NEW: Grouping logic
-  isVerified?: boolean;     // NEW: Email Verification Status
-  supportEmail?: string;    // NEW: Contact person (Creator's email)
+  creatorId?: string;       
+  isVerified?: boolean;     // Email Verified
+  isKycVerified?: boolean;  // KYC Verified (New)
+  supportEmail?: string;    
 }
 
 export interface WhitelabelConfig {
@@ -32,7 +33,15 @@ export interface SmtpConfig {
   fromEmail: string;
   enableNotifications: boolean;
   useSystemSmtp?: boolean; 
-  requireEmailVerification?: boolean; // NEW: Toggle for Email Verification Requirement
+  requireEmailVerification?: boolean; 
+}
+
+// NEW: Konfigurasi KYC (Didit.me)
+export interface KycConfig {
+  provider: 'manual' | 'didit';
+  diditClientId?: string;
+  diditClientSecret?: string;
+  diditCallbackUrl?: string; // Optional override
 }
 
 export interface MerchantConfig {
@@ -41,9 +50,10 @@ export interface MerchantConfig {
   qiospayApiKey: string; 
   appSecretKey: string; 
   qrisString: string; 
-  callbackUrl?: string; // RESTORED: Default callback URL for UI
+  callbackUrl?: string; 
   branding?: WhitelabelConfig;
   smtp?: SmtpConfig;
+  kyc?: KycConfig; // Added KYC Config
 }
 
 export interface Transaction {

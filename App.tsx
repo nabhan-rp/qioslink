@@ -55,7 +55,9 @@ import {
   Cloud,
   Rocket,
   PlayCircle,
-  HardDrive
+  HardDrive,
+  MessageCircle,
+  ScanFace
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -71,7 +73,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.5.0 (Public Beta)";
+const APP_VERSION = "4.6.0 (Public Beta)";
 
 const getEnv = () => {
   try {
@@ -82,7 +84,7 @@ const getEnv = () => {
   }
 };
 
-const env = getEnv();
+const env: any = getEnv();
 const IS_DEMO_MODE = env.VITE_USE_DEMO_DATA !== 'false';
 const API_BASE = env.VITE_API_BASE_URL || './api';
 
@@ -337,7 +339,7 @@ const Card = ({ children, className = '' }: any) => (
   <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 ${className}`}>{children}</div>
 );
 
-const TransactionModal = ({ transaction, onClose, onCopyLink, branding }: any) => {
+const TransactionModal = ({ transaction, onClose, onCopyLink, branding, onCheckStatus }: any) => {
   if (!transaction) return null;
   const brandColor = branding?.brandColor || '#4f46e5';
   return (
@@ -354,9 +356,18 @@ const TransactionModal = ({ transaction, onClose, onCopyLink, branding }: any) =
              <div className="text-2xl font-bold text-gray-800">{formatRupiah(transaction.amount)}</div>
              <div className={`px-3 py-1 rounded-full text-xs font-medium mt-2 ${transaction.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{transaction.status.toUpperCase()}</div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button onClick={() => onCopyLink(transaction)} className="flex-1 flex items-center justify-center space-x-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors border border-gray-200"><LinkIcon size={18} /><span>Copy Link</span></button>
-            <button onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(transaction.qrString)}`, '_blank')} className="flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"><Download size={18} /></button>
+          <div className="flex gap-3 pt-2 flex-col">
+            <div className="flex gap-3">
+               <button onClick={() => onCopyLink(transaction)} className="flex-1 flex items-center justify-center space-x-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors border border-gray-200"><LinkIcon size={18} /><span>Copy Link</span></button>
+               <button onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(transaction.qrString)}`, '_blank')} className="flex items-center justify-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"><Download size={18} /></button>
+            </div>
+            {/* MANUAL CHECK BUTTON */}
+            {transaction.status === 'pending' && (
+                <button onClick={() => onCheckStatus(transaction)} className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/30">
+                    <RefreshCw size={18} />
+                    <span>Check Payment Status (Sync)</span>
+                </button>
+            )}
           </div>
         </div>
       </div>
@@ -372,12 +383,13 @@ const DEFAULT_MERCHANT_CONFIG: MerchantConfig = {
   qrisString: "00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424",
   callbackUrl: "https://your-domain.com/callback.php",
   branding: { brandColor: '#4f46e5', customDomain: '' },
-  smtp: { host: 'smtp.gmail.com', port: '587', user: 'your-email@gmail.com', pass: 'app-password', secure: 'tls', fromName: 'QiosLink Notification', fromEmail: 'no-reply@qioslink.com', enableNotifications: false, useSystemSmtp: false, requireEmailVerification: false }
+  smtp: { host: 'smtp.gmail.com', port: '587', user: 'your-email@gmail.com', pass: 'app-password', secure: 'tls', fromName: 'QiosLink Notification', fromEmail: 'no-reply@qioslink.com', enableNotifications: false, useSystemSmtp: false, requireEmailVerification: false },
+  kyc: { provider: 'manual' } // Default Manual
 };
 
 const MOCK_USERS: User[] = [
-  { id: '1', username: 'admin', email:'admin@example.com', role: 'superadmin', merchantConfig: DEFAULT_MERCHANT_CONFIG, isVerified: true },
-  { id: '2', username: 'merchant', email:'merchant@store.com', role: 'merchant', merchantConfig: { ...DEFAULT_MERCHANT_CONFIG, merchantName: "Warung Demo" }, isVerified: true }
+  { id: '1', username: 'admin', email:'admin@example.com', role: 'superadmin', merchantConfig: DEFAULT_MERCHANT_CONFIG, isVerified: true, isKycVerified: true },
+  { id: '2', username: 'merchant', email:'merchant@store.com', role: 'merchant', merchantConfig: { ...DEFAULT_MERCHANT_CONFIG, merchantName: "Warung Demo" }, isVerified: true, isKycVerified: false }
 ];
 
 export default function App() {
@@ -387,7 +399,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [apiLoading, setApiLoading] = useState(false);
   const [view, setView] = useState<ViewState>('dashboard');
-  const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding' | 'smtp'>('config');
+  const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding' | 'smtp' | 'kyc'>('config');
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
@@ -421,6 +433,7 @@ export default function App() {
   const [regError, setRegError] = useState('');
   const [isPublicMode, setIsPublicMode] = useState(false);
   const [publicData, setPublicData] = useState<any>(null);
+  const [isCheckingPublic, setIsCheckingPublic] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -432,6 +445,17 @@ export default function App() {
   }, []);
 
   useEffect(() => { initialize(); }, []);
+
+  // --- CLIENT-SIDE POLLING FOR FREE HOSTING SUPPORT ---
+  useEffect(() => {
+    let interval: any;
+    if (isPublicMode && publicData?.status === 'pending' && !IS_DEMO_MODE) {
+      interval = setInterval(() => {
+        handlePublicCheck(true); // Silent check (no alert)
+      }, 10000); // Check every 10 seconds
+    }
+    return () => clearInterval(interval);
+  }, [isPublicMode, publicData?.status]);
 
   const initialize = async () => {
     setAuthLoading(true);
@@ -472,22 +496,155 @@ export default function App() {
     setAuthLoading(false);
   };
 
-  const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
-  const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
-  const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
+  const handlePublicCheck = async (silent = false) => {
+      // Validasi data awal
+      if (!publicData?.trx_id || !publicData?.merchant_id) {
+          if(!silent) alert("Please wait for payment details to load fully.");
+          return;
+      }
+      
+      if (IS_DEMO_MODE) {
+          if (!silent) alert("Check Status Demo");
+          return;
+      }
+      
+      if (!silent) setIsCheckingPublic(true);
+      try {
+          // 1. Trigger Check Mutation
+          const res = await fetch(`${API_BASE}/check_mutation.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ 
+                  trx_id: publicData.trx_id, 
+                  merchant_id: publicData.merchant_id 
+              })
+          });
+          
+          if(!res.ok) throw new Error(`Server Error: ${res.status}`);
+          
+          // 2. Refresh Status
+          const params = new URLSearchParams(window.location.search);
+          const token = params.get('pay');
+          if (token) {
+               const resDetails = await fetch(`${API_BASE}/get_payment_details.php?token=${token}`);
+               const data = await resDetails.json();
+               if (data.success) {
+                   setPublicData(data.data);
+                   if (data.data.status === 'paid' && !silent) {
+                       alert("Payment Confirmed!");
+                   } else if (data.data.status === 'pending' && !silent) {
+                       alert("Payment not received yet. Please try again in a few seconds.");
+                   }
+               }
+          }
+      } catch (e: any) {
+          if (!silent) {
+              console.error("Auto check failed", e);
+              alert("Check Failed: " + e.message);
+          }
+      } finally {
+          if (!silent) setIsCheckingPublic(false);
+      }
+  };
+
+  const handleCheckStatus = async (trx: Transaction) => {
+      if(IS_DEMO_MODE) {
+          setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'paid'} : t));
+          alert("Status Updated (Demo)");
+          setSelectedTransaction(null);
+          return;
+      }
+      
+      setApiLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/check_mutation.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ trx_id: trx.id, merchant_id: trx.merchantId })
+          });
+          const data = await res.json();
+          if(data.status === 'success') {
+              alert(data.message);
+              fetchTransactions(currentUser!); // Refresh list
+              setSelectedTransaction(null);
+          } else {
+              alert(data.message || 'Status still pending or not found in mutation');
+          }
+      } catch(e) {
+          alert("Error checking mutation");
+      } finally {
+          setApiLoading(false);
+      }
+  };
+  
+  const handleManualApproveKyc = async (targetUserId: string) => {
+      if(!confirm("Approve KYC for this user?")) return;
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          setUsers(users.map(u => u.id === targetUserId ? {...u, isKycVerified: true} : u));
+          alert("KYC Approved (Demo)");
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/manage_users.php?action=approve_kyc`, { 
+                  method: 'POST', body: JSON.stringify({ id: targetUserId }) 
+              });
+              const data = await res.json();
+              if(data.success) { alert("KYC Approved"); fetchUsers(); } else alert(data.message);
+          } catch(e) { alert("Error"); }
+      }
+      setApiLoading(false);
+  };
+
   const handleUpdateConfig = async () => { setApiLoading(true); if (currentUser) { const updatedUser = { ...currentUser, merchantConfig: config }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert('Saved'); } else { try { const res = await fetch(`${API_BASE}/update_config.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_id: currentUser.id, config: config }) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert('Saved'); } else alert(data.message); } catch (e) { alert('Error'); } } } setApiLoading(false); };
+  
+  const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
+  const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
+  
+  const handleStartDiditKyc = () => {
+      // Logic for Didit.me integration would go here.
+      // 1. Create session via Backend API
+      // 2. Redirect user to Didit verification URL
+      alert("Didit.me Integration: This would redirect to Didit.me verification flow.");
+  };
+
+  const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
+  const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); setLoginError(''); setApiLoading(true); if (IS_DEMO_MODE) { let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); else setLoginError('Invalid (Demo: user=pass)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const text = await res.text(); if (!text || text.trim() === '') throw new Error("Empty Response"); let data; try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } } };
+  const handleRegister = async (e: React.FormEvent) => { e.preventDefault(); setRegError(''); if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } setApiLoading(true); if (IS_DEMO_MODE) { const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Success (Demo)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } if (data.success) { alert('Success! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else setRegError(data.message || 'Failed'); } catch (err: any) { setRegError(err.message || 'Error'); } finally { setApiLoading(false); } } };
+  const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
+  const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
+  const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
+  const handleUpdateAccount = async () => { 
+    if (!accountForm.username) return alert("Username required"); 
+    if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); 
+    setApiLoading(true); 
+    const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email };
+    if (IS_DEMO_MODE) { 
+        setCurrentUser(updatedUser); 
+        sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
+        const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]');
+        const existingIndex = savedUsers.findIndex((u: User) => u.id === updatedUser.id);
+        let newUsersList;
+        if (existingIndex >= 0) { savedUsers[existingIndex] = updatedUser; newUsersList = savedUsers; } else { newUsersList = [...savedUsers, updatedUser]; }
+        localStorage.setItem('qios_users', JSON.stringify(newUsersList));
+        alert("Profile Updated (Demo)"); 
+        setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''});
+    } else { 
+        try { 
+            const payload = { action: 'update', id: currentUser!.id, username: accountForm.username, email: accountForm.email, role: currentUser!.role, config: currentUser!.merchantConfig, password: accountForm.newPassword ? accountForm.newPassword : undefined };
+            const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); 
+            const data = await res.json(); 
+            if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Profile Updated Successfully"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { alert("Update failed: " + data.message); } 
+        } catch (e) { alert('Connection Error'); } 
+    } 
+    setApiLoading(false); 
+  };
   const handleTestEmail = async () => { if (!config.smtp) return alert("Configure SMTP first"); setApiLoading(true); if (IS_DEMO_MODE) { setTimeout(() => { alert(`Sent to ${config.smtp?.fromEmail}`); setApiLoading(false); }, 1500); } else { try { const res = await fetch(`${API_BASE}/test_smtp.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ config: config.smtp, recipient: currentUser?.email || config.smtp.fromEmail }) }); const data = await res.json(); alert(data.message); } catch(e) { alert("Failed"); } finally { setApiLoading(false); } } };
-  const handleUpdateAccount = () => { if (!accountForm.username) return alert("Username required"); if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email }; setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Updated"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); };
-  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
-  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
   const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); alert("Copied!"); };
   const fetchTransactions = async (user: User) => { if (IS_DEMO_MODE) { const savedTx = localStorage.getItem('qios_transactions'); if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions(Array(5).fill(0).map((_, i) => ({ id: `TRX-DEMO-${1000+i}`, merchantId: user.id, amount: 10000 + (i * 5000), description: `Demo ${i+1}`, status: i % 2 === 0 ? 'paid' : 'pending', createdAt: new Date().toISOString(), qrString: user.merchantConfig?.qrisString || '', paymentUrl: window.location.origin + '/?pay=demo' + i }))); return; } try { const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`); const data = await res.json(); if (data.success && data.transactions) setTransactions(data.transactions); } catch (e) { console.error(e); } };
   const fetchUsers = async () => { if (IS_DEMO_MODE) { const savedUsers = localStorage.getItem('qios_users'); setUsers([...MOCK_USERS, ...(savedUsers ? JSON.parse(savedUsers) : []).filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]); return; } try { const res = await fetch(`${API_BASE}/manage_users.php?action=list`); const data = await res.json(); if (data.success && data.users) setUsers(data.users); } catch (e) { console.error(e); } };
   const loginSuccess = (user: User, redirect = true) => { if (user.username === 'admin' && user.role !== 'superadmin') user.role = 'superadmin'; if (user.isVerified === undefined) user.isVerified = true; setCurrentUser(user); sessionStorage.setItem('qios_user', JSON.stringify(user)); if (user.merchantConfig) setConfig(user.merchantConfig); setAccountForm({ username: user.username, email: user.email || '', password: '', newPassword: '', confirmNewPassword: '' }); if (user.merchantConfig?.branding?.brandColor) document.documentElement.style.setProperty('--brand-color', user.merchantConfig.branding.brandColor); setView(user.role === 'user' ? 'history' : 'dashboard'); if (redirect) setShowLanding(false); fetchTransactions(user); if (['superadmin', 'merchant', 'cs'].includes(user.role)) fetchUsers(); };
-  const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); setLoginError(''); setApiLoading(true); if (IS_DEMO_MODE) { let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); else setLoginError('Invalid (Demo: user=pass)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const text = await res.text(); if (!text || text.trim() === '') throw new Error("Empty Response"); let data; try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } } };
-  const handleRegister = async (e: React.FormEvent) => { e.preventDefault(); setRegError(''); if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } setApiLoading(true); if (IS_DEMO_MODE) { const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Success (Demo)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } if (data.success) { alert('Success! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else setRegError(data.message || 'Failed'); } catch (err: any) { setRegError(err.message || 'Error'); } finally { setApiLoading(false); } } };
-  const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
-  const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
+  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
+  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
 
   if (isPublicMode) {
      const brandColor = config.branding?.brandColor || '#4f46e5';
@@ -495,19 +652,59 @@ export default function App() {
      if (publicData?.error) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full"><AlertCircle className="mx-auto text-red-500 mb-4" size={48} /><h2 className="text-xl font-bold text-gray-800">Invalid Link</h2><p className="text-gray-500 mt-2">{publicData.error}</p></div></div> }
      const isPaid = publicData?.status === 'paid';
      const isExpired = publicData?.status === 'expired' || publicData?.status === 'cancelled';
-     return ( <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4"><div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6 relative overflow-hidden">{isPaid && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><CheckCircle2 className="text-green-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Payment Successful!</h2><p className="text-gray-500 mt-2">Thank you for your payment.</p><p className="font-bold text-lg mt-4">{formatRupiah(publicData.amount)}</p></div>}{isExpired && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><Ban className="text-red-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Link Expired</h2><p className="text-gray-500 mt-2">This payment link is no longer active.</p></div>}<div className="flex justify-center mb-2">{logo ? <img src={logo} alt="Merchant Logo" className="h-16 w-auto object-contain" /> : <div style={{backgroundColor: brandColor}} className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg"><QrCode size={32} /></div>}</div><div><h1 className="text-2xl font-bold text-gray-800">{config.merchantName || publicData?.merchant_name}</h1><p className="text-gray-500 text-sm mt-1">{publicData?.description}</p>{publicData?.expires_at && <p className="text-xs text-orange-500 font-bold mt-2 flex justify-center items-center gap-1"><Clock size={12}/> Expires: {new Date(publicData.expires_at).toLocaleString()}</p>}</div><div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative"><div className="flex justify-center">{generatedQR && <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />}</div></div><div style={{color: brandColor}} className="text-4xl font-extrabold">{formatRupiah(Number(tempAmount))}</div></div>{config.branding?.customDomain && <p className="mt-8 text-gray-400 text-xs">Powered by {config.branding.customDomain}</p>}</div> );
+     return ( 
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+            <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 text-center space-y-6 relative overflow-hidden">
+                {isPaid && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><CheckCircle2 className="text-green-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Payment Successful!</h2><p className="text-gray-500 mt-2">Thank you for your payment.</p><p className="font-bold text-lg mt-4">{formatRupiah(publicData.amount)}</p></div>}
+                {isExpired && <div className="absolute inset-0 bg-white/95 z-10 flex flex-col items-center justify-center animate-in fade-in"><Ban className="text-red-500 mb-4" size={64} /><h2 className="text-2xl font-bold text-gray-800">Link Expired</h2><p className="text-gray-500 mt-2">This payment link is no longer active.</p></div>}
+                <div className="flex justify-center mb-2">{logo ? <img src={logo} alt="Merchant Logo" className="h-16 w-auto object-contain" /> : <div style={{backgroundColor: brandColor}} className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg"><QrCode size={32} /></div>}</div>
+                <div><h1 className="text-2xl font-bold text-gray-800">{config.merchantName || publicData?.merchant_name}</h1><p className="text-gray-500 text-sm mt-1">{publicData?.description}</p>{publicData?.expires_at && <p className="text-xs text-orange-500 font-bold mt-2 flex justify-center items-center gap-1"><Clock size={12}/> Expires: {new Date(publicData.expires_at).toLocaleString()}</p>}</div>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative"><div className="flex justify-center">{generatedQR && <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />}</div></div>
+                <div style={{color: brandColor}} className="text-4xl font-extrabold">{formatRupiah(Number(tempAmount))}</div>
+                
+                {/* NEW: PUBLIC ACTION BUTTONS */}
+                {!isPaid && !isExpired && (
+                    <div className="flex flex-col gap-3 w-full mt-4 animate-in fade-in slide-in-from-bottom-4">
+                        {/* Check Status Button (Sync) */}
+                        <button 
+                            onClick={() => handlePublicCheck(false)} 
+                            disabled={isCheckingPublic}
+                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                            {isCheckingPublic ? <Loader2 className="animate-spin" size={20}/> : <RefreshCw size={20}/>}
+                            <span>Check Payment Status</span>
+                        </button>
+                        
+                        {/* Download QR Button */}
+                        {generatedQR && (
+                            <a 
+                                href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(generatedQR)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <Download size={20}/>
+                                <span>Download QR Image</span>
+                            </a>
+                        )}
+                    </div>
+                )}
+            </div>
+            {config.branding?.customDomain && <p className="mt-8 text-gray-400 text-xs">Powered by {config.branding.customDomain}</p>}
+        </div> 
+     );
   }
   
   if (showLanding && !currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
   
   if (!currentUser) { 
-      if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button></form></div></div></div>; } 
+      if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button></form></div></div></div>; } 
       return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Welcome Back</h1></div><div className="p-8"><form onSubmit={handleLogin} className="space-y-6"><div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-3 border border-gray-200 rounded-lg pr-10" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>{loginError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2"/>{loginError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button><div className="text-center text-sm"><span className="text-gray-500">New here? </span><button type="button" onClick={()=>{setShowRegister(true);}} className="text-indigo-600 font-bold hover:underline">Create Account</button></div></form></div></div></div>; 
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} />
+      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} onCheckStatus={handleCheckStatus} />
       
       {isUserModalOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"><div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">{editingUser?'Edit User':'Add New User'}</h3><button onClick={()=>setUserModalOpen(false)}><X size={20}/></button></div><form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4"><div><label className="block text-sm font-medium mb-1">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData,role:e.target.value as UserRole})}>{currentUser.role==='superadmin'&&<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>}{currentUser.role==='merchant'&&<><option value="user">User</option><option value="cs">CS</option></>}{currentUser.role==='cs'&&<option value="user">User</option>}</select></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData,username:e.target.value})}/></div><div><label className="block text-sm font-medium mb-1">Password</label><input type={editingUser?"text":"password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData,password:e.target.value})} placeholder={editingUser?"Blank to keep":"Password"}/></div></div><div><label className="block text-sm font-medium mb-1">Email Address</label><input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData,email:e.target.value})} placeholder="user@example.com"/></div>{(userFormData.role==='merchant'||userFormData.role==='superadmin')&&<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p><input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData,merchantName:e.target.value})} placeholder="Merchant Name"/><textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData,qrisString:e.target.value})} placeholder="QRIS String"/></div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading?<Loader2 className="animate-spin"/>:'Save User'}</button></form></div> </div> )}
       
@@ -550,7 +747,10 @@ export default function App() {
               </button>
               <h2 className="text-2xl font-bold text-gray-800 capitalize truncate">{view.replace('_', ' ')}</h2>
           </div>
-          <div className="flex items-center gap-2">{currentUser.isVerified ? <CheckCircle2 size={16} className="text-green-500"/> : <AlertTriangle size={16} className="text-yellow-500"/>}</div>
+          <div className="flex items-center gap-3">
+              {currentUser.isVerified ? <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-full"><CheckCircle2 size={12}/> Email Verified</span> : <span className="flex items-center gap-1 text-yellow-600 text-xs font-bold bg-yellow-50 px-2 py-1 rounded-full"><AlertTriangle size={12}/> Email Pending</span>}
+              {currentUser.isKycVerified ? <span className="flex items-center gap-1 text-blue-600 text-xs font-bold bg-blue-50 px-2 py-1 rounded-full"><ScanFace size={12}/> KYC Verified</span> : null}
+          </div>
         </header>
         
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20">
@@ -568,6 +768,7 @@ export default function App() {
                         <>
                            <button onClick={() => setSettingsTab('branding')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'branding' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Branding</button>
                            <button onClick={() => setSettingsTab('smtp')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'smtp' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>SMTP</button>
+                           <button onClick={() => setSettingsTab('kyc')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'kyc' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>KYC Config</button>
                         </>
                      )}
                  </div>
@@ -587,9 +788,70 @@ export default function App() {
                  {settingsTab === 'account' && (
                      <div className="space-y-6">
                          <Card>
-                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Email Verification</h3>
-                            <div className="flex items-center gap-4 mb-4"><div className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${currentUser.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{currentUser.isVerified ? 'Verified' : 'Not Verified'}</div>{!currentUser.isVerified && <span className="text-sm text-gray-500">Please verify to unlock full features.</span>}</div>
-                            {!currentUser.isVerified && ( <div className="max-w-md space-y-3"><label className="block text-sm font-medium mb-1">Enter Verification Code (OTP)</label><div className="flex gap-2"><input type="text" className="border p-2 rounded flex-1 tracking-widest text-center text-lg" placeholder="123456" maxLength={6} value={otpCode} onChange={e => setOtpCode(e.target.value)} /><button onClick={handleVerifyEmail} disabled={apiLoading || otpCode.length < 4} className="bg-green-600 text-white px-4 rounded font-bold hover:bg-green-700">{apiLoading ? <Loader2 className="animate-spin"/> : 'Verify'}</button></div><div className="text-sm text-gray-500">Didn't get the code? <button onClick={handleResendOtp} disabled={apiLoading} className="text-indigo-600 font-bold hover:underline">Resend OTP</button></div><p className="text-xs text-red-400 mt-2">Problem? Contact support: {currentUser.supportEmail || 'admin@qioslink.com'}</p></div> )}
+                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Verification Status</h3>
+                            <div className="space-y-4">
+                                {/* 1. EMAIL STATUS */}
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-full ${currentUser.isVerified ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                                            <Mail size={20}/>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-800">Email Verified</p>
+                                            <p className="text-xs text-gray-500">{currentUser.email}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {currentUser.isVerified ? (
+                                            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase">YES</span>
+                                        ) : (
+                                            <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase">NO</span>
+                                        )}
+                                    </div>
+                                </div>
+                                {!currentUser.isVerified && (
+                                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+                                        <label className="block text-sm font-medium mb-2">Enter OTP Code to Verify Email</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" className="border p-2 rounded flex-1 tracking-widest text-center" placeholder="123456" maxLength={6} value={otpCode} onChange={e => setOtpCode(e.target.value)} />
+                                            <button onClick={handleVerifyEmail} disabled={apiLoading} className="bg-green-600 text-white px-4 rounded font-bold hover:bg-green-700">Verify</button>
+                                        </div>
+                                        <button onClick={handleResendOtp} className="text-indigo-600 text-xs mt-2 hover:underline">Resend OTP</button>
+                                    </div>
+                                )}
+
+                                {/* 2. KYC STATUS */}
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-full ${currentUser.isKycVerified ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
+                                            <ScanFace size={20}/>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-800">Identity Verified (KYC)</p>
+                                            <p className="text-xs text-gray-500">Official ID Verification</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {currentUser.isKycVerified ? (
+                                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">YES</span>
+                                        ) : (
+                                            <span className="px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-bold uppercase">NO</span>
+                                        )}
+                                    </div>
+                                </div>
+                                {!currentUser.isKycVerified && (
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                        <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
+                                        <button 
+                                            onClick={config.kyc?.provider === 'didit' ? handleStartDiditKyc : () => window.open(`https://wa.me/628123456789?text=Halo%20Admin,%20saya%20${currentUser.username}%20ingin%20verifikasi%20KYC%20manual.`, '_blank')}
+                                            className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+                                        >
+                                            <ScanFace size={18}/> 
+                                            {config.kyc?.provider === 'didit' ? 'Start Automated Verification' : 'Contact Admin for Manual Verification'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                          </Card>
                          <Card>
                              <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><UserIcon size={20}/> Edit Profile</h3>
@@ -647,10 +909,92 @@ export default function App() {
                          </div>
                      </Card>
                  )}
+                 {settingsTab === 'kyc' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><ScanFace size={20}/> KYC Configuration (Didit.me)</h3>
+                         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-6 text-sm text-indigo-800">
+                             Configure how users verify their identity. You can use <strong>Manual Verification</strong> (Admin approves via WhatsApp/Email) or <strong>Automated Verification</strong> using Didit.me API.
+                         </div>
+                         
+                         <div className="space-y-4">
+                             <div>
+                                 <label className="block text-sm font-medium mb-1">Verification Provider</label>
+                                 <select 
+                                    className="w-full border p-2 rounded bg-white"
+                                    value={config.kyc?.provider || 'manual'}
+                                    onChange={e => setConfig({...config, kyc: {...config.kyc, provider: e.target.value as any}})}
+                                 >
+                                     <option value="manual">Manual (Contact Admin)</option>
+                                     <option value="didit">Didit.me (Automated)</option>
+                                 </select>
+                             </div>
+
+                             {config.kyc?.provider === 'didit' && (
+                                 <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
+                                     <div className="bg-white border p-4 rounded-lg">
+                                         <h4 className="font-bold text-gray-800 mb-2">Didit.me API Credentials</h4>
+                                         <p className="text-xs text-gray-500 mb-4">Get these from your <a href="https://business.didit.me" target="_blank" className="text-blue-600 underline">Didit Business Console</a>.</p>
+                                         
+                                         <div className="space-y-3">
+                                             <div>
+                                                 <label className="block text-sm font-medium mb-1">Client ID</label>
+                                                 <input 
+                                                    type="text" 
+                                                    className="w-full border p-2 rounded" 
+                                                    value={config.kyc?.diditClientId || ''}
+                                                    onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientId: e.target.value}})}
+                                                    placeholder="Enter Client ID"
+                                                 />
+                                             </div>
+                                             <div>
+                                                 <label className="block text-sm font-medium mb-1">Client Secret</label>
+                                                 <input 
+                                                    type="password" 
+                                                    className="w-full border p-2 rounded" 
+                                                    value={config.kyc?.diditClientSecret || ''}
+                                                    onChange={e => setConfig({...config, kyc: {...config.kyc!, diditClientSecret: e.target.value}})}
+                                                    placeholder="Enter Client Secret"
+                                                 />
+                                             </div>
+                                             <div>
+                                                 <label className="block text-sm font-medium mb-1">Callback URL (Optional)</label>
+                                                 <input 
+                                                    type="text" 
+                                                    className="w-full border p-2 rounded bg-gray-50" 
+                                                    readOnly
+                                                    value={`${window.location.origin}/api/kyc_callback.php`} 
+                                                 />
+                                                 <p className="text-xs text-gray-400 mt-1">Set this in your Didit Console Webhook settings.</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">
+                                 {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings
+                             </button>
+                         </div>
+                     </Card>
+                 )}
              </div>
           )}
           {view === 'history' && <Card><div className="flex justify-between items-center mb-6"><div className="relative max-w-sm w-full"><Search className="absolute left-3 top-3 text-gray-400" size={18} /><input type="text" placeholder="Search ID or Amount..." className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><button onClick={() => fetchTransactions(currentUser!)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><ArrowRight size={18} className="rotate-90" /></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Transaction ID</th><th className="py-4 font-medium">Date</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.length === 0 ? <tr><td colSpan={5} className="py-8 text-center text-gray-400">No transactions found</td></tr> : transactions.filter(t => t.id.toLowerCase().includes(searchQuery.toLowerCase())).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 font-medium text-gray-800">{t.id}</td><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>{t.status}</span></td><td className="py-4 text-right"><button onClick={() => setSelectedTransaction(t)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
-          {view === 'users' && ['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">User Management</h3><button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button></div><table className="w-full text-left"><thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead><tbody>{users.map(u => (<tr key={u.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{u.username}</td><td className="px-4 py-3 text-gray-500 text-sm">{u.email || '-'}</td><td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-xs rounded-full uppercase font-bold">{u.role}</span></td><td className="px-4 py-3">{u.isVerified?<span className="text-green-600 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Verified</span>:<span className="text-yellow-600 text-xs font-bold flex items-center gap-1"><AlertTriangle size={12}/> Pending</span>}</td><td className="px-4 py-3">{(currentUser.role === 'superadmin' || (currentUser.role === 'merchant' && ['cs','user'].includes(u.role))) && (<div className="flex space-x-2">{!u.isVerified && <button onClick={() => handleManualVerifyUser(u.id)} title="Verify Manually" className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"><Check size={16} /></button>}<button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600"><Pencil size={18} /></button></div>)}</td></tr>))}</tbody></table></Card>}
+          {view === 'users' && ['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">User Management</h3><button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role: currentUser.role === 'cs' ? 'user' : 'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"><Plus size={18} /><span>Add User</span></button></div><table className="w-full text-left"><thead className="bg-gray-50"><tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Email Verif</th><th className="px-4 py-3">KYC Verif</th><th className="px-4 py-3">Actions</th></tr></thead><tbody>{users.map(u => (<tr key={u.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-medium">{u.username}</td><td className="px-4 py-3 text-gray-500 text-sm">{u.email || '-'}</td><td className="px-4 py-3"><span className="px-2 py-1 bg-gray-100 text-xs rounded-full uppercase font-bold">{u.role}</span></td>
+            {/* EMAIL STATUS */}
+            <td className="px-4 py-3">{u.isVerified?
+                <span className="text-green-600 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> YES</span>:
+                <span className="text-yellow-600 text-xs font-bold flex items-center gap-1"><AlertTriangle size={12}/> NO</span>
+            }</td>
+            {/* KYC STATUS */}
+            <td className="px-4 py-3">{u.isKycVerified?
+                <span className="text-blue-600 text-xs font-bold flex items-center gap-1"><ScanFace size={12}/> YES</span>:
+                <span className="text-gray-400 text-xs font-bold flex items-center gap-1">NO</span>
+            }</td>
+            <td className="px-4 py-3">{(currentUser.role === 'superadmin' || (currentUser.role === 'merchant' && ['cs','user'].includes(u.role))) && (<div className="flex space-x-2">
+                {!u.isVerified && <button onClick={() => handleManualVerifyUser(u.id)} title="Approve Email" className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"><Check size={16} /></button>}
+                {!u.isKycVerified && <button onClick={() => handleManualApproveKyc(u.id)} title="Approve KYC" className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><ScanFace size={16} /></button>}
+                <button onClick={() => { setEditingUser(u); setUserFormData({...userFormData, username: u.username, email: u.email || '', role: u.role}); setUserModalOpen(true); }} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg"><Pencil size={18} /></button><button onClick={() => handleDeleteUser(u)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg" title="Delete User"><Trash2 size={18} /></button></div>)}</td></tr>))}</tbody></table></Card>}
           {view === 'links' && <Card><div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg">Active Payment Links</h3><button onClick={()=>fetchTransactions(currentUser!)} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><RefreshCw size={18}/></button></div><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="border-b border-gray-100 text-gray-500 text-sm"><th className="py-4 font-medium">Created At</th><th className="py-4 font-medium">Amount</th><th className="py-4 font-medium">Description</th><th className="py-4 font-medium">Link</th><th className="py-4 font-medium">Status</th><th className="py-4 font-medium text-right">Action</th></tr></thead><tbody className="text-sm">{transactions.filter(t => t.paymentUrl).map((t) => (<tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group"><td className="py-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString()}</td><td className="py-4 font-bold text-gray-800">{formatRupiah(Number(t.amount))}</td><td className="py-4 text-gray-600 max-w-[150px] truncate">{t.description}</td><td className="py-4"><button onClick={() => copyToClipboard(t.paymentUrl || '')} className="flex items-center gap-1 text-indigo-600 hover:underline text-xs"><LinkIcon size={12}/> Copy Link</button></td><td className="py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${t.status === 'paid' ? 'bg-green-100 text-green-700' : t.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{t.status}</span></td><td className="py-4 text-right flex justify-end gap-2">{t.status === 'pending' && <button onClick={() => handleRevokeLink(t)} title="Revoke/Cancel Link" className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Ban size={18} /></button>}<button onClick={() => { setGeneratedQR(t.qrString); setGeneratedLink(t.paymentUrl || ''); setTempAmount(t.amount.toString()); setTempDesc(t.description); setView('terminal'); }} title="View QR" className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"><Eye size={18} /></button></td></tr>))}</tbody></table></div></Card>}
           {view === 'integration' && <Card><h3 className="text-xl font-bold mb-4">Integration API</h3><p className="text-gray-500 mb-6">Use these endpoints to integrate QiosLink with your custom application.</p><div className="bg-gray-900 rounded-xl p-6 text-gray-300 font-mono text-sm overflow-x-auto"><p className="text-green-400">// Create Dynamic Payment (With Options)</p><p>POST {window.location.origin}/api/create_payment.php</p><p className="mb-4">Content-Type: application/json</p><pre>{`{\n  "merchant_id": "${currentUser.id}",\n  "api_key": "${config.appSecretKey || 'YOUR_APP_SECRET_KEY'}",\n  "amount": 10000,\n  "description": "Invoice #123",\n  "expiry_minutes": 60, // Optional: Expire in 60 mins\n  "single_use": true,   // Optional: Link becomes invalid after payment\n  "callback_url": "https://your-site.com/webhook"\n}`}</pre></div></Card>}
         </div>
