@@ -33,11 +33,9 @@ if ($res->num_rows > 0) {
 
     $apiKey = isset($kycConf['diditApiKey']) ? trim($kycConf['diditApiKey']) : '';
     
-    // CLEAN API KEY: Remove 'Bearer ' prefix if user pasted it
-    // Some users accidentally copy "Bearer eyJ..." from docs
-    if (stripos($apiKey, 'bearer ') === 0) {
-        $apiKey = trim(substr($apiKey, 7)); // Cut first 7 chars
-    }
+    // DEEP CLEANING: Remove 'Bearer ' prefix (case insensitive) and hidden chars
+    $apiKey = preg_replace('/^bearer\s+/i', '', $apiKey);
+    $apiKey = trim($apiKey);
 
     // NEW: Get App ID
     $appId = isset($kycConf['diditAppId']) ? trim($kycConf['diditAppId']) : '';

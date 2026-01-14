@@ -9,10 +9,22 @@ header('Content-Type: application/json');
 
 $input = json_decode(file_get_contents("php://input"), true);
 
+// Fungsi Recursive Trim untuk membersihkan semua input string
+function recursive_trim($data) {
+    if (is_array($data)) {
+        return array_map('recursive_trim', $data);
+    }
+    if (is_string($data)) {
+        return trim($data);
+    }
+    return $data;
+}
+
 if(isset($input['user_id']) && isset($input['config'])) {
     
     $user_id = $input['user_id'];
-    $config = $input['config'];
+    // SANITIZE INPUT CONFIG
+    $config = recursive_trim($input['config']);
     
     // Validasi User ID
     if (!is_numeric($user_id)) {
@@ -29,10 +41,6 @@ if(isset($input['user_id']) && isset($input['config'])) {
     if ($res->num_rows > 0) {
         $row = $res->fetch_assoc();
         $oldConfig = json_decode($row['merchant_config'], true) ?? [];
-        
-        // Hanya Superadmin/Merchant yang boleh update config
-        // Tapi kita longgarkan sedikit jika user ingin update data diri (tapi biasanya handled by manage_users update action)
-        // Di sini kita asumsikan yang panggil update_config adalah halaman Setting Config/Branding/SMTP/KYC.
         
         // Merge config: Timpa config lama dengan yang baru
         // Kita gunakan array_replace_recursive agar nested object seperti 'auth' atau 'kyc' tidak tertimpa total jika parsial
