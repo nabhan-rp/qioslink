@@ -42,7 +42,8 @@ if ($res->num_rows > 0) {
     // NEW: Get App ID
     $appId = isset($kycConf['diditAppId']) ? trim($kycConf['diditAppId']) : '';
     
-    logDebug("Config Loaded. API Key Length: " . strlen($apiKey));
+    // Log key length only, to prevent leak
+    logDebug("Config Loaded. API Key Length: " . strlen($apiKey) . " | First 5 chars: " . substr($apiKey, 0, 5));
 } else {
     logDebug("Superadmin config not found");
     echo json_encode(['success' => false, 'message' => 'System Config Error: Admin Not Found']);
