@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export type UserRole = 'superadmin' | 'merchant' | 'cs' | 'user';
@@ -45,13 +44,12 @@ export interface KycConfig {
   enabled: boolean; 
   provider: 'manual' | 'didit';
   // Didit Config
-  diditAppId?: string;         // App ID from Didit Console
-  diditApiKey?: string;        // API Key
-  diditWebhookSecret?: string; // Webhook Secret
-  diditWorkflowId?: string;    // NEW: Workflow ID for Didit V3
+  diditAppId?: string;         // NEW: App ID from Didit Console
+  diditApiKey?: string;        // CHANGED: API Key
+  diditWebhookSecret?: string; // CHANGED: Webhook Secret
   // Manual Config
-  manualContactType?: 'whatsapp' | 'email'; 
-  manualContactValue?: string;              
+  manualContactType?: 'whatsapp' | 'email'; // NEW
+  manualContactValue?: string;              // NEW (Number or Email)
 }
 
 // NEW: WhatsApp & Social Login Configuration

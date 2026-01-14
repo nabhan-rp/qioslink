@@ -20,7 +20,8 @@ if (!$event) {
 }
 
 // 3. Proses Logika Didit.me
-$data = $event['data'] ?? [];
+// Didit V3 structure might differ, checking generic 'status' or 'decision' keys inside 'data' or root
+$data = $event['data'] ?? $event; 
 $status = $data['status'] ?? ''; 
 $decision = $data['decision'] ?? '';
 
@@ -30,9 +31,12 @@ $isApproved = ($status === 'approved' || $decision === 'approved');
 if ($isApproved) {
     $userId = null;
     
+    // Check metadata locations
     if (isset($data['metadata']['internal_user_id'])) {
         $userId = $data['metadata']['internal_user_id'];
-    } 
+    } elseif (isset($event['metadata']['internal_user_id'])) {
+        $userId = $event['metadata']['internal_user_id'];
+    }
     
     if ($userId) {
         // UPDATE LOGIC: Set is_kyc_verified = 1 DAN role = 'merchant'

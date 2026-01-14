@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
@@ -64,7 +63,8 @@ import {
   Fingerprint,
   ToggleLeft,
   ToggleRight,
-  HelpCircle as QuestionMark
+  HelpCircle as QuestionMark,
+  MinusCircle
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -80,7 +80,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.9.0 (Enterprise Stable)";
+const APP_VERSION = "4.9.2 (Enterprise Stable)";
 
 const getEnv = () => {
   try {
@@ -104,15 +104,15 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
     verifyWhatsapp: false,
     verifyKyc: false,
     waProvider: 'fonnte',
-    loginMethod: 'hybrid', // Default to hybrid to show options
+    loginMethod: 'hybrid', 
     waLoginScope: 'universal_except_admin',
-    allowedRoles: ['user'],
+    allowedRoles: ['merchant', 'user'],
     allowedSpecificUsers: [],
     twoFactorLogic: 'user_opt_in',
     socialLogin: {
-        google: true,
-        github: true,
-        facebook: true
+        google: false,
+        github: false,
+        facebook: false
     }
 };
 
@@ -145,7 +145,7 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
   );
 };
 
-// --- LANDING PAGE COMPONENT ---
+// --- LANDING PAGE COMPONENT (FULL RESTORED) ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -230,11 +230,11 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           </div>
         </section>
 
-        {/* FEATURES GRID */}
+        {/* FEATURES GRID (Restored) */}
         <section id="features" className="py-20 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.8</h2>
+                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.9</h2>
                     <p className="mt-4 text-gray-500">Major security and usability updates for enterprise needs.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -252,6 +252,87 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                         <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6"><Phone size={24}/></div>
                         <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp 2FA</h3>
                         <p className="text-gray-500">Secure your dashboard with OTP sent via WhatsApp. Supports passwordless login flow.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* PRICING/DEPLOYMENT OPTIONS (Restored) */}
+        <section id="options" className="py-20 bg-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-4"><span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span></div>
+                <div className="text-center mb-16">
+                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Cloud Service vs Self-Hosted</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto text-lg">Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
+                    {/* Cloud SaaS Card */}
+                    <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/20">
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120}/></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm"><Cloud size={24} className="text-white"/></div>
+                        <h3 className="text-2xl font-bold mb-1">Cloud SaaS</h3>
+                        <p className="text-indigo-200 text-sm font-mono mb-6">bayar.jajanan.online</p>
+                        <p className="text-indigo-100 mb-8 flex-grow leading-relaxed">The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-indigo-100">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Zero Maintenance</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Instant Activation</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Free & Pro Plans</li>
+                        </ul>
+                        <button onClick={onRegister} className="w-full py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">Register Now</button>
+                    </div>
+
+                    {/* Self Host Free Card */}
+                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120}/></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-6 text-emerald-600"><Zap size={24}/></div>
+                        <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
+                        <p className="text-gray-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
+                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> 0 Cost / Lifetime</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Free SSL Certificate</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Open Source Control</li>
+                        </ul>
+                        <a href="https://freehosting.jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-white border border-emerald-500 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-center">Get Free Host</a>
+                    </div>
+
+                    {/* Self Host Paid Card */}
+                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-yellow-400 transition-colors">
+                        <div className="absolute top-4 right-4"><span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded border border-yellow-200">ENTERPRISE</span></div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl mb-6 text-yellow-600"><Rocket size={24}/></div>
+                        <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
+                        <p className="text-gray-400 text-sm font-mono mb-6">jajanserver.com</p>
+                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.</p>
+                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> 99.9% Uptime SLA</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Priority Support</li>
+                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Daily Backups</li>
+                        </ul>
+                        <a href="https://jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-colors text-center shadow-lg shadow-yellow-500/20">View Plans</a>
+                    </div>
+                </div>
+
+                <div className="text-center mb-16 pt-8 border-t border-gray-200">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Why QiosLink?</h2>
+                    <p className="text-gray-500">The ultimate payment solution.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6"><Server size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Self Hosted</h3>
+                        <p className="text-gray-500 leading-relaxed">Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6"><Palette size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">White Label Branding</h3>
+                        <p className="text-gray-500 leading-relaxed">Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank.</p>
+                    </div>
+                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6"><Code2 size={24}/></div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Integration</h3>
+                        <p className="text-gray-500 leading-relaxed">Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps.</p>
                     </div>
                 </div>
             </div>
@@ -570,15 +651,18 @@ export default function App() {
       if(!confirm("Approve KYC for this user?")) return;
       setApiLoading(true);
       if(IS_DEMO_MODE) {
-          setUsers(users.map(u => u.id === targetUserId ? {...u, isKycVerified: true} : u));
-          alert("KYC Approved (Demo)");
+          setUsers(users.map(u => u.id === targetUserId ? {...u, isKycVerified: true, role: 'merchant'} : u));
+          alert("KYC Approved & Role Upgraded to Merchant (Demo)");
       } else {
           try {
               const res = await fetch(`${API_BASE}/manage_users.php?action=approve_kyc`, { 
                   method: 'POST', body: JSON.stringify({ id: targetUserId }) 
               });
               const data = await res.json();
-              if(data.success) { alert("KYC Approved"); fetchUsers(); } else alert(data.message);
+              if(data.success) { 
+                  alert(data.message); // Should say "User KYC Approved & Upgraded to Merchant"
+                  fetchUsers(); 
+              } else alert(data.message);
           } catch(e) { alert("Error"); }
       }
       setApiLoading(false);
@@ -1063,7 +1147,7 @@ export default function App() {
              <SidebarItem active={view === 'history'} icon={<History size={20} />} label="Transactions" onClick={() => { setView('history'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
              {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'terminal'} icon={<Smartphone size={20} />} label="Terminal" onClick={() => { setView('terminal'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
              {['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <SidebarItem active={view === 'users'} icon={<Users size={20} />} label="Users" onClick={() => { setView('users'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
-             {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Payment Links" onClick={() => { setView('links'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
+             {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Payment Links" onClick={() => { setView('links'); if(window.innerWidth <1024) setSidebarOpen(false); }} />}
              {currentUser.role === 'superadmin' && <SidebarItem active={view === 'integration'} icon={<Code2 size={20} />} label="Integration" onClick={() => { setView('integration'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
              <SidebarItem active={view === 'settings'} icon={<Settings size={20} />} label="Settings & Profile" onClick={() => { setView('settings'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
           </nav>
@@ -1421,14 +1505,6 @@ export default function App() {
                                                  <div className="space-y-4">
                                                      <div><label className="block text-sm font-medium mb-1">App ID</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditAppId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditAppId: e.target.value}})} placeholder="Enter Didit App ID"/></div>
                                                      <div><label className="block text-sm font-medium mb-1">API Key</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditApiKey || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditApiKey: e.target.value}})} placeholder="Enter Didit API Key"/></div>
-                                                     
-                                                     {/* NEW: Workflow ID Input */}
-                                                     <div>
-                                                         <label className="block text-sm font-medium mb-1">Workflow ID (Optional)</label>
-                                                         <input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditWorkflowId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWorkflowId: e.target.value}})} placeholder="Enter Workflow ID (if using Custom Flow)"/>
-                                                         <p className="text-xs text-gray-400 mt-1">Leave empty to use default verification flow.</p>
-                                                     </div>
-
                                                      <div><label className="block text-sm font-medium mb-1">Webhook Secret</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditWebhookSecret || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWebhookSecret: e.target.value}})} placeholder="Enter Webhook Secret"/></div>
                                                      <div className="pt-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Webhook URL (Callback)</label><div className="flex gap-2"><input type="text" readOnly className="w-full bg-gray-50 border p-2 rounded text-gray-600 font-mono text-xs" value={window.location.origin + "/api/kyc_callback.php"} /><button onClick={() => copyToClipboard(window.location.origin + "/api/kyc_callback.php")} className="px-3 bg-gray-100 border rounded hover:bg-gray-200 text-gray-600"><Copy size={16}/></button></div></div>
                                                  </div>
@@ -1441,12 +1517,11 @@ export default function App() {
                          <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings</button>
                      </Card>
                  )}
-                 {/* ... (Branding, SMTP, Auth Tabs - keeping same) ... */}
                  {settingsTab === 'auth' && (
                      <div className="space-y-6 animate-in fade-in">
                          {/* 1. VERIFICATION METHODS */}
                          <Card>
-                             <h3 className="text-lg font-bold mb-4">Verification Methods</h3>
+                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><CheckCircle2 size={20}/> Verification Requirements</h3>
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                  <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border cursor-pointer hover:bg-indigo-50 transition-colors">
                                      <input type="checkbox" checked={config.auth?.verifyEmail} onChange={e => setConfig({...config, auth: {...config.auth!, verifyEmail: e.target.checked}})} className="h-5 w-5 text-indigo-600"/>
@@ -1462,7 +1537,138 @@ export default function App() {
                                  </label>
                              </div>
                          </Card>
-                         {/* ... (Login Logic & Social Auth - No changes) ... */}
+
+                         {/* 2. LOGIN METHOD & SCOPE */}
+                         <Card>
+                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Lock size={20}/> Login Security</h3>
+                             <div className="space-y-4">
+                                 {/* Login Method */}
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">Login Method</label>
+                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.loginMethod || 'standard'} onChange={e => setConfig({...config, auth: {...config.auth!, loginMethod: e.target.value as any}})}>
+                                         <option value="standard">Standard (Email & Password)</option>
+                                         <option value="whatsapp_otp">WhatsApp OTP Only (Passwordless)</option>
+                                         <option value="hybrid">Hybrid (Email OR WhatsApp)</option>
+                                     </select>
+                                 </div>
+
+                                 {/* WA Login Scope */}
+                                 <div>
+                                     <label className="block text-sm font-medium mb-1">WhatsApp Login Scope</label>
+                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.waLoginScope || 'universal_except_admin'} onChange={e => setConfig({...config, auth: {...config.auth!, waLoginScope: e.target.value as any}})}>
+                                         <option value="universal_except_admin">Universal (All Users except Superadmin)</option>
+                                         <option value="role_based">Role Based (Select Roles)</option>
+                                         <option value="specific_users">Specific Users (By Username)</option>
+                                         <option value="all_users_dangerous">All Users (Including Superadmin - Dangerous)</option>
+                                     </select>
+                                     <p className="text-xs text-gray-500 mt-1">Determines who is allowed to use WhatsApp OTP for login.</p>
+                                 </div>
+
+                                 {/* Conditional: Role Based */}
+                                 {config.auth?.waLoginScope === 'role_based' && (
+                                     <div className="p-4 bg-gray-50 border rounded-lg">
+                                         <label className="block text-sm font-bold mb-2">Allowed Roles:</label>
+                                         <div className="flex gap-4">
+                                             {['merchant', 'cs', 'user'].map((role) => (
+                                                 <label key={role} className="flex items-center gap-2">
+                                                     <input 
+                                                         type="checkbox" 
+                                                         checked={config.auth?.allowedRoles?.includes(role as UserRole)} 
+                                                         onChange={(e) => {
+                                                             const currentRoles = config.auth?.allowedRoles || [];
+                                                             const newRoles = e.target.checked 
+                                                                 ? [...currentRoles, role as UserRole]
+                                                                 : currentRoles.filter(r => r !== role);
+                                                             setConfig({...config, auth: {...config.auth!, allowedRoles: newRoles}});
+                                                         }}
+                                                         className="h-4 w-4 text-indigo-600"
+                                                     />
+                                                     <span className="capitalize">{role}</span>
+                                                 </label>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 {/* Conditional: Specific Users */}
+                                 {config.auth?.waLoginScope === 'specific_users' && (
+                                     <div>
+                                         <label className="block text-sm font-medium mb-1">Allowed Usernames (Comma Separated)</label>
+                                         <textarea 
+                                             className="w-full border p-2 rounded h-20 text-sm font-mono" 
+                                             value={config.auth?.allowedSpecificUsers?.join(', ') || ''} 
+                                             onChange={(e) => {
+                                                 const users = e.target.value.split(',').map(u => u.trim()).filter(u => u !== '');
+                                                 setConfig({...config, auth: {...config.auth!, allowedSpecificUsers: users}});
+                                             }}
+                                             placeholder="admin, budi, siska_123"
+                                         />
+                                     </div>
+                                 )}
+
+                                 {/* 2FA Logic */}
+                                 <div className="pt-4 border-t">
+                                     <label className="block text-sm font-medium mb-1">Two-Factor Authentication (2FA)</label>
+                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.twoFactorLogic || 'user_opt_in'} onChange={e => setConfig({...config, auth: {...config.auth!, twoFactorLogic: e.target.value as any}})}>
+                                         <option value="disabled">Disabled Globally</option>
+                                         <option value="user_opt_in">User Opt-in (User decides in Profile)</option>
+                                         <option value="admin_forced">Admin Forced (Mandatory for All)</option>
+                                     </select>
+                                     {config.auth?.twoFactorLogic === 'admin_forced' && (
+                                         <p className="text-xs text-red-600 mt-1 font-bold">Warning: All users must have valid WhatsApp numbers or they will be locked out.</p>
+                                     )}
+                                 </div>
+                             </div>
+                         </Card>
+
+                         {/* 3. SOCIAL LOGIN CONFIG */}
+                         <Card>
+                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Globe size={20}/> Social Login</h3>
+                             <div className="space-y-4">
+                                 {/* Google */}
+                                 <div className="border p-4 rounded-lg">
+                                     <div className="flex justify-between items-center mb-2">
+                                         <div className="flex items-center gap-2 font-bold"><Chrome size={16} className="text-red-500"/> Google Login</div>
+                                         <input type="checkbox" checked={config.auth?.socialLogin?.google} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, google: e.target.checked}}})} className="toggle toggle-primary h-5 w-5"/>
+                                     </div>
+                                     {config.auth?.socialLogin?.google && (
+                                         <div className="mt-2 animate-in fade-in">
+                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Client ID</label>
+                                             <input type="text" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.googleClientId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientId: e.target.value}}})} placeholder="xxx.apps.googleusercontent.com"/>
+                                         </div>
+                                     )}
+                                 </div>
+
+                                 {/* Facebook */}
+                                 <div className="border p-4 rounded-lg">
+                                     <div className="flex justify-between items-center mb-2">
+                                         <div className="flex items-center gap-2 font-bold"><Facebook size={16} className="text-blue-600"/> Facebook Login</div>
+                                         <input type="checkbox" checked={config.auth?.socialLogin?.facebook} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebook: e.target.checked}}})} className="toggle toggle-primary h-5 w-5"/>
+                                     </div>
+                                     {config.auth?.socialLogin?.facebook && (
+                                         <div className="mt-2 animate-in fade-in grid grid-cols-2 gap-4">
+                                             <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">App ID</label><input type="text" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.facebookAppId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppId: e.target.value}}})} /></div>
+                                             <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">App Secret</label><input type="password" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.facebookAppSecret || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppSecret: e.target.value}}})} /></div>
+                                         </div>
+                                     )}
+                                 </div>
+
+                                 {/* GitHub */}
+                                 <div className="border p-4 rounded-lg">
+                                     <div className="flex justify-between items-center mb-2">
+                                         <div className="flex items-center gap-2 font-bold"><Github size={16}/> GitHub Login</div>
+                                         <input type="checkbox" checked={config.auth?.socialLogin?.github} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, github: e.target.checked}}})} className="toggle toggle-primary h-5 w-5"/>
+                                     </div>
+                                     {config.auth?.socialLogin?.github && (
+                                         <div className="mt-2 animate-in fade-in">
+                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Client ID</label>
+                                             <input type="text" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.githubClientId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientId: e.target.value}}})} />
+                                         </div>
+                                     )}
+                                 </div>
+                             </div>
+                         </Card>
+
                          <button onClick={handleUpdateConfig} disabled={apiLoading} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
                              {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save All Security Settings
                          </button>
