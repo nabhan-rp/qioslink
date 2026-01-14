@@ -8,7 +8,7 @@ import {
   LogOut, 
   Menu, 
   Wallet, 
-  History,
+  History, 
   Copy,
   CheckCircle2,
   ExternalLink,
@@ -1308,6 +1308,14 @@ export default function App() {
                                                  <div className="space-y-4">
                                                      <div><label className="block text-sm font-medium mb-1">App ID</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditAppId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditAppId: e.target.value}})} placeholder="Enter Didit App ID"/></div>
                                                      <div><label className="block text-sm font-medium mb-1">API Key</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditApiKey || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditApiKey: e.target.value}})} placeholder="Enter Didit API Key"/></div>
+                                                     
+                                                     {/* NEW: Workflow ID Input */}
+                                                     <div>
+                                                         <label className="block text-sm font-medium mb-1">Workflow ID (Optional)</label>
+                                                         <input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditWorkflowId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWorkflowId: e.target.value}})} placeholder="Enter Workflow ID (if using Custom Flow)"/>
+                                                         <p className="text-xs text-gray-400 mt-1">Leave empty to use default verification flow.</p>
+                                                     </div>
+
                                                      <div><label className="block text-sm font-medium mb-1">Webhook Secret</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditWebhookSecret || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWebhookSecret: e.target.value}})} placeholder="Enter Webhook Secret"/></div>
                                                      <div className="pt-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Webhook URL (Callback)</label><div className="flex gap-2"><input type="text" readOnly className="w-full bg-gray-50 border p-2 rounded text-gray-600 font-mono text-xs" value={window.location.origin + "/api/kyc_callback.php"} /><button onClick={() => copyToClipboard(window.location.origin + "/api/kyc_callback.php")} className="px-3 bg-gray-100 border rounded hover:bg-gray-200 text-gray-600"><Copy size={16}/></button></div></div>
                                                  </div>
@@ -1439,4 +1447,3 @@ export default function App() {
 }
 // Add missing icon import
 function MinusCircle({size}:{size:number}) { return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
-// new restored

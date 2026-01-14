@@ -1,0 +1,69 @@
+
+<?php
+// FILE: api/login.php
+require 'db_connect.php';
+
+header('Content-Type: application/json');
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['username']) && isset($input['password'])) {
+    $user = $input['username'];
+    $pass = $input['password'];
+    
+    // Support login via Email or Username
+    $stmt = $conn->prepare("
+        SELECT u.id, u.username, u.email, u.phone, u.password, u.role, u.merchant_config, 
+               u.is_verified, u.is_phone_verified, u.two_factor_enabled, u.creator_id
+        FROM users u 
+        WHERE u.username = ? OR u.email = ?
+    ");
+    
+    $stmt->bind_param("ss", $user, $user);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        
+        // Verify Password
+        if ($row['password'] !== $pass) {
+            echo json_encode(['success' => false, 'message' => 'Invalid Password']);
+            exit;
+        }
+
+        // --- 2FA CHECK ---
+        if ($row['two_factor_enabled'] == 1) {
+            if (empty($row['phone'])) {
+                echo json_encode(['success' => false, 'message' => '2FA Enabled but phone not set.']);
+                exit;
+            }
+            
+            $maskedPhone = substr($row['phone'], 0, 4) . "****" . substr($row['phone'], -3);
+            
+            // Return special response telling frontend to switch to OTP Input
+            echo json_encode([
+                'success' => false, 
+                'require_2fa' => true,
+                'user_id' => $row['id'],
+                'phone_masked' => $maskedPhone
+            ]);
+            exit;
+        }
+
+        // Success Login
+        $row['merchantConfig'] = json_decode($row['merchant_config']);
+        unset($row['merchant_config']);
+        unset($row['password']);
+        
+        $row['isVerified'] = $row['is_verified'] == 1;
+        $row['isPhoneVerified'] = $row['is_phone_verified'] == 1;
+        
+        echo json_encode(['success' => true, 'user' => $row]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'User not found']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Missing Input']);
+}
+?>

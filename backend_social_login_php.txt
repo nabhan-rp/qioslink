@@ -1,0 +1,82 @@
+
+<?php
+// FILE: api/social_login.php
+require 'db_connect.php';
+header('Content-Type: application/json');
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['provider']) && isset($input['email'])) {
+    
+    $provider = $input['provider']; // 'google', 'facebook', 'github'
+    $provider_id = $input['provider_id'] ?? '';
+    $email = $input['email'];
+    $name = $input['name'] ?? explode('@', $email)[0];
+    
+    // 1. LOGIN: Check by Provider ID
+    $stmt = $conn->prepare("SELECT * FROM users WHERE auth_provider = ? AND provider_id = ?");
+    $stmt->bind_param("ss", $provider, $provider_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if ($res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        $row['merchantConfig'] = json_decode($row['merchant_config']);
+        unset($row['merchant_config'], $row['password']);
+        $row['isVerified'] = $row['is_verified'] == 1;
+        
+        echo json_encode(['success' => true, 'user' => $row]);
+        exit;
+    } 
+    
+    // 2. LINKING: Check by Email
+    $stmtEmail = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $stmtEmail->bind_param("s", $email);
+    $stmtEmail->execute();
+    $resEmail = $stmtEmail->get_result();
+    
+    if ($resEmail->num_rows > 0) {
+        // Link Account
+        $existing = $resEmail->fetch_assoc();
+        $uid = $existing['id'];
+        
+        $upd = $conn->prepare("UPDATE users SET auth_provider = ?, provider_id = ?, is_verified = 1 WHERE id = ?");
+        $upd->bind_param("ssi", $provider, $provider_id, $uid);
+        $upd->execute();
+        
+        // Fetch Updated
+        $final = $conn->query("SELECT * FROM users WHERE id = $uid")->fetch_assoc();
+        $final['merchantConfig'] = json_decode($final['merchant_config']);
+        unset($final['merchant_config'], $final['password']);
+        
+        echo json_encode(['success' => true, 'user' => $final, 'message' => 'Account Linked']);
+        exit;
+    }
+    
+    // 3. REGISTER
+    $baseUser = strtolower(preg_replace("/[^A-Za-z0-9]/", '', $name));
+    $username = $baseUser;
+    $cnt = 1;
+    while($conn->query("SELECT id FROM users WHERE username='$username'")->num_rows > 0) {
+        $username = $baseUser . $cnt++;
+    }
+    
+    $role = 'user';
+    $defConf = json_encode(["merchantName" => $name, "auth" => ["loginMethod"=>"standard"]]);
+    
+    $ins = $conn->prepare("INSERT INTO users (username, email, role, is_verified, auth_provider, provider_id, merchant_config) VALUES (?, ?, ?, 1, ?, ?, ?)");
+    $ins->bind_param("ssssss", $username, $email, $role, $provider, $provider_id, $defConf);
+    
+    if ($ins->execute()) {
+        $newId = $conn->insert_id;
+        $newUser = $conn->query("SELECT * FROM users WHERE id = $newId")->fetch_assoc();
+        $newUser['merchantConfig'] = json_decode($newUser['merchant_config']);
+        unset($newUser['merchant_config'], $newUser['password']);
+        echo json_encode(['success' => true, 'user' => $newUser]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Register Failed']);
+    }
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid Data']);
+}
+?>

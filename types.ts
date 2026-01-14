@@ -45,12 +45,13 @@ export interface KycConfig {
   enabled: boolean; 
   provider: 'manual' | 'didit';
   // Didit Config
-  diditAppId?: string;         // NEW: App ID from Didit Console
-  diditApiKey?: string;        // CHANGED: API Key
-  diditWebhookSecret?: string; // CHANGED: Webhook Secret
+  diditAppId?: string;         // App ID from Didit Console
+  diditApiKey?: string;        // API Key
+  diditWebhookSecret?: string; // Webhook Secret
+  diditWorkflowId?: string;    // NEW: Workflow ID for Didit V3
   // Manual Config
-  manualContactType?: 'whatsapp' | 'email'; // NEW
-  manualContactValue?: string;              // NEW (Number or Email)
+  manualContactType?: 'whatsapp' | 'email'; 
+  manualContactValue?: string;              
 }
 
 // NEW: WhatsApp & Social Login Configuration

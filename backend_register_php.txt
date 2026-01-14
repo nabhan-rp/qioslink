@@ -1,0 +1,27 @@
+
+<?php
+// FILE: api/register.php
+require 'db_connect.php';
+header('Content-Type: application/json');
+
+$input = json_decode(file_get_contents("php://input"), true);
+
+if(isset($input['username']) && isset($input['password'])) {
+    $u = $conn->real_escape_string($input['username']);
+    $p = $input['password']; // Plain text for now
+    $e = $conn->real_escape_string($input['email'] ?? '');
+    
+    if($conn->query("SELECT id FROM users WHERE username='$u'")->num_rows > 0) { 
+        echo json_encode(['success'=>false, 'message'=>'Username taken']); exit; 
+    }
+    
+    // Default config
+    $defConf = json_encode(["merchantName" => $u]);
+    
+    $ins = $conn->prepare("INSERT INTO users (username, email, password, role, merchant_config) VALUES (?, ?, ?, 'user', ?)");
+    $ins->bind_param("ssss", $u, $e, $p, $defConf);
+    
+    if($ins->execute()) echo json_encode(['success'=>true, 'warning'=>'Please Login']);
+    else echo json_encode(['success'=>false, 'message'=>'DB Error']);
+}
+?>
