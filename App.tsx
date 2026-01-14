@@ -80,7 +80,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.9 (Enterprise Stable)";
+const APP_VERSION = "4.9.0 (Enterprise Stable)";
 
 const getEnv = () => {
   try {
@@ -104,15 +104,15 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
     verifyWhatsapp: false,
     verifyKyc: false,
     waProvider: 'fonnte',
-    loginMethod: 'standard',
+    loginMethod: 'hybrid', // Default to hybrid to show options
     waLoginScope: 'universal_except_admin',
     allowedRoles: ['user'],
     allowedSpecificUsers: [],
     twoFactorLogic: 'user_opt_in',
     socialLogin: {
-        google: false,
-        github: false,
-        facebook: false
+        google: true,
+        github: true,
+        facebook: true
     }
 };
 
@@ -145,7 +145,7 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
   );
 };
 
-// --- LANDING PAGE COMPONENT (RESTORED V4.8 DESIGN) ---
+// --- LANDING PAGE COMPONENT ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -230,7 +230,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           </div>
         </section>
 
-        {/* FEATURES GRID (V4.8 Design) */}
+        {/* FEATURES GRID */}
         <section id="features" className="py-20 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
@@ -252,87 +252,6 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                         <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6"><Phone size={24}/></div>
                         <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp 2FA</h3>
                         <p className="text-gray-500">Secure your dashboard with OTP sent via WhatsApp. Supports passwordless login flow.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {/* PRICING/DEPLOYMENT OPTIONS (V4.8 Design) */}
-        <section id="options" className="py-20 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-4"><span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span></div>
-                <div className="text-center mb-16">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Cloud Service vs Self-Hosted</h2>
-                    <p className="text-gray-500 max-w-2xl mx-auto text-lg">Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-                    {/* Cloud SaaS Card */}
-                    <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/20">
-                        <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120}/></div>
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm"><Cloud size={24} className="text-white"/></div>
-                        <h3 className="text-2xl font-bold mb-1">Cloud SaaS</h3>
-                        <p className="text-indigo-200 text-sm font-mono mb-6">bayar.jajanan.online</p>
-                        <p className="text-indigo-100 mb-8 flex-grow leading-relaxed">The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.</p>
-                        <ul className="space-y-3 mb-8 text-sm font-medium text-indigo-100">
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Zero Maintenance</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Instant Activation</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Free & Pro Plans</li>
-                        </ul>
-                        <button onClick={onRegister} className="w-full py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">Register Now</button>
-                    </div>
-
-                    {/* Self Host Free Card */}
-                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-gray-300 transition-colors">
-                        <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120}/></div>
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-6 text-emerald-600"><Zap size={24}/></div>
-                        <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
-                        <p className="text-gray-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
-                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.</p>
-                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
-                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> 0 Cost / Lifetime</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Free SSL Certificate</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Open Source Control</li>
-                        </ul>
-                        <a href="https://freehosting.jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-white border border-emerald-500 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-center">Get Free Host</a>
-                    </div>
-
-                    {/* Self Host Paid Card */}
-                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-yellow-400 transition-colors">
-                        <div className="absolute top-4 right-4"><span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded border border-yellow-200">ENTERPRISE</span></div>
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl mb-6 text-yellow-600"><Rocket size={24}/></div>
-                        <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
-                        <p className="text-gray-400 text-sm font-mono mb-6">jajanserver.com</p>
-                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.</p>
-                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> 99.9% Uptime SLA</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Priority Support</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Daily Backups</li>
-                        </ul>
-                        <a href="https://jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-colors text-center shadow-lg shadow-yellow-500/20">View Plans</a>
-                    </div>
-                </div>
-
-                <div className="text-center mb-16 pt-8 border-t border-gray-200">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Why QiosLink?</h2>
-                    <p className="text-gray-500">The ultimate payment solution.</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6"><Server size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">Self Hosted</h3>
-                        <p className="text-gray-500 leading-relaxed">Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers.</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6"><Palette size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">White Label Branding</h3>
-                        <p className="text-gray-500 leading-relaxed">Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank.</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6"><Code2 size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Integration</h3>
-                        <p className="text-gray-500 leading-relaxed">Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps.</p>
                     </div>
                 </div>
             </div>
@@ -481,6 +400,13 @@ export default function App() {
   const [resetToken, setResetToken] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmNewPass, setConfirmNewPass] = useState('');
+  const [waLoginPhone, setWaLoginPhone] = useState('');
+  const [waLoginOtp, setWaLoginOtp] = useState('');
+  const [waLoginStep, setWaLoginStep] = useState<'phone' | 'otp'>('phone');
+  
+  // NEW: State for WhatsApp Verification in Settings
+  const [waVerifyOtp, setWaVerifyOtp] = useState('');
+  const [showWaOtpInput, setShowWaOtpInput] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -509,8 +435,6 @@ export default function App() {
   const refreshSession = async () => {
       if (!currentUser) return;
       try {
-          // BUG FIX 2: Use new endpoint specifically for refreshing user data
-          // This works for ALL roles (including 'user')
           const res = await fetch(`${API_BASE}/refresh_user.php`, {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -604,7 +528,6 @@ export default function App() {
   };
 
   const handlePublicCheck = async (silent = false) => {
-      // ... (No changes here)
       if (!publicData?.trx_id || !publicData?.merchant_id) return;
       if (IS_DEMO_MODE) return;
       if (!silent) setIsCheckingPublic(true);
@@ -684,17 +607,74 @@ export default function App() {
                           sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
                           alert('Saved'); 
                       } else alert(data.message); 
-                  } catch(e) { alert("Invalid JSON response: " + text); }
+                  } catch(e: any) { alert("Invalid JSON response: " + text); }
               } catch (e) { alert('Connection Error'); } 
           } 
       } 
       setApiLoading(false); 
   };
   
-  // ... (Other handlers like verifyEmail, resendOtp, etc. remain the same) ...
+  // --- VERIFICATION HANDLERS (EMAIL & WA) ---
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
   
+  // NEW: Handler for WhatsApp Verification (Sending OTP)
+  const handleSendWaVerification = async () => {
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          alert("WA OTP: 123456 (Demo)");
+          setShowWaOtpInput(true);
+          setApiLoading(false);
+      } else {
+          try {
+              // Send OTP to user's registered phone
+              const res = await fetch(`${API_BASE}/send_otp.php`, {
+                  method: 'POST', headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({ user_id: currentUser?.id })
+              });
+              const data = await res.json();
+              if(data.success) {
+                  alert(data.message);
+                  setShowWaOtpInput(true);
+              } else {
+                  alert(data.message || 'Failed to send WhatsApp OTP');
+              }
+          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
+      }
+  };
+
+  // NEW: Handler for WhatsApp Verification (Submitting OTP)
+  const handleVerifyWa = async () => {
+      if(!waVerifyOtp) return alert("Enter OTP code");
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          if(waVerifyOtp === '123456') {
+              const updated = {...currentUser!, isPhoneVerified: true}; 
+              loginSuccess(updated, false); 
+              alert("WhatsApp Verified!");
+              setShowWaOtpInput(false);
+          } else alert("Invalid Code");
+          setApiLoading(false);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/verify_otp.php`, {
+                  method: 'POST', headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({ user_id: currentUser?.id, code: waVerifyOtp })
+              });
+              const data = await res.json();
+              if(data.success) {
+                  // verify_otp.php returns updated user object
+                  loginSuccess(data.user, false);
+                  alert("WhatsApp Verified Successfully!");
+                  setShowWaOtpInput(false);
+                  setWaVerifyOtp('');
+              } else {
+                  alert(data.message || 'Invalid Code');
+              }
+          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
+      }
+  };
+
   const handleStartDiditKyc = async () => {
       setApiLoading(true);
       try {
@@ -724,21 +704,144 @@ export default function App() {
   const handleForgotVerify = async () => { setApiLoading(true); if(IS_DEMO_MODE) { if(forgotOtp === '123456') { setForgotStep('reset'); setResetToken('demo-token'); } else alert('Invalid OTP'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=verify`, { method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier, otp: forgotOtp }) }); const data = await res.json(); if(data.success) { setResetToken(data.token); setForgotStep('reset'); } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
   const handleForgotReset = async (e: React.FormEvent) => { e.preventDefault(); if(newPass !== confirmNewPass) return alert("Password mismatch"); setApiLoading(true); if(IS_DEMO_MODE) { alert("Password Reset Success (Demo)"); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=reset`, { method: 'POST', body: JSON.stringify({ token: resetToken, password: newPass }) }); const data = await res.json(); if(data.success) { alert("Password changed successfully. Please login."); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
 
+  // --- WHATSAPP LOGIN HANDLERS ---
+  const handleSendLoginOtp = async () => {
+      if(!waLoginPhone) return alert("Enter phone number");
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          alert("OTP: 123456 (Demo)");
+          setWaLoginStep('otp');
+          setApiLoading(false);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/send_otp.php`, {
+                  method: 'POST', headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({ phone: waLoginPhone })
+              });
+              const data = await res.json();
+              if(data.success) {
+                  setWaLoginStep('otp');
+              } else {
+                  alert(data.message || 'Failed to send OTP');
+              }
+          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
+      }
+  };
+
+  const handleVerifyLoginOtp = async () => {
+      if(!waLoginOtp) return alert("Enter OTP");
+      setApiLoading(true);
+      if(IS_DEMO_MODE) {
+          if(waLoginOtp === '123456') {
+              const demoUser = MOCK_USERS.find(u => u.phone === waLoginPhone) || MOCK_USERS[0];
+              loginSuccess(demoUser);
+          } else { alert("Invalid OTP"); }
+          setApiLoading(false);
+      } else {
+          try {
+              const res = await fetch(`${API_BASE}/verify_otp.php`, {
+                  method: 'POST', headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({ phone: waLoginPhone, code: waLoginOtp })
+              });
+              const data = await res.json();
+              if(data.success) {
+                  loginSuccess(data.user);
+              } else {
+                  alert(data.message || 'Invalid OTP');
+              }
+          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
+      }
+  };
+
+  const handleSocialLogin = (provider: string) => {
+      if (IS_DEMO_MODE) {
+          alert(`Login with ${provider} (Demo)`);
+      } else {
+          // Implement actual SDK call here or redirect
+          alert(`${provider} login requires client SDK setup. Please configure keys in backend.`);
+      }
+  };
+
   const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
-  const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); setLoginError(''); setApiLoading(true); if (IS_DEMO_MODE) { let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); else setLoginError('Invalid (Demo: user=pass)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const text = await res.text(); if (!text || text.trim() === '') throw new Error("Empty Response"); let data; try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } } };
-  const handleRegister = async (e: React.FormEvent) => { e.preventDefault(); setRegError(''); if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } setApiLoading(true); if (IS_DEMO_MODE) { const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Success (Demo)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } if (data.success) { alert('Success! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else setRegError(data.message || 'Failed'); } catch (err: any) { setRegError(err.message || 'Error'); } finally { setApiLoading(false); } } };
-  const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
-  const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
-  const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
+  
+  const handleLogin = async (e: React.FormEvent) => { 
+      e.preventDefault(); 
+      setLoginError(''); 
+      setApiLoading(true); 
+      if (IS_DEMO_MODE) { 
+          let allUsers = [...users]; 
+          const savedUsers = localStorage.getItem('qios_users'); 
+          if (savedUsers) { 
+              const parsed = JSON.parse(savedUsers); 
+              allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; 
+          } 
+          const foundUser = allUsers.find(u => u.username === loginUser); 
+          if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); 
+          else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); 
+          else setLoginError('Invalid (Demo: user=pass)'); 
+          setApiLoading(false); 
+      } else { 
+          try { 
+              const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); 
+              const text = await res.text(); 
+              if (!text || text.trim() === '') throw new Error("Empty Response"); 
+              let data; 
+              try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } 
+              if (data.success) loginSuccess(data.user); 
+              else setLoginError(data.message || 'Login failed'); 
+          } catch (err: any) { 
+              setLoginError(err.message || 'Connection Error'); 
+          } finally { 
+              setApiLoading(false); 
+          } 
+      } 
+  };
+
+  const handleRegister = async (e: React.FormEvent) => { 
+      e.preventDefault(); 
+      setRegError(''); 
+      if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } 
+      setApiLoading(true); 
+      if (IS_DEMO_MODE) { 
+          const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; 
+          const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); 
+          currentUsers.push(newUser); 
+          localStorage.setItem('qios_users', JSON.stringify(currentUsers)); 
+          loginSuccess(newUser); 
+          setShowRegister(false); 
+          alert('Success (Demo)'); 
+          setApiLoading(false); 
+      } else { 
+          try { 
+              const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); 
+              const text = await res.text(); 
+              let data; 
+              try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } 
+              if (data.success) { 
+                  alert('Success! ' + (data.warning || 'Please login.')); 
+                  setShowRegister(false); 
+                  setLoginUser(regUser); 
+              } else setRegError(data.message || 'Failed'); 
+          } catch (err: any) { 
+              setRegError(err.message || 'Error'); 
+          } finally { 
+              setApiLoading(false); 
+          } 
+      } 
+  };
+
+  const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e: any) { alert("Error"); } } setApiLoading(false); };
+  const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e: any) { alert("Connection Error"); } } setApiLoading(false); };
+  const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e: any) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
   const handleUserAuthUpdate = async (userId: string, waEnabled: boolean, twoFaEnabled: boolean) => { setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === userId ? {...u, waLoginEnabled: waEnabled, twoFactorEnabled: twoFaEnabled} : u)); alert("Auth Settings Updated (Demo)"); } else { alert("Backend endpoint for updating per-user auth settings is needed."); } setApiLoading(false); setUserAuthModalOpen(false); };
-  const handleUpdateAccount = async () => { if (!accountForm.username) return alert("Username required"); if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); setApiLoading(true); const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email, phone: accountForm.phone }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const existingIndex = savedUsers.findIndex((u: User) => u.id === updatedUser.id); let newUsersList; if (existingIndex >= 0) { savedUsers[existingIndex] = updatedUser; newUsersList = savedUsers; } else { newUsersList = [...savedUsers, updatedUser]; } localStorage.setItem('qios_users', JSON.stringify(newUsersList)); alert("Profile Updated (Demo)"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { try { const payload = { action: 'update', id: currentUser!.id, username: accountForm.username, email: accountForm.email, phone: accountForm.phone, role: currentUser!.role, config: currentUser!.merchantConfig, password: accountForm.newPassword ? accountForm.newPassword : undefined }; const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Profile Updated Successfully"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { alert("Update failed: " + data.message); } } catch (e) { alert('Connection Error'); } } setApiLoading(false); };
-  const handleTestEmail = async () => { if (!config.smtp) return alert("Configure SMTP first"); setApiLoading(true); if (IS_DEMO_MODE) { setTimeout(() => { alert(`Sent to ${config.smtp?.fromEmail}`); setApiLoading(false); }, 1500); } else { try { const res = await fetch(`${API_BASE}/test_smtp.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ config: config.smtp, recipient: currentUser?.email || config.smtp.fromEmail }) }); const data = await res.json(); alert(data.message); } catch(e) { alert("Failed"); } finally { setApiLoading(false); } } };
+  const handleUpdateAccount = async () => { if (!accountForm.username) return alert("Username required"); if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); setApiLoading(true); const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email, phone: accountForm.phone }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const existingIndex = savedUsers.findIndex((u: User) => u.id === updatedUser.id); let newUsersList; if (existingIndex >= 0) { savedUsers[existingIndex] = updatedUser; newUsersList = savedUsers; } else { newUsersList = [...savedUsers, updatedUser]; } localStorage.setItem('qios_users', JSON.stringify(newUsersList)); alert("Profile Updated (Demo)"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { try { const payload = { action: 'update', id: currentUser!.id, username: accountForm.username, email: accountForm.email, phone: accountForm.phone, role: currentUser!.role, config: currentUser!.merchantConfig, password: accountForm.newPassword ? accountForm.newPassword : undefined }; const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Profile Updated Successfully"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { alert("Update failed: " + data.message); } } catch (e: any) { alert('Connection Error'); } } setApiLoading(false); };
+  const handleTestEmail = async () => { if (!config.smtp) return alert("Configure SMTP first"); setApiLoading(true); if (IS_DEMO_MODE) { setTimeout(() => { alert(`Sent to ${config.smtp?.fromEmail}`); setApiLoading(false); }, 1500); } else { try { const res = await fetch(`${API_BASE}/test_smtp.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ config: config.smtp, recipient: currentUser?.email || config.smtp.fromEmail }) }); const data = await res.json(); alert(data.message); } catch(e: any) { alert("Failed"); } finally { setApiLoading(false); } } };
   const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); alert("Copied!"); };
   const fetchTransactions = async (user: User) => { if (IS_DEMO_MODE) { const savedTx = localStorage.getItem('qios_transactions'); if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions(Array(5).fill(0).map((_, i) => ({ id: `TRX-DEMO-${1000+i}`, merchantId: user.id, amount: 10000 + (i * 5000), description: `Demo ${i+1}`, status: i % 2 === 0 ? 'paid' : 'pending', createdAt: new Date().toISOString(), qrString: user.merchantConfig?.qrisString || '', paymentUrl: window.location.origin + '/?pay=demo' + i }))); return; } try { const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`); const data = await res.json(); if (data.success && data.transactions) setTransactions(data.transactions); } catch (e) { console.error(e); } };
   const fetchUsers = async () => { if (IS_DEMO_MODE) { const savedUsers = localStorage.getItem('qios_users'); setUsers([...MOCK_USERS, ...(savedUsers ? JSON.parse(savedUsers) : []).filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]); return; } try { const res = await fetch(`${API_BASE}/manage_users.php?action=list`); const data = await res.json(); if (data.success && data.users) setUsers(data.users); } catch (e) { console.error(e); } };
   const loginSuccess = (user: User, redirect = true) => { if (user.username === 'admin' && user.role !== 'superadmin') user.role = 'superadmin'; if (user.isVerified === undefined) user.isVerified = true; setCurrentUser(user); sessionStorage.setItem('qios_user', JSON.stringify(user)); if (user.merchantConfig) setConfig(user.merchantConfig); setAccountForm({ username: user.username, email: user.email || '', phone: user.phone || '', password: '', newPassword: '', confirmNewPassword: '' }); if (user.merchantConfig?.branding?.brandColor) document.documentElement.style.setProperty('--brand-color', user.merchantConfig.branding.brandColor); setView(user.role === 'user' ? 'history' : 'dashboard'); if (redirect) setShowLanding(false); fetchTransactions(user); if (['superadmin', 'merchant', 'cs'].includes(user.role)) fetchUsers(); };
-  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
-  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
+  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e: any) { alert("Error"); } } };
+  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e: any) { alert("Error"); } finally { setApiLoading(false); } } };
 
   // ... (Render Logic) ...
   if (isPublicMode) {
@@ -777,14 +880,14 @@ export default function App() {
   if (!currentUser) { 
       if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button>
       
-      {/* SOCIAL LOGIN FOR REGISTER - USING SYSTEM CONFIG */}
+      {/* SOCIAL LOGIN FOR REGISTER */}
       {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
           <>
               <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or sign up with</span></div></div>
               <div className="grid grid-cols-3 gap-3">
-                  {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
-                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
-                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+                  <button type="button" onClick={()=>handleSocialLogin('google')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>
+                  <button type="button" onClick={()=>handleSocialLogin('github')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>
+                  <button type="button" onClick={()=>handleSocialLogin('facebook')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>
               </div>
           </>
       )}
@@ -877,8 +980,18 @@ export default function App() {
                   )}
                   {loginMode === 'whatsapp' && (
                       <div className="space-y-6">
-                          <div><label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label><div className="flex gap-2"><div className="px-3 py-3 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 font-bold">+62</div><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="812345678" /></div></div>
-                          <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2"><Send size={18}/> Send OTP</button>
+                          {waLoginStep === 'phone' ? (
+                              <>
+                                <div><label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label><div className="flex gap-2"><div className="px-3 py-3 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 font-bold">+62</div><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="812345678" value={waLoginPhone} onChange={e=>setWaLoginPhone(e.target.value)} /></div></div>
+                                <button onClick={handleSendLoginOtp} disabled={apiLoading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <><Send size={18}/> Send OTP</>}</button>
+                              </>
+                          ) : (
+                              <>
+                                <div><label className="block text-sm font-medium text-gray-700 mb-2">Enter OTP Code</label><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg text-center text-2xl tracking-widest" placeholder="000000" maxLength={6} value={waLoginOtp} onChange={e=>setWaLoginOtp(e.target.value)} /></div>
+                                <button onClick={handleVerifyLoginOtp} disabled={apiLoading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : 'Verify & Login'}</button>
+                                <button onClick={() => setWaLoginStep('phone')} className="w-full text-sm text-gray-500 py-2">Change Phone Number</button>
+                              </>
+                          )}
                       </div>
                   )}
                   
@@ -887,9 +1000,9 @@ export default function App() {
                       <>
                           <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
                           <div className="grid grid-cols-3 gap-3">
-                              {systemConfig.socialLogin?.google && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
-                              {systemConfig.socialLogin?.github && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
-                              {systemConfig.socialLogin?.facebook && <button className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+                              <button type="button" onClick={()=>handleSocialLogin('google')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>
+                              <button type="button" onClick={()=>handleSocialLogin('github')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>
+                              <button type="button" onClick={()=>handleSocialLogin('facebook')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>
                           </div>
                       </>
                   )}
@@ -1375,14 +1488,33 @@ export default function App() {
                  <Card>
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Verification Status</h3>
                     <div className="space-y-3">
+                        {/* EMAIL VERIFICATION BLOCK */}
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                             <div className="flex items-center gap-3"><Mail size={20} className="text-gray-500"/><div><p className="font-medium">Email Verification</p><p className="text-xs text-gray-500">{currentUser.email}</p></div></div>
                             {isTrue(currentUser.isVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <div className="flex gap-2"><input type="text" placeholder="OTP" className="w-20 border p-1 rounded text-xs" value={otpCode} onChange={e=>setOtpCode(e.target.value)} /><button onClick={handleVerifyEmail} className="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Submit</button><button onClick={handleResendOtp} className="text-xs text-indigo-600 underline">Resend</button></div>}
                         </div>
 
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                            <div className="flex items-center gap-3"><Phone size={20} className="text-gray-500"/><div><p className="font-medium">WhatsApp Verification</p><p className="text-xs text-gray-500">{currentUser.phone || 'Not set'}</p></div></div>
-                            {isTrue(currentUser.isPhoneVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <button onClick={() => { if(!accountForm.phone) return alert("Save phone number first"); handleResendOtp(); }} className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded">Send OTP</button>}
+                        {/* WHATSAPP VERIFICATION BLOCK (FIXED LOGIC) */}
+                        <div className="flex flex-col p-3 bg-gray-50 rounded-lg border">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3"><Phone size={20} className="text-gray-500"/><div><p className="font-medium">WhatsApp Verification</p><p className="text-xs text-gray-500">{currentUser.phone || 'Not set'}</p></div></div>
+                                {isTrue(currentUser.isPhoneVerified) ? (
+                                    <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> 
+                                ) : (
+                                    <button onClick={() => { if(!accountForm.phone) return alert("Save phone number first"); handleSendWaVerification(); }} className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded disabled:opacity-50" disabled={showWaOtpInput}>
+                                        {showWaOtpInput ? 'OTP Sent' : 'Send OTP'}
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {/* OTP Input for WA (Shows only when button clicked) */}
+                            {!isTrue(currentUser.isPhoneVerified) && showWaOtpInput && (
+                                <div className="flex gap-2 justify-end animate-in fade-in slide-in-from-top-1 mt-2 border-t pt-2">
+                                    <input type="text" placeholder="Enter WA Code" className="border p-1.5 rounded text-xs w-32" value={waVerifyOtp} onChange={e=>setWaVerifyOtp(e.target.value)} />
+                                    <button onClick={handleVerifyWa} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 font-bold">Verify</button>
+                                    <button onClick={() => setShowWaOtpInput(false)} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                                </div>
+                            )}
                         </div>
 
                         {/* KYC STATUS LOGIC FIXED HERE */}
