@@ -348,7 +348,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
                  <span className="font-bold text-gray-900">QiosLink</span>
              </div>
              <p className="text-sm text-gray-500">
-                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. 
+                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. Licensed under MIT. Sponsored by <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-bold">JajanServer</a>.
              </p>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium">
