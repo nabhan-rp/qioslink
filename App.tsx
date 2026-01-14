@@ -80,7 +80,7 @@ import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.9.2 (Enterprise Stable)";
+const APP_VERSION = "4.8.9 (Enterprise Stable)";
 
 const getEnv = () => {
   try {
@@ -104,9 +104,9 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
     verifyWhatsapp: false,
     verifyKyc: false,
     waProvider: 'fonnte',
-    loginMethod: 'hybrid', 
+    loginMethod: 'standard',
     waLoginScope: 'universal_except_admin',
-    allowedRoles: ['merchant', 'user'],
+    allowedRoles: ['user'],
     allowedSpecificUsers: [],
     twoFactorLogic: 'user_opt_in',
     socialLogin: {
@@ -145,7 +145,7 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
   );
 };
 
-// --- LANDING PAGE COMPONENT (FULL RESTORED) ---
+// --- LANDING PAGE COMPONENT (RESTORED V4.8 DESIGN) ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -230,11 +230,11 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
           </div>
         </section>
 
-        {/* FEATURES GRID (Restored) */}
+        {/* FEATURES GRID (V4.8 Design) */}
         <section id="features" className="py-20 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.9</h2>
+                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.8</h2>
                     <p className="mt-4 text-gray-500">Major security and usability updates for enterprise needs.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -257,8 +257,8 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
             </div>
         </section>
 
-        {/* PRICING/DEPLOYMENT OPTIONS (Restored) */}
-        <section id="options" className="py-20 bg-white">
+        {/* PRICING/DEPLOYMENT OPTIONS (V4.8 Design) */}
+        <section id="options" className="py-20 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-4"><span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span></div>
                 <div className="text-center mb-16">
@@ -481,13 +481,6 @@ export default function App() {
   const [resetToken, setResetToken] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmNewPass, setConfirmNewPass] = useState('');
-  const [waLoginPhone, setWaLoginPhone] = useState('');
-  const [waLoginOtp, setWaLoginOtp] = useState('');
-  const [waLoginStep, setWaLoginStep] = useState<'phone' | 'otp'>('phone');
-  
-  // NEW: State for WhatsApp Verification in Settings
-  const [waVerifyOtp, setWaVerifyOtp] = useState('');
-  const [showWaOtpInput, setShowWaOtpInput] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -516,6 +509,8 @@ export default function App() {
   const refreshSession = async () => {
       if (!currentUser) return;
       try {
+          // BUG FIX 2: Use new endpoint specifically for refreshing user data
+          // This works for ALL roles (including 'user')
           const res = await fetch(`${API_BASE}/refresh_user.php`, {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -609,6 +604,7 @@ export default function App() {
   };
 
   const handlePublicCheck = async (silent = false) => {
+      // ... (No changes here)
       if (!publicData?.trx_id || !publicData?.merchant_id) return;
       if (IS_DEMO_MODE) return;
       if (!silent) setIsCheckingPublic(true);
@@ -651,18 +647,15 @@ export default function App() {
       if(!confirm("Approve KYC for this user?")) return;
       setApiLoading(true);
       if(IS_DEMO_MODE) {
-          setUsers(users.map(u => u.id === targetUserId ? {...u, isKycVerified: true, role: 'merchant'} : u));
-          alert("KYC Approved & Role Upgraded to Merchant (Demo)");
+          setUsers(users.map(u => u.id === targetUserId ? {...u, isKycVerified: true} : u));
+          alert("KYC Approved (Demo)");
       } else {
           try {
               const res = await fetch(`${API_BASE}/manage_users.php?action=approve_kyc`, { 
                   method: 'POST', body: JSON.stringify({ id: targetUserId }) 
               });
               const data = await res.json();
-              if(data.success) { 
-                  alert(data.message); // Should say "User KYC Approved & Upgraded to Merchant"
-                  fetchUsers(); 
-              } else alert(data.message);
+              if(data.success) { alert("KYC Approved"); fetchUsers(); } else alert(data.message);
           } catch(e) { alert("Error"); }
       }
       setApiLoading(false);
@@ -691,74 +684,17 @@ export default function App() {
                           sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); 
                           alert('Saved'); 
                       } else alert(data.message); 
-                  } catch(e: any) { alert("Invalid JSON response: " + text); }
+                  } catch(e) { alert("Invalid JSON response: " + text); }
               } catch (e) { alert('Connection Error'); } 
           } 
       } 
       setApiLoading(false); 
   };
   
-  // --- VERIFICATION HANDLERS (EMAIL & WA) ---
+  // ... (Other handlers like verifyEmail, resendOtp, etc. remain the same) ...
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
   
-  // NEW: Handler for WhatsApp Verification (Sending OTP)
-  const handleSendWaVerification = async () => {
-      setApiLoading(true);
-      if(IS_DEMO_MODE) {
-          alert("WA OTP: 123456 (Demo)");
-          setShowWaOtpInput(true);
-          setApiLoading(false);
-      } else {
-          try {
-              // Send OTP to user's registered phone
-              const res = await fetch(`${API_BASE}/send_otp.php`, {
-                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({ user_id: currentUser?.id })
-              });
-              const data = await res.json();
-              if(data.success) {
-                  alert(data.message);
-                  setShowWaOtpInput(true);
-              } else {
-                  alert(data.message || 'Failed to send WhatsApp OTP');
-              }
-          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
-      }
-  };
-
-  // NEW: Handler for WhatsApp Verification (Submitting OTP)
-  const handleVerifyWa = async () => {
-      if(!waVerifyOtp) return alert("Enter OTP code");
-      setApiLoading(true);
-      if(IS_DEMO_MODE) {
-          if(waVerifyOtp === '123456') {
-              const updated = {...currentUser!, isPhoneVerified: true}; 
-              loginSuccess(updated, false); 
-              alert("WhatsApp Verified!");
-              setShowWaOtpInput(false);
-          } else alert("Invalid Code");
-          setApiLoading(false);
-      } else {
-          try {
-              const res = await fetch(`${API_BASE}/verify_otp.php`, {
-                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({ user_id: currentUser?.id, code: waVerifyOtp })
-              });
-              const data = await res.json();
-              if(data.success) {
-                  // verify_otp.php returns updated user object
-                  loginSuccess(data.user, false);
-                  alert("WhatsApp Verified Successfully!");
-                  setShowWaOtpInput(false);
-                  setWaVerifyOtp('');
-              } else {
-                  alert(data.message || 'Invalid Code');
-              }
-          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
-      }
-  };
-
   const handleStartDiditKyc = async () => {
       setApiLoading(true);
       try {
@@ -788,144 +724,21 @@ export default function App() {
   const handleForgotVerify = async () => { setApiLoading(true); if(IS_DEMO_MODE) { if(forgotOtp === '123456') { setForgotStep('reset'); setResetToken('demo-token'); } else alert('Invalid OTP'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=verify`, { method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier, otp: forgotOtp }) }); const data = await res.json(); if(data.success) { setResetToken(data.token); setForgotStep('reset'); } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
   const handleForgotReset = async (e: React.FormEvent) => { e.preventDefault(); if(newPass !== confirmNewPass) return alert("Password mismatch"); setApiLoading(true); if(IS_DEMO_MODE) { alert("Password Reset Success (Demo)"); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=reset`, { method: 'POST', body: JSON.stringify({ token: resetToken, password: newPass }) }); const data = await res.json(); if(data.success) { alert("Password changed successfully. Please login."); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
 
-  // --- WHATSAPP LOGIN HANDLERS ---
-  const handleSendLoginOtp = async () => {
-      if(!waLoginPhone) return alert("Enter phone number");
-      setApiLoading(true);
-      if(IS_DEMO_MODE) {
-          alert("OTP: 123456 (Demo)");
-          setWaLoginStep('otp');
-          setApiLoading(false);
-      } else {
-          try {
-              const res = await fetch(`${API_BASE}/send_otp.php`, {
-                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({ phone: waLoginPhone })
-              });
-              const data = await res.json();
-              if(data.success) {
-                  setWaLoginStep('otp');
-              } else {
-                  alert(data.message || 'Failed to send OTP');
-              }
-          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
-      }
-  };
-
-  const handleVerifyLoginOtp = async () => {
-      if(!waLoginOtp) return alert("Enter OTP");
-      setApiLoading(true);
-      if(IS_DEMO_MODE) {
-          if(waLoginOtp === '123456') {
-              const demoUser = MOCK_USERS.find(u => u.phone === waLoginPhone) || MOCK_USERS[0];
-              loginSuccess(demoUser);
-          } else { alert("Invalid OTP"); }
-          setApiLoading(false);
-      } else {
-          try {
-              const res = await fetch(`${API_BASE}/verify_otp.php`, {
-                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({ phone: waLoginPhone, code: waLoginOtp })
-              });
-              const data = await res.json();
-              if(data.success) {
-                  loginSuccess(data.user);
-              } else {
-                  alert(data.message || 'Invalid OTP');
-              }
-          } catch(e: any) { alert("Connection Error"); } finally { setApiLoading(false); }
-      }
-  };
-
-  const handleSocialLogin = (provider: string) => {
-      if (IS_DEMO_MODE) {
-          alert(`Login with ${provider} (Demo)`);
-      } else {
-          // Implement actual SDK call here or redirect
-          alert(`${provider} login requires client SDK setup. Please configure keys in backend.`);
-      }
-  };
-
   const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
-  
-  const handleLogin = async (e: React.FormEvent) => { 
-      e.preventDefault(); 
-      setLoginError(''); 
-      setApiLoading(true); 
-      if (IS_DEMO_MODE) { 
-          let allUsers = [...users]; 
-          const savedUsers = localStorage.getItem('qios_users'); 
-          if (savedUsers) { 
-              const parsed = JSON.parse(savedUsers); 
-              allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; 
-          } 
-          const foundUser = allUsers.find(u => u.username === loginUser); 
-          if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); 
-          else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); 
-          else setLoginError('Invalid (Demo: user=pass)'); 
-          setApiLoading(false); 
-      } else { 
-          try { 
-              const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); 
-              const text = await res.text(); 
-              if (!text || text.trim() === '') throw new Error("Empty Response"); 
-              let data; 
-              try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } 
-              if (data.success) loginSuccess(data.user); 
-              else setLoginError(data.message || 'Login failed'); 
-          } catch (err: any) { 
-              setLoginError(err.message || 'Connection Error'); 
-          } finally { 
-              setApiLoading(false); 
-          } 
-      } 
-  };
-
-  const handleRegister = async (e: React.FormEvent) => { 
-      e.preventDefault(); 
-      setRegError(''); 
-      if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } 
-      setApiLoading(true); 
-      if (IS_DEMO_MODE) { 
-          const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; 
-          const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); 
-          currentUsers.push(newUser); 
-          localStorage.setItem('qios_users', JSON.stringify(currentUsers)); 
-          loginSuccess(newUser); 
-          setShowRegister(false); 
-          alert('Success (Demo)'); 
-          setApiLoading(false); 
-      } else { 
-          try { 
-              const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); 
-              const text = await res.text(); 
-              let data; 
-              try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } 
-              if (data.success) { 
-                  alert('Success! ' + (data.warning || 'Please login.')); 
-                  setShowRegister(false); 
-                  setLoginUser(regUser); 
-              } else setRegError(data.message || 'Failed'); 
-          } catch (err: any) { 
-              setRegError(err.message || 'Error'); 
-          } finally { 
-              setApiLoading(false); 
-          } 
-      } 
-  };
-
-  const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e: any) { alert("Error"); } } setApiLoading(false); };
-  const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e: any) { alert("Connection Error"); } } setApiLoading(false); };
-  const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e: any) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
+  const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); setLoginError(''); setApiLoading(true); if (IS_DEMO_MODE) { let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); else setLoginError('Invalid (Demo: user=pass)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const text = await res.text(); if (!text || text.trim() === '') throw new Error("Empty Response"); let data; try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } } };
+  const handleRegister = async (e: React.FormEvent) => { e.preventDefault(); setRegError(''); if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } setApiLoading(true); if (IS_DEMO_MODE) { const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Success (Demo)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } if (data.success) { alert('Success! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else setRegError(data.message || 'Failed'); } catch (err: any) { setRegError(err.message || 'Error'); } finally { setApiLoading(false); } } };
+  const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
+  const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
+  const handleUserManagementSubmit = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if (!currentUser) return; const payloadConfig = userFormData.role === 'merchant' ? { merchantName: userFormData.merchantName, merchantCode: userFormData.merchantCode, qiospayApiKey: userFormData.apiKey, appSecretKey: 'QIOS_SECRET_' + Math.random().toString(36).substring(7), qrisString: userFormData.qrisString } : null; if (IS_DEMO_MODE) { alert('Saved (Demo)'); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: editingUser ? 'update' : 'create', id: editingUser?.id, username: userFormData.username, email: userFormData.email, password: userFormData.password, role: userFormData.role, config: payloadConfig, creator_role: currentUser.role }) }); const data = await res.json(); if(data.success) { fetchUsers(); alert('Saved'); } else alert(data.message); } catch(e) { alert('Error'); } } setApiLoading(false); setUserModalOpen(false); };
   const handleUserAuthUpdate = async (userId: string, waEnabled: boolean, twoFaEnabled: boolean) => { setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === userId ? {...u, waLoginEnabled: waEnabled, twoFactorEnabled: twoFaEnabled} : u)); alert("Auth Settings Updated (Demo)"); } else { alert("Backend endpoint for updating per-user auth settings is needed."); } setApiLoading(false); setUserAuthModalOpen(false); };
-  const handleUpdateAccount = async () => { if (!accountForm.username) return alert("Username required"); if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); setApiLoading(true); const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email, phone: accountForm.phone }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const existingIndex = savedUsers.findIndex((u: User) => u.id === updatedUser.id); let newUsersList; if (existingIndex >= 0) { savedUsers[existingIndex] = updatedUser; newUsersList = savedUsers; } else { newUsersList = [...savedUsers, updatedUser]; } localStorage.setItem('qios_users', JSON.stringify(newUsersList)); alert("Profile Updated (Demo)"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { try { const payload = { action: 'update', id: currentUser!.id, username: accountForm.username, email: accountForm.email, phone: accountForm.phone, role: currentUser!.role, config: currentUser!.merchantConfig, password: accountForm.newPassword ? accountForm.newPassword : undefined }; const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Profile Updated Successfully"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { alert("Update failed: " + data.message); } } catch (e: any) { alert('Connection Error'); } } setApiLoading(false); };
-  const handleTestEmail = async () => { if (!config.smtp) return alert("Configure SMTP first"); setApiLoading(true); if (IS_DEMO_MODE) { setTimeout(() => { alert(`Sent to ${config.smtp?.fromEmail}`); setApiLoading(false); }, 1500); } else { try { const res = await fetch(`${API_BASE}/test_smtp.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ config: config.smtp, recipient: currentUser?.email || config.smtp.fromEmail }) }); const data = await res.json(); alert(data.message); } catch(e: any) { alert("Failed"); } finally { setApiLoading(false); } } };
+  const handleUpdateAccount = async () => { if (!accountForm.username) return alert("Username required"); if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmNewPassword) return alert("Passwords do not match"); setApiLoading(true); const updatedUser = { ...currentUser!, username: accountForm.username, email: accountForm.email, phone: accountForm.phone }; if (IS_DEMO_MODE) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const existingIndex = savedUsers.findIndex((u: User) => u.id === updatedUser.id); let newUsersList; if (existingIndex >= 0) { savedUsers[existingIndex] = updatedUser; newUsersList = savedUsers; } else { newUsersList = [...savedUsers, updatedUser]; } localStorage.setItem('qios_users', JSON.stringify(newUsersList)); alert("Profile Updated (Demo)"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { try { const payload = { action: 'update', id: currentUser!.id, username: accountForm.username, email: accountForm.email, phone: accountForm.phone, role: currentUser!.role, config: currentUser!.merchantConfig, password: accountForm.newPassword ? accountForm.newPassword : undefined }; const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); if (data.success) { setCurrentUser(updatedUser); sessionStorage.setItem('qios_user', JSON.stringify(updatedUser)); alert("Profile Updated Successfully"); setAccountForm({...accountForm, password: '', newPassword: '', confirmNewPassword: ''}); } else { alert("Update failed: " + data.message); } } catch (e) { alert('Connection Error'); } } setApiLoading(false); };
+  const handleTestEmail = async () => { if (!config.smtp) return alert("Configure SMTP first"); setApiLoading(true); if (IS_DEMO_MODE) { setTimeout(() => { alert(`Sent to ${config.smtp?.fromEmail}`); setApiLoading(false); }, 1500); } else { try { const res = await fetch(`${API_BASE}/test_smtp.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ config: config.smtp, recipient: currentUser?.email || config.smtp.fromEmail }) }); const data = await res.json(); alert(data.message); } catch(e) { alert("Failed"); } finally { setApiLoading(false); } } };
   const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); alert("Copied!"); };
   const fetchTransactions = async (user: User) => { if (IS_DEMO_MODE) { const savedTx = localStorage.getItem('qios_transactions'); if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions(Array(5).fill(0).map((_, i) => ({ id: `TRX-DEMO-${1000+i}`, merchantId: user.id, amount: 10000 + (i * 5000), description: `Demo ${i+1}`, status: i % 2 === 0 ? 'paid' : 'pending', createdAt: new Date().toISOString(), qrString: user.merchantConfig?.qrisString || '', paymentUrl: window.location.origin + '/?pay=demo' + i }))); return; } try { const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`); const data = await res.json(); if (data.success && data.transactions) setTransactions(data.transactions); } catch (e) { console.error(e); } };
   const fetchUsers = async () => { if (IS_DEMO_MODE) { const savedUsers = localStorage.getItem('qios_users'); setUsers([...MOCK_USERS, ...(savedUsers ? JSON.parse(savedUsers) : []).filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]); return; } try { const res = await fetch(`${API_BASE}/manage_users.php?action=list`); const data = await res.json(); if (data.success && data.users) setUsers(data.users); } catch (e) { console.error(e); } };
   const loginSuccess = (user: User, redirect = true) => { if (user.username === 'admin' && user.role !== 'superadmin') user.role = 'superadmin'; if (user.isVerified === undefined) user.isVerified = true; setCurrentUser(user); sessionStorage.setItem('qios_user', JSON.stringify(user)); if (user.merchantConfig) setConfig(user.merchantConfig); setAccountForm({ username: user.username, email: user.email || '', phone: user.phone || '', password: '', newPassword: '', confirmNewPassword: '' }); if (user.merchantConfig?.branding?.brandColor) document.documentElement.style.setProperty('--brand-color', user.merchantConfig.branding.brandColor); setView(user.role === 'user' ? 'history' : 'dashboard'); if (redirect) setShowLanding(false); fetchTransactions(user); if (['superadmin', 'merchant', 'cs'].includes(user.role)) fetchUsers(); };
-  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e: any) { alert("Error"); } } };
-  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e: any) { alert("Error"); } finally { setApiLoading(false); } } };
+  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
+  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
 
   // ... (Render Logic) ...
   if (isPublicMode) {
@@ -964,14 +777,14 @@ export default function App() {
   if (!currentUser) { 
       if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button>
       
-      {/* SOCIAL LOGIN FOR REGISTER */}
+      {/* SOCIAL LOGIN FOR REGISTER - USING SYSTEM CONFIG */}
       {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
           <>
               <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or sign up with</span></div></div>
               <div className="grid grid-cols-3 gap-3">
-                  <button type="button" onClick={()=>handleSocialLogin('google')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>
-                  <button type="button" onClick={()=>handleSocialLogin('github')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>
-                  <button type="button" onClick={()=>handleSocialLogin('facebook')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>
+                  {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
+                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
+                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
               </div>
           </>
       )}
@@ -1034,754 +847,4 @@ export default function App() {
               </div>
           )}
 
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-              <div className="bg-indigo-600 p-8 text-center relative">
-                  <button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button>
-                  <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-                  
-                  {/* AUTH TOGGLE IF ENABLED */}
-                  {(systemConfig?.loginMethod === 'hybrid' || systemConfig?.loginMethod === 'whatsapp_otp') && (
-                      <div className="flex justify-center gap-2 mt-4 bg-indigo-700/50 p-1 rounded-lg inline-flex">
-                          <button onClick={() => setLoginMode('standard')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'standard' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>Email</button>
-                          <button onClick={() => setLoginMode('whatsapp')} className={`px-3 py-1 text-xs font-bold rounded ${loginMode === 'whatsapp' ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white'}`}>WhatsApp</button>
-                      </div>
-                  )}
-              </div>
-              <div className="p-8">
-                  {loginMode === 'standard' && (
-                      <form onSubmit={handleLogin} className="space-y-6">
-                          <div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div>
-                          <div>
-                              <div className="flex justify-between items-center mb-2">
-                                  <label className="block text-sm font-medium text-gray-700">Password</label>
-                                  <button type="button" onClick={() => setShowForgotPass(true)} className="text-xs text-indigo-600 font-bold hover:underline">Forgot?</button>
-                              </div>
-                              <div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-3 border border-gray-200 rounded-lg pr-10" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
-                          </div>
-                          {loginError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center"><Lock size={16} className="mr-2"/>{loginError}</div>}
-                          <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button>
-                      </form>
-                  )}
-                  {loginMode === 'whatsapp' && (
-                      <div className="space-y-6">
-                          {waLoginStep === 'phone' ? (
-                              <>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label><div className="flex gap-2"><div className="px-3 py-3 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 font-bold">+62</div><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="812345678" value={waLoginPhone} onChange={e=>setWaLoginPhone(e.target.value)} /></div></div>
-                                <button onClick={handleSendLoginOtp} disabled={apiLoading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <><Send size={18}/> Send OTP</>}</button>
-                              </>
-                          ) : (
-                              <>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-2">Enter OTP Code</label><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg text-center text-2xl tracking-widest" placeholder="000000" maxLength={6} value={waLoginOtp} onChange={e=>setWaLoginOtp(e.target.value)} /></div>
-                                <button onClick={handleVerifyLoginOtp} disabled={apiLoading} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : 'Verify & Login'}</button>
-                                <button onClick={() => setWaLoginStep('phone')} className="w-full text-sm text-gray-500 py-2">Change Phone Number</button>
-                              </>
-                          )}
-                      </div>
-                  )}
-                  
-                  {/* SOCIAL LOGIN - Using systemConfig derived from API/LocalStorage */}
-                  {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
-                      <>
-                          <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
-                          <div className="grid grid-cols-3 gap-3">
-                              <button type="button" onClick={()=>handleSocialLogin('google')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>
-                              <button type="button" onClick={()=>handleSocialLogin('github')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>
-                              <button type="button" onClick={()=>handleSocialLogin('facebook')} className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>
-                          </div>
-                      </>
-                  )}
-
-                  <div className="text-center text-sm mt-6"><span className="text-gray-500">New here? </span><button type="button" onClick={()=>{setShowRegister(true);}} className="text-indigo-600 font-bold hover:underline">Create Account</button></div>
-              </div>
-          </div>
-      </div>
-      ); 
-  }
-
-  // ... (Main Dashboard Return) ...
-  return (
-    <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-      <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} onCheckStatus={handleCheckStatus} />
-      
-      {/* USER MODALS (Fix blank issue by ensuring it handles state properly) */}
-      {isUserModalOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"><div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">{editingUser?'Edit User':'Add New User'}</h3><button onClick={()=>setUserModalOpen(false)}><X size={20}/></button></div><form onSubmit={handleUserManagementSubmit} className="p-6 space-y-4"><div><label className="block text-sm font-medium mb-1">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData,role:e.target.value as UserRole})}>{currentUser.role==='superadmin'&&<><option value="user">User</option><option value="merchant">Merchant</option><option value="cs">CS</option><option value="superadmin">Super Admin</option></>}{currentUser.role==='merchant'&&<><option value="user">User</option><option value="cs">CS</option></>}{currentUser.role==='cs'&&<option value="user">User</option>}</select></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Username</label><input type="text" required className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData,username:e.target.value})}/></div><div><label className="block text-sm font-medium mb-1">Password</label><input type={editingUser?"text":"password"} required={!editingUser} className="w-full border p-2 rounded" value={userFormData.password} onChange={e=>setUserFormData({...userFormData,password:e.target.value})} placeholder={editingUser?"Blank to keep":"Password"}/></div></div><div><label className="block text-sm font-medium mb-1">Email Address</label><input type="email" className="w-full border p-2 rounded" value={userFormData.email} onChange={e=>setUserFormData({...userFormData,email:e.target.value})} placeholder="user@example.com"/></div>{(userFormData.role==='merchant'||userFormData.role==='superadmin')&&<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"><p className="text-xs font-bold text-gray-500 uppercase">Merchant Config</p><input type="text" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData,merchantName:e.target.value})} placeholder="Merchant Name"/><textarea className="w-full border p-2 rounded text-xs" rows={2} value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData,qrisString:e.target.value})} placeholder="QRIS String"/></div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">{apiLoading?<Loader2 className="animate-spin"/>:'Save User'}</button></form></div> </div> )}
-      {isUserAuthModalOpen && editingUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                  <div className="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 className="font-bold">Security Settings</h3><button onClick={()=>setUserAuthModalOpen(false)}><X size={20}/></button></div>
-                  <div className="p-6 space-y-4">
-                      <p className="text-sm text-gray-500 mb-2">Manage security for <strong>{editingUser.username}</strong></p>
-                      
-                      <div className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-2"><Phone size={18}/> <span className="text-sm font-medium">Allow Login via WhatsApp</span></div>
-                          <button onClick={()=>handleUserAuthUpdate(editingUser.id, !editingUser.waLoginEnabled, !!editingUser.twoFactorEnabled)} className={`${editingUser.waLoginEnabled ? 'text-green-600' : 'text-gray-400'}`}>
-                              {editingUser.waLoginEnabled ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
-                          </button>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-2"><Fingerprint size={18}/> <span className="text-sm font-medium">Force 2FA (WhatsApp)</span></div>
-                          <button onClick={()=>handleUserAuthUpdate(editingUser.id, !!editingUser.waLoginEnabled, !editingUser.twoFactorEnabled)} className={`${editingUser.twoFactorEnabled ? 'text-green-600' : 'text-gray-400'}`}>
-                              {editingUser.twoFactorEnabled ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* SIDEBAR & MAIN LAYOUT ... */}
-      {isSidebarOpen && ( <div className="fixed inset-0 bg-black/50 z-20 lg:hidden transition-opacity" onClick={() => setSidebarOpen(false)} /> )}
-      <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0`}>
-        {/* ... Sidebar Content ... */}
-        <div className="h-full flex flex-col">
-          <div className="h-20 flex items-center justify-between px-6 border-b border-gray-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white"><QrCode size={24} /></div>
-              <div><h1 className="text-xl font-bold text-gray-800">QiosLink</h1><p className="text-xs text-gray-500">{currentUser.username}</p></div>
-            </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-500 hover:text-red-500"><X size={24} /></button>
-          </div>
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-             <SidebarItem active={view === 'dashboard'} icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={() => { setView('dashboard'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
-             <SidebarItem active={view === 'history'} icon={<History size={20} />} label="Transactions" onClick={() => { setView('history'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
-             {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'terminal'} icon={<Smartphone size={20} />} label="Terminal" onClick={() => { setView('terminal'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
-             {['superadmin', 'merchant', 'cs'].includes(currentUser.role) && <SidebarItem active={view === 'users'} icon={<Users size={20} />} label="Users" onClick={() => { setView('users'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
-             {['superadmin', 'merchant'].includes(currentUser.role) && <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Payment Links" onClick={() => { setView('links'); if(window.innerWidth <1024) setSidebarOpen(false); }} />}
-             {currentUser.role === 'superadmin' && <SidebarItem active={view === 'integration'} icon={<Code2 size={20} />} label="Integration" onClick={() => { setView('integration'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />}
-             <SidebarItem active={view === 'settings'} icon={<Settings size={20} />} label="Settings & Profile" onClick={() => { setView('settings'); if(window.innerWidth < 1024) setSidebarOpen(false); }} />
-          </nav>
-          <div className="p-4 border-t border-gray-100"><button onClick={handleLogout} className="w-full flex items-center space-x-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-lg"><LogOut size={20} /><span className="font-medium">Logout</span></button></div>
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
-        {/* ... Header ... */}
-        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-10 shrink-0">
-          <div className="flex items-center gap-4">
-              <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 hover:bg-gray-100 rounded-lg lg:hidden text-gray-700">
-                <Menu size={28} />
-              </button>
-              <h2 className="text-2xl font-bold text-gray-800 capitalize truncate">{view.replace('_', ' ')}</h2>
-          </div>
-          <div className="flex items-center gap-3">
-              {isTrue(currentUser.isVerified) ? <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-full"><CheckCircle2 size={12}/> Email</span> : <span className="flex items-center gap-1 text-yellow-600 text-xs font-bold bg-yellow-50 px-2 py-1 rounded-full"><AlertTriangle size={12}/> Email</span>}
-              {isTrue(currentUser.isPhoneVerified) ? <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-full"><Phone size={12}/> WA</span> : null}
-              {isTrue(currentUser.isKycVerified) ? <span className="flex items-center gap-1 text-blue-600 text-xs font-bold bg-blue-50 px-2 py-1 rounded-full"><ScanFace size={12}/> KYC</span> : null}
-          </div>
-        </header>
-        
-        <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20">
-          <VerificationBanner user={currentUser} onVerifyClick={() => { setView('settings'); setSettingsTab('account'); }} />
-          
-          {/* DASHBOARD VIEW */}
-          {view === 'dashboard' && (
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-none">
-                        <div className="flex justify-between items-start">
-                            <div><p className="text-indigo-100 font-medium">Total Transactions</p><h3 className="text-4xl font-bold mt-2">{transactions.length}</h3></div>
-                            <div className="bg-white/20 p-2 rounded-lg"><Wallet className="text-white" size={24}/></div>
-                        </div>
-                    </Card>
-                    <Card>
-                        <p className="text-gray-500 font-medium">Total Revenue {IS_DEMO_MODE ? '(Demo)' : ''}</p>
-                        <h3 className="text-3xl font-bold text-gray-800 mt-2">{formatRupiah(transactions.reduce((acc, curr) => acc + (curr.status === 'paid' ? Number(curr.amount) : 0), 0))}</h3>
-                    </Card>
-                    <Card>
-                        <p className="text-gray-500 font-medium">Pending</p>
-                        <h3 className="text-3xl font-bold text-orange-600 mt-2">{transactions.filter(t => t.status === 'pending').length}</h3>
-                    </Card>
-                </div>
-                <Card className="h-80">
-                    <h3 className="font-bold text-gray-700 mb-4">Transaction Volume</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={transactions.slice(0, 10).reverse()}>
-                            <defs>
-                                <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e7ff" />
-                            <XAxis dataKey="createdAt" hide />
-                            <YAxis hide />
-                            <RechartsTooltip />
-                            <Area type="monotone" dataKey="amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorAmt)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </Card>
-            </div>
-          )}
-
-          {/* HISTORY / TRANSACTIONS VIEW */}
-          {view === 'history' && (
-            <Card className="overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-gray-700">Transaction History</h3>
-                    <div className="flex gap-2">
-                        <input type="text" placeholder="Search ID..." className="border p-2 rounded-lg text-sm" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
-                    </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
-                            <tr><th className="p-4">ID</th><th className="p-4">Date</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
-                        </thead>
-                        <tbody className="text-sm divide-y">
-                            {transactions.filter(t => t.id.toLowerCase().includes(searchQuery.toLowerCase())).map(t => (
-                                <tr key={t.id} className="hover:bg-gray-50">
-                                    <td className="p-4 font-mono text-xs text-gray-500">{t.id}</td>
-                                    <td className="p-4 text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</td>
-                                    <td className="p-4 font-bold text-gray-800">{formatRupiah(t.amount)}</td>
-                                    <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${t.status==='paid'?'bg-green-100 text-green-700':t.status==='pending'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{t.status.toUpperCase()}</span></td>
-                                    <td className="p-4">
-                                        <button onClick={() => setSelectedTransaction(t)} className="text-indigo-600 hover:underline mr-3">View</button>
-                                        {t.status === 'pending' && <button onClick={() => handleCheckStatus(t)} className="text-gray-500 hover:text-indigo-600"><RefreshCw size={14}/></button>}
-                                    </td>
-                                </tr>
-                            ))}
-                            {transactions.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No transactions found</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-          )}
-
-          {/* USER MANAGEMENT VIEW (FIXED BLANK ISSUE) */}
-          {view === 'users' && (
-            <Card>
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-gray-700">User Management</h3>
-                    <button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role:'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><Plus size={16}/> Add User</button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
-                            <tr><th className="p-4">User</th><th className="p-4">Role</th><th className="p-4">Status</th><th className="p-4">KYC</th><th className="p-4">Action</th></tr>
-                        </thead>
-                        <tbody className="text-sm divide-y">
-                            {users && users.length > 0 ? (
-                                users.map(u => (
-                                    <tr key={u.id} className="hover:bg-gray-50">
-                                        <td className="p-4">
-                                            <div className="font-bold text-gray-800">{u.username}</div>
-                                            <div className="text-xs text-gray-500">{u.email}</div>
-                                        </td>
-                                        <td className="p-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs uppercase font-bold">{u.role}</span></td>
-                                        <td className="p-4">
-                                            {isTrue(u.isVerified) ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 size={14}/> Email</span> : <button onClick={() => handleManualVerifyUser(u.id)} className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200">Verify Email</button>}
-                                        </td>
-                                        <td className="p-4">
-                                            {isTrue(u.isKycVerified) ? <span className="text-blue-600 flex items-center gap-1"><ScanFace size={14}/> KYC</span> : (u.role !== 'superadmin' && <button onClick={() => handleManualApproveKyc(u.id)} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-blue-50 hover:text-blue-600">Approve KYC</button>)}
-                                        </td>
-                                        <td className="p-4 flex gap-2">
-                                            <button onClick={() => { setEditingUser(u); setUserFormData({username:u.username, email:u.email||'', password:'', role:u.role, merchantName:u.merchantConfig?.merchantName||'', merchantCode:u.merchantConfig?.merchantCode||'', apiKey:u.merchantConfig?.qiospayApiKey||'', qrisString:u.merchantConfig?.qrisString||''}); setUserModalOpen(true); }} className="p-1 text-gray-500 hover:text-indigo-600"><Pencil size={16}/></button>
-                                            <button onClick={() => { setEditingUser(u); setUserAuthModalOpen(true); }} className="p-1 text-gray-500 hover:text-green-600" title="Security Settings"><Shield size={16}/></button>
-                                            <button onClick={() => handleDeleteUser(u)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={16}/></button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-400">No users found. Click 'Add User' to start.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-          )}
-
-          {/* ... (Terminal & Links View same as before) ... */}
-          {view === 'terminal' && (
-            <div className="flex flex-col lg:flex-row gap-8">
-                <Card className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Create Payment Link</h3>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-1">Amount (IDR)</label>
-                            <div className="relative"><span className="absolute left-3 top-3 text-gray-400 font-bold">Rp</span><input type="number" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} /></div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-1">Description (Optional)</label>
-                            <input type="text" className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={tempDesc} onChange={e=>setTempDesc(e.target.value)} placeholder="e.g. Order #123" />
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
-                            <p className="text-xs font-bold text-gray-500 uppercase">Advanced Options</p>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-1">Expiry Time (Minutes)</label>
-                                <input type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white" value={expiryMinutes} onChange={e=>setExpiryMinutes(e.target.value)} placeholder="e.g. 60 (Leave empty for no expiry)" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <input type="checkbox" id="singleUse" checked={singleUse} onChange={e=>setSingleUse(e.target.checked)} className="h-4 w-4 text-indigo-600 rounded" />
-                                <label htmlFor="singleUse" className="text-sm text-gray-700">One-time Use (Link expires after payment)</label>
-                            </div>
-                        </div>
-                        <button onClick={handleGenerateQR} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">{apiLoading ? <Loader2 className="animate-spin" size={24}/> : <><QrCode size={20} /><span>Generate Payment Link</span></>}</button>
-                    </div>
-                </Card>
-                <Card className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-dashed border-2 border-gray-200">
-                    {generatedQR ? <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300 w-full"><div className="flex justify-center"><QRCodeDisplay data={generatedQR} width={200} logoUrl={config.branding?.logoUrl} /></div><div><h2 className="text-3xl font-extrabold text-indigo-900">{formatRupiah(Number(tempAmount))}</h2><p className="text-sm text-gray-500 mt-1">{tempDesc}</p></div>{generatedLink && <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-2 text-left"><div className="flex-1 truncate text-xs text-gray-500 font-mono">{generatedLink}</div><button onClick={() => copyToClipboard(generatedLink)} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded"><Copy size={16}/></button><a href={generatedLink} target="_blank" className="text-gray-500 hover:bg-gray-50 p-2 rounded"><ExternalLink size={16}/></a></div>}</div> : <div className="text-center text-gray-400 py-12"><QrCode size={48} className="mx-auto mb-4 opacity-50" /><p>Generate to create QR & Link</p></div>}
-                </Card>
-            </div>
-          )}
-
-          {view === 'links' && (
-            <Card>
-                <h3 className="font-bold text-gray-700 mb-6">Active Payment Links</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-600 font-medium border-b">
-                            <tr><th className="p-4">Created</th><th className="p-4">Amount</th><th className="p-4">Description</th><th className="p-4">Link</th><th className="p-4">Action</th></tr>
-                        </thead>
-                        <tbody className="text-sm divide-y">
-                            {transactions.filter(t => t.status === 'pending').map(t => (
-                                <tr key={t.id} className="hover:bg-gray-50">
-                                    <td className="p-4 text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td>
-                                    <td className="p-4 font-bold">{formatRupiah(t.amount)}</td>
-                                    <td className="p-4 text-gray-600">{t.description}</td>
-                                    <td className="p-4"><a href={t.paymentUrl} target="_blank" className="text-indigo-600 hover:underline truncate max-w-[200px] block">{t.paymentUrl}</a></td>
-                                    <td className="p-4">
-                                        <button onClick={() => copyToClipboard(t.paymentUrl || '')} className="text-gray-500 hover:text-indigo-600 mr-3"><Copy size={16}/></button>
-                                        <button onClick={() => handleRevokeLink(t)} className="text-red-400 hover:text-red-600"><Ban size={16}/></button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {transactions.filter(t => t.status === 'pending').length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No active links</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-          )}
-
-          {view === 'integration' && (
-            <div className="space-y-6">
-                <Card>
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600"><Code2 size={24}/></div>
-                        <div><h3 className="text-lg font-bold">Integration Modules</h3><p className="text-gray-500 text-sm">Download ready-to-use plugins for your platform.</p></div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="border p-4 rounded-xl hover:border-indigo-500 transition-colors cursor-pointer group" onClick={() => window.open('https://github.com/nabhan-rp/qioslink', '_blank')}>
-                            <div className="flex justify-between items-start mb-2"><h4 className="font-bold text-gray-800">WHMCS Module</h4><Download size={18} className="text-gray-400 group-hover:text-indigo-600"/></div>
-                            <p className="text-xs text-gray-500">Automated payment gateway for WHMCS billing system. Supports auto-activation.</p>
-                        </div>
-                        <div className="border p-4 rounded-xl hover:border-indigo-500 transition-colors cursor-pointer group" onClick={() => window.open('https://github.com/nabhan-rp/qioslink', '_blank')}>
-                            <div className="flex justify-between items-start mb-2"><h4 className="font-bold text-gray-800">WooCommerce Plugin</h4><Download size={18} className="text-gray-400 group-hover:text-indigo-600"/></div>
-                            <p className="text-xs text-gray-500">WordPress plugin for online stores. Seamless checkout experience.</p>
-                        </div>
-                    </div>
-                </Card>
-                <Card>
-                    <h3 className="text-lg font-bold mb-4">API Credentials</h3>
-                    <div className="space-y-4">
-                        <div className="bg-gray-900 text-gray-300 p-4 rounded-lg font-mono text-sm overflow-x-auto">
-                            <p className="text-gray-500 mb-2"># API Endpoint</p>
-                            <p className="text-white">{window.location.origin}/api/create_payment.php</p>
-                            <br/>
-                            <p className="text-gray-500 mb-2"># Example JSON Payload</p>
-                            <pre>{`{
-  "merchant_id": "${currentUser?.id}",
-  "amount": 50000,
-  "description": "Invoice #100",
-  "callback_url": "https://your-site.com/callback"
-}`}</pre>
-                        </div>
-                    </div>
-                </Card>
-            </div>
-          )}
-          
-          {/* ... (Settings Tab - No changes to structure, using helper isTrue) ... */}
-          {view === 'settings' && (
-             <div className="max-w-4xl mx-auto w-full">
-                 <div className="flex space-x-4 mb-6 border-b border-gray-200 overflow-x-auto pb-2">
-                     <button onClick={() => setSettingsTab('config')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'config' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Merchant Config</button>
-                     <button onClick={() => setSettingsTab('account')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'account' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Account</button>
-                     {['merchant', 'superadmin'].includes(currentUser.role) && (
-                        <>
-                           <button onClick={() => setSettingsTab('branding')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'branding' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>Branding</button>
-                           <button onClick={() => setSettingsTab('smtp')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'smtp' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>SMTP</button>
-                           <button onClick={() => setSettingsTab('kyc')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap ${settingsTab === 'kyc' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}>KYC Config</button>
-                           <button onClick={() => setSettingsTab('auth')} className={`pb-3 px-2 font-medium transition-colors whitespace-nowrap flex items-center gap-1 ${settingsTab === 'auth' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}><Shield size={14}/> Auth & Security</button>
-                        </>
-                     )}
-                 </div>
-
-                 {/* ... (Existing Tabs: config, branding, smtp, auth - Keeping same content) ... */}
-                 {settingsTab === 'config' && (
-                     <Card>
-                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Settings size={20}/> Core Configuration</h3>
-                         <div className="space-y-4">
-                             <div><label className="block text-sm font-medium mb-1">Merchant Name</label><input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e => setConfig({...config, merchantName: e.target.value})} disabled={currentUser.role === 'user'} /></div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Qiospay Merchant Code</label><input type="text" className="w-full border p-2 rounded" value={config.merchantCode} onChange={e => setConfig({...config, merchantCode: e.target.value})} disabled={currentUser.role === 'user'} placeholder="e.g. QP001" /></div><div><label className="block text-sm font-medium mb-1">Qiospay API Key</label><div className="relative"><input type="password" className="w-full border p-2 rounded pr-10" value={config.qiospayApiKey || ''} onChange={e => setConfig({...config, qiospayApiKey: e.target.value})} disabled={currentUser.role === 'user'} /><Key size={16} className="absolute right-3 top-3 text-gray-400" /></div></div></div>
-                             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200"><label className="block text-sm font-bold text-yellow-800 mb-1">QiosLink Secret Key (Internal)</label><div className="flex gap-2"><input type="text" readOnly className="w-full bg-white border border-yellow-300 p-2 rounded text-gray-600 font-mono" value={config.appSecretKey || 'Not Generated'} /><button onClick={() => setConfig({...config, appSecretKey: 'QIOS_SEC_' + Math.random().toString(36).substring(2, 12).toUpperCase()})} className="px-3 bg-white border border-yellow-300 rounded hover:bg-yellow-100 text-yellow-700"><RefreshCw size={16}/></button></div></div>
-                             <div><label className="block text-sm font-medium mb-1">Default Callback URL (Optional)</label><input type="text" className="w-full border p-2 rounded" value={config.callbackUrl || ''} onChange={e => setConfig({...config, callbackUrl: e.target.value})} placeholder="https://your-website.com/callback" disabled={currentUser.role === 'user'} /><p className="text-xs text-gray-400 mt-1">Used if no callback URL is provided in the API request.</p></div>
-                             <div><label className="block text-sm font-medium mb-1">Static QRIS Data (000201...)</label><textarea rows={4} className="w-full border p-2 rounded font-mono text-xs" value={config.qrisString} onChange={e => setConfig({...config, qrisString: e.target.value})} disabled={currentUser.role === 'user'} /></div>
-                             {currentUser.role !== 'user' && <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save Configuration</button>}
-                         </div>
-                     </Card>
-                 )}
-                 {settingsTab === 'branding' && (
-                     <Card>
-                         <div className="flex justify-between items-start mb-6"><div><h3 className="text-lg font-bold flex items-center gap-2"><Palette size={20}/> Whitelabel Branding</h3><p className="text-sm text-gray-500">Customize how your payment page looks.</p></div><div className="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200">Merchant Feature</div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-4"><div><label className="block text-sm font-medium mb-1">Custom Domain (CNAME)</label><input type="text" placeholder="e.g. pay.mystore.com" className="w-full border p-2 rounded" value={config.branding?.customDomain || ''} onChange={e => setConfig({...config, branding: {...config.branding, customDomain: e.target.value}})} /><p className="text-xs text-gray-400 mt-1">Point your domain CNAME to <code>{window.location.host}</code></p></div><div><label className="block text-sm font-medium mb-1">Brand Color</label><div className="flex items-center gap-2"><input type="color" className="h-10 w-10 border p-1 rounded" value={config.branding?.brandColor || '#4f46e5'} onChange={e => setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})} /><input type="text" className="border p-2 rounded w-full" value={config.branding?.brandColor || '#4f46e5'} onChange={e => setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})} /></div></div><div><label className="block text-sm font-medium mb-1">Logo URL</label><input type="text" placeholder="https://..." className="w-full border p-2 rounded" value={config.branding?.logoUrl || ''} onChange={e => setConfig({...config, branding: {...config.branding, logoUrl: e.target.value}})} /></div><button onClick={handleUpdateConfig} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 mt-4">Save Branding</button></div><div className="bg-gray-100 p-4 rounded-xl border border-gray-200 flex flex-col items-center justify-center min-h-[300px]"><p className="text-xs font-bold text-gray-400 uppercase mb-4">Payment Page Preview</p><div className="bg-white p-6 rounded-2xl shadow-lg w-64 text-center"><div className="flex justify-center mb-3">{config.branding?.logoUrl ? <img src={config.branding.logoUrl} className="h-8 w-auto" /> : <div style={{backgroundColor: config.branding?.brandColor || '#4f46e5'}} className="w-8 h-8 rounded-lg flex items-center justify-center text-white"><QrCode size={16}/></div>}</div><div className="h-32 bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-300">QR CODE</div><div style={{color: config.branding?.brandColor || '#4f46e5'}} className="font-bold text-xl">Rp 50.000</div></div></div></div>
-                     </Card>
-                 )}
-                 {settingsTab === 'smtp' && (
-                     <Card>
-                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Mail size={20}/> SMTP Configuration</h3>
-                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 flex gap-3"><div className="text-blue-600"><AlertCircle size={20}/></div><div className="text-sm text-blue-800"><strong>Universal SMTP</strong><br/>Compatible with Gmail, Zoho, and Free Hosting (Socket based, No Library required).</div></div>
-                         <div className="mb-6 p-4 border border-indigo-100 rounded-lg bg-indigo-50/50">
-                             <div className="flex items-center gap-2"><input type="checkbox" id="useSystemSmtp" className="h-5 w-5 text-indigo-600 rounded" checked={config.smtp?.useSystemSmtp || false} onChange={e => setConfig({...config, smtp: {...config.smtp!, useSystemSmtp: e.target.checked}})} /><div><label htmlFor="useSystemSmtp" className="text-base font-medium text-gray-900 cursor-pointer">Use System Default SMTP</label><p className="text-sm text-gray-500">If enabled, the system will use the Superadmin's email server to send your notifications.</p></div></div>
-                         </div>
-                         <div className={`space-y-4 transition-opacity duration-200 ${config.smtp?.useSystemSmtp ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div><label className="block text-sm font-medium mb-1">SMTP Host</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.host || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})} placeholder="smtp.gmail.com" /></div>
-                                 <div>
-                                   <label className="block text-sm font-medium mb-1">SMTP Port</label>
-                                   <input type="text" className="w-full border p-2 rounded" value={config.smtp?.port || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})} placeholder="587" />
-                                 </div>
-                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Encryption Protocol</label>
-                                    <select className="w-full border p-2 rounded bg-white" value={config.smtp?.secure || 'tls'} onChange={e => setConfig({...config, smtp: {...config.smtp!, secure: e.target.value as any}})}>
-                                        <option value="tls">TLS (Recommended)</option>
-                                        <option value="ssl">SSL</option>
-                                        <option value="none">None</option>
-                                    </select>
-                                 </div>
-                                 <div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.user || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})} placeholder="email@gmail.com" /></div>
-                                 <div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})} placeholder="App Password" /></div>
-                             </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <div><label className="block text-sm font-medium mb-1">From Email</label><input type="email" className="w-full border p-2 rounded" value={config.smtp?.fromEmail || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromEmail: e.target.value}})} placeholder="no-reply@domain.com" /></div>
-                                <div><label className="block text-sm font-medium mb-1">From Name</label><input type="text" className="w-full border p-2 rounded" value={config.smtp?.fromName || ''} onChange={e => setConfig({...config, smtp: {...config.smtp!, fromName: e.target.value}})} placeholder="My Store" /></div>
-                             </div>
-                         </div>
-                         <div className="mt-6 pt-6 border-t border-gray-100">
-                            <h4 className="font-bold text-gray-800 mb-2">User Registration Policy</h4>
-                            <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200"><input type="checkbox" id="reqVerif" className="h-4 w-4 text-indigo-600 rounded" checked={config.smtp?.requireEmailVerification || false} onChange={e => setConfig({...config, smtp: {...config.smtp!, requireEmailVerification: e.target.checked}})} /><div><label htmlFor="reqVerif" className="text-sm font-bold text-gray-700">Require Email Verification for New Users</label><p className="text-xs text-gray-500">If checked, new users created under you must verify their email before using the dashboard.</p></div></div>
-                         </div>
-                         <div className="flex gap-4 pt-4 border-t border-gray-100 mt-4">
-                             <button onClick={handleUpdateConfig} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2"><Save size={18}/> Save Settings</button>
-                             <button onClick={handleTestEmail} disabled={apiLoading || config.smtp?.useSystemSmtp} className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-2 border border-gray-200">{apiLoading ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Test Email</button>
-                         </div>
-                     </Card>
-                 )}
-                 {settingsTab === 'kyc' && (
-                     <Card>
-                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><ScanFace size={20}/> KYC Configuration</h3>
-                         <div className="mb-6 p-4 border border-indigo-100 rounded-lg bg-indigo-50/50">
-                             <div className="flex items-center gap-2">
-                                 <input type="checkbox" id="enableKyc" className="h-5 w-5 text-indigo-600 rounded" checked={config.kyc?.enabled || false} onChange={e => setConfig({...config, kyc: {...config.kyc!, enabled: e.target.checked}})} />
-                                 <div><label htmlFor="enableKyc" className="text-base font-medium text-gray-900 cursor-pointer">Enable Identity Verification System</label><p className="text-sm text-gray-500">If enabled, users will see an option to verify their identity.</p></div>
-                             </div>
-                         </div>
-                         
-                         {config.kyc?.enabled && (
-                            <div className="animate-in fade-in slide-in-from-top-4">
-                                <div className="space-y-4">
-                                     <div>
-                                         <label className="block text-sm font-medium mb-1">Verification Provider</label>
-                                         <select className="w-full border p-2 rounded bg-white" value={config.kyc?.provider || 'manual'} onChange={e => setConfig({...config, kyc: {...config.kyc!, provider: e.target.value as any}})}>
-                                             <option value="manual">Manual (Contact Admin)</option>
-                                             <option value="didit">Didit.me (Automated)</option>
-                                         </select>
-                                     </div>
-
-                                     {config.kyc?.provider === 'manual' && (
-                                         <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
-                                             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                                                 <h4 className="font-bold text-gray-800 mb-2">Manual Verification Contact</h4>
-                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                     <div><label className="block text-sm font-medium mb-1">Contact Method</label><select className="w-full border p-2 rounded bg-white" value={config.kyc?.manualContactType || 'whatsapp'} onChange={e => setConfig({...config, kyc: {...config.kyc!, manualContactType: e.target.value as any}})}><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></div>
-                                                     <div><label className="block text-sm font-medium mb-1">Contact Value (Number/Email)</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.manualContactValue || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, manualContactValue: e.target.value}})} placeholder={config.kyc?.manualContactType === 'email' ? 'admin@example.com' : '628123456789'} /></div>
-                                                 </div>
-                                                 <p className="text-xs text-yellow-800 mt-2">When users click "Verify Identity", they will be redirected to this contact.</p>
-                                             </div>
-                                         </div>
-                                     )}
-
-                                     {config.kyc?.provider === 'didit' && (
-                                         <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
-                                             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 flex gap-3 items-start"><div className="text-blue-600 mt-1"><AlertCircle size={20}/></div><div className="text-sm text-blue-800"><p className="font-bold mb-1">Didit.me Integration</p><p className="mb-2">Enter your App ID, API Key, and Webhook Secret from the Didit Dashboard.</p><a href="https://business.didit.me" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 font-bold hover:underline">Go to Didit Console <ExternalLink size={12}/></a></div></div>
-                                             <div className="bg-white border p-4 rounded-lg shadow-sm">
-                                                 <h4 className="font-bold text-gray-800 mb-4 border-b pb-2">API Credentials</h4>
-                                                 <div className="space-y-4">
-                                                     <div><label className="block text-sm font-medium mb-1">App ID</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditAppId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditAppId: e.target.value}})} placeholder="Enter Didit App ID"/></div>
-                                                     <div><label className="block text-sm font-medium mb-1">API Key</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditApiKey || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditApiKey: e.target.value}})} placeholder="Enter Didit API Key"/></div>
-                                                     <div><label className="block text-sm font-medium mb-1">Webhook Secret</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditWebhookSecret || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWebhookSecret: e.target.value}})} placeholder="Enter Webhook Secret"/></div>
-                                                     <div className="pt-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Webhook URL (Callback)</label><div className="flex gap-2"><input type="text" readOnly className="w-full bg-gray-50 border p-2 rounded text-gray-600 font-mono text-xs" value={window.location.origin + "/api/kyc_callback.php"} /><button onClick={() => copyToClipboard(window.location.origin + "/api/kyc_callback.php")} className="px-3 bg-gray-100 border rounded hover:bg-gray-200 text-gray-600"><Copy size={16}/></button></div></div>
-                                                 </div>
-                                             </div>
-                                         </div>
-                                     )}
-                                </div>
-                            </div>
-                         )}
-                         <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings</button>
-                     </Card>
-                 )}
-                 {settingsTab === 'auth' && (
-                     <div className="space-y-6 animate-in fade-in">
-                         {/* 1. VERIFICATION METHODS */}
-                         <Card>
-                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><CheckCircle2 size={20}/> Verification Requirements</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                 <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border cursor-pointer hover:bg-indigo-50 transition-colors">
-                                     <input type="checkbox" checked={config.auth?.verifyEmail} onChange={e => setConfig({...config, auth: {...config.auth!, verifyEmail: e.target.checked}})} className="h-5 w-5 text-indigo-600"/>
-                                     <span className="font-medium">Verify Email</span>
-                                 </label>
-                                 <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border cursor-pointer hover:bg-indigo-50 transition-colors">
-                                     <input type="checkbox" checked={config.auth?.verifyWhatsapp} onChange={e => setConfig({...config, auth: {...config.auth!, verifyWhatsapp: e.target.checked}})} className="h-5 w-5 text-indigo-600"/>
-                                     <span className="font-medium">Verify WhatsApp</span>
-                                 </label>
-                                 <label className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border cursor-pointer hover:bg-indigo-50 transition-colors">
-                                     <input type="checkbox" checked={config.kyc?.enabled} onChange={e => setConfig({...config, kyc: {...config.kyc!, enabled: e.target.checked}})} className="h-5 w-5 text-indigo-600"/>
-                                     <span className="font-medium">Verify KYC (Identity)</span>
-                                 </label>
-                             </div>
-                         </Card>
-
-                         {/* 2. LOGIN METHOD & SCOPE */}
-                         <Card>
-                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Lock size={20}/> Login Security</h3>
-                             <div className="space-y-4">
-                                 {/* Login Method */}
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">Login Method</label>
-                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.loginMethod || 'standard'} onChange={e => setConfig({...config, auth: {...config.auth!, loginMethod: e.target.value as any}})}>
-                                         <option value="standard">Standard (Email & Password)</option>
-                                         <option value="whatsapp_otp">WhatsApp OTP Only (Passwordless)</option>
-                                         <option value="hybrid">Hybrid (Email OR WhatsApp)</option>
-                                     </select>
-                                 </div>
-
-                                 {/* WA Login Scope */}
-                                 <div>
-                                     <label className="block text-sm font-medium mb-1">WhatsApp Login Scope</label>
-                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.waLoginScope || 'universal_except_admin'} onChange={e => setConfig({...config, auth: {...config.auth!, waLoginScope: e.target.value as any}})}>
-                                         <option value="universal_except_admin">Universal (All Users except Superadmin)</option>
-                                         <option value="role_based">Role Based (Select Roles)</option>
-                                         <option value="specific_users">Specific Users (By Username)</option>
-                                         <option value="all_users_dangerous">All Users (Including Superadmin - Dangerous)</option>
-                                     </select>
-                                     <p className="text-xs text-gray-500 mt-1">Determines who is allowed to use WhatsApp OTP for login.</p>
-                                 </div>
-
-                                 {/* Conditional: Role Based */}
-                                 {config.auth?.waLoginScope === 'role_based' && (
-                                     <div className="p-4 bg-gray-50 border rounded-lg">
-                                         <label className="block text-sm font-bold mb-2">Allowed Roles:</label>
-                                         <div className="flex gap-4">
-                                             {['merchant', 'cs', 'user'].map((role) => (
-                                                 <label key={role} className="flex items-center gap-2">
-                                                     <input 
-                                                         type="checkbox" 
-                                                         checked={config.auth?.allowedRoles?.includes(role as UserRole)} 
-                                                         onChange={(e) => {
-                                                             const currentRoles = config.auth?.allowedRoles || [];
-                                                             const newRoles = e.target.checked 
-                                                                 ? [...currentRoles, role as UserRole]
-                                                                 : currentRoles.filter(r => r !== role);
-                                                             setConfig({...config, auth: {...config.auth!, allowedRoles: newRoles}});
-                                                         }}
-                                                         className="h-4 w-4 text-indigo-600"
-                                                     />
-                                                     <span className="capitalize">{role}</span>
-                                                 </label>
-                                             ))}
-                                         </div>
-                                     </div>
-                                 )}
-
-                                 {/* Conditional: Specific Users */}
-                                 {config.auth?.waLoginScope === 'specific_users' && (
-                                     <div>
-                                         <label className="block text-sm font-medium mb-1">Allowed Usernames (Comma Separated)</label>
-                                         <textarea 
-                                             className="w-full border p-2 rounded h-20 text-sm font-mono" 
-                                             value={config.auth?.allowedSpecificUsers?.join(', ') || ''} 
-                                             onChange={(e) => {
-                                                 const users = e.target.value.split(',').map(u => u.trim()).filter(u => u !== '');
-                                                 setConfig({...config, auth: {...config.auth!, allowedSpecificUsers: users}});
-                                             }}
-                                             placeholder="admin, budi, siska_123"
-                                         />
-                                     </div>
-                                 )}
-
-                                 {/* 2FA Logic */}
-                                 <div className="pt-4 border-t">
-                                     <label className="block text-sm font-medium mb-1">Two-Factor Authentication (2FA)</label>
-                                     <select className="w-full border p-2 rounded bg-white" value={config.auth?.twoFactorLogic || 'user_opt_in'} onChange={e => setConfig({...config, auth: {...config.auth!, twoFactorLogic: e.target.value as any}})}>
-                                         <option value="disabled">Disabled Globally</option>
-                                         <option value="user_opt_in">User Opt-in (User decides in Profile)</option>
-                                         <option value="admin_forced">Admin Forced (Mandatory for All)</option>
-                                     </select>
-                                     {config.auth?.twoFactorLogic === 'admin_forced' && (
-                                         <p className="text-xs text-red-600 mt-1 font-bold">Warning: All users must have valid WhatsApp numbers or they will be locked out.</p>
-                                     )}
-                                 </div>
-                             </div>
-                         </Card>
-
-                         {/* 3. SOCIAL LOGIN CONFIG */}
-                         <Card>
-                             <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Globe size={20}/> Social Login</h3>
-                             <div className="space-y-4">
-                                 {/* Google */}
-                                 <div className="border p-4 rounded-lg">
-                                     <div className="flex justify-between items-center mb-2">
-                                         <div className="flex items-center gap-2 font-bold"><Chrome size={16} className="text-red-500"/> Google Login</div>
-                                         <input type="checkbox" checked={config.auth?.socialLogin?.google} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, google: e.target.checked}}})} className="toggle toggle-primary h-5 w-5"/>
-                                     </div>
-                                     {config.auth?.socialLogin?.google && (
-                                         <div className="mt-2 animate-in fade-in">
-                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Client ID</label>
-                                             <input type="text" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.googleClientId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientId: e.target.value}}})} placeholder="xxx.apps.googleusercontent.com"/>
-                                         </div>
-                                     )}
-                                 </div>
-
-                                 {/* Facebook */}
-                                 <div className="border p-4 rounded-lg">
-                                     <div className="flex justify-between items-center mb-2">
-                                         <div className="flex items-center gap-2 font-bold"><Facebook size={16} className="text-blue-600"/> Facebook Login</div>
-                                         <input type="checkbox" checked={config.auth?.socialLogin?.facebook} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebook: e.target.checked}}})} className="toggle toggle-primary h-5 w-5"/>
-                                     </div>
-                                     {config.auth?.socialLogin?.facebook && (
-                                         <div className="mt-2 animate-in fade-in grid grid-cols-2 gap-4">
-                                             <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">App ID</label><input type="text" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.facebookAppId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppId: e.target.value}}})} /></div>
-                                             <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">App Secret</label><input type="password" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.facebookAppSecret || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, facebookAppSecret: e.target.value}}})} /></div>
-                                         </div>
-                                     )}
-                                 </div>
-
-                                 {/* GitHub */}
-                                 <div className="border p-4 rounded-lg">
-                                     <div className="flex justify-between items-center mb-2">
-                                         <div className="flex items-center gap-2 font-bold"><Github size={16}/> GitHub Login</div>
-                                         <input type="checkbox" checked={config.auth?.socialLogin?.github} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, github: e.target.checked}}})} className="toggle toggle-primary h-5 w-5"/>
-                                     </div>
-                                     {config.auth?.socialLogin?.github && (
-                                         <div className="mt-2 animate-in fade-in">
-                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Client ID</label>
-                                             <input type="text" className="w-full border p-2 rounded text-sm" value={config.auth?.socialLogin?.githubClientId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientId: e.target.value}}})} />
-                                         </div>
-                                     )}
-                                 </div>
-                             </div>
-                         </Card>
-
-                         <button onClick={handleUpdateConfig} disabled={apiLoading} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
-                             {apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save All Security Settings
-                         </button>
-                     </div>
-                 )}
-             </div>
-          )}
-          
-          {/* --- ACCOUNT TAB (FIXED KYC STATUS DISPLAY) --- */}
-          {view === 'settings' && settingsTab === 'account' && (
-             <div className="space-y-6">
-                 {/* 1. Account Details Form */}
-                 <Card>
-                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><UserIcon size={20}/> Profile Details</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded bg-gray-50" value={accountForm.username} readOnly /></div>
-                         <div><label className="block text-sm font-medium mb-1">Email Address</label><div className="flex gap-2"><input type="email" className="w-full border p-2 rounded" value={accountForm.email} onChange={e => setAccountForm({...accountForm, email: e.target.value})} />{isTrue(currentUser.isVerified) ? <span className="text-green-500 flex items-center" title="Verified"><CheckCircle2 size={20}/></span> : <button onClick={() => {}} className="text-xs bg-yellow-100 text-yellow-700 px-2 rounded hover:bg-yellow-200">Verify</button>}</div></div>
-                         <div><label className="block text-sm font-medium mb-1">WhatsApp Number</label><div className="flex gap-2"><input type="text" className="w-full border p-2 rounded" value={accountForm.phone} onChange={e => setAccountForm({...accountForm, phone: e.target.value})} placeholder="628..." />{isTrue(currentUser.isPhoneVerified) ? <span className="text-green-500 flex items-center" title="Verified"><CheckCircle2 size={20}/></span> : <span className="text-gray-300 flex items-center" title="Not Verified"><MinusCircle size={20}/></span>}</div></div>
-                     </div>
-                 </Card>
-
-                 {/* 2. Verification Status */}
-                 <Card>
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Verification Status</h3>
-                    <div className="space-y-3">
-                        {/* EMAIL VERIFICATION BLOCK */}
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                            <div className="flex items-center gap-3"><Mail size={20} className="text-gray-500"/><div><p className="font-medium">Email Verification</p><p className="text-xs text-gray-500">{currentUser.email}</p></div></div>
-                            {isTrue(currentUser.isVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <div className="flex gap-2"><input type="text" placeholder="OTP" className="w-20 border p-1 rounded text-xs" value={otpCode} onChange={e=>setOtpCode(e.target.value)} /><button onClick={handleVerifyEmail} className="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Submit</button><button onClick={handleResendOtp} className="text-xs text-indigo-600 underline">Resend</button></div>}
-                        </div>
-
-                        {/* WHATSAPP VERIFICATION BLOCK (FIXED LOGIC) */}
-                        <div className="flex flex-col p-3 bg-gray-50 rounded-lg border">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-3"><Phone size={20} className="text-gray-500"/><div><p className="font-medium">WhatsApp Verification</p><p className="text-xs text-gray-500">{currentUser.phone || 'Not set'}</p></div></div>
-                                {isTrue(currentUser.isPhoneVerified) ? (
-                                    <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> 
-                                ) : (
-                                    <button onClick={() => { if(!accountForm.phone) return alert("Save phone number first"); handleSendWaVerification(); }} className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded disabled:opacity-50" disabled={showWaOtpInput}>
-                                        {showWaOtpInput ? 'OTP Sent' : 'Send OTP'}
-                                    </button>
-                                )}
-                            </div>
-                            
-                            {/* OTP Input for WA (Shows only when button clicked) */}
-                            {!isTrue(currentUser.isPhoneVerified) && showWaOtpInput && (
-                                <div className="flex gap-2 justify-end animate-in fade-in slide-in-from-top-1 mt-2 border-t pt-2">
-                                    <input type="text" placeholder="Enter WA Code" className="border p-1.5 rounded text-xs w-32" value={waVerifyOtp} onChange={e=>setWaVerifyOtp(e.target.value)} />
-                                    <button onClick={handleVerifyWa} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 font-bold">Verify</button>
-                                    <button onClick={() => setShowWaOtpInput(false)} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* KYC STATUS LOGIC FIXED HERE */}
-                        {(isTrue(systemConfig.verifyKyc) || isTrue(config.kyc?.enabled) || isTrue(currentUser.merchantConfig?.kyc?.enabled)) && (
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                                <div className="flex items-center gap-3"><ScanFace size={20} className="text-gray-500"/><div><p className="font-medium">Identity Verification (KYC)</p><p className="text-xs text-gray-500">Required for higher limits</p></div></div>
-                                {isTrue(currentUser.isKycVerified) ? 
-                                    <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : 
-                                    <span className="text-gray-500 text-xs font-medium">Not Verified</span>
-                                }
-                            </div>
-                        )}
-                    </div>
-
-                    {!isTrue(currentUser.isKycVerified) && (isTrue(systemConfig.verifyKyc) || isTrue(config.kyc?.enabled) || isTrue(currentUser.merchantConfig?.kyc?.enabled)) && ( 
-                        <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
-                            <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
-                            <button onClick={(config.kyc?.provider === 'didit' || !config.kyc) ? handleStartDiditKyc : () => { const type = config.kyc?.manualContactType || 'whatsapp'; const value = config.kyc?.manualContactValue || '628123456789'; let url = type === 'whatsapp' ? `https://wa.me/${value.replace(/[^0-9]/g,'')}?text=Halo%20Admin,%20saya%20${currentUser.username}%20(ID:${currentUser.id})%20ingin%20verifikasi%20KYC%20manual.` : `mailto:${value}?subject=KYC%20Verification%20Request%20(${currentUser.username})&body=Hello%20Admin,%20I%20want%20to%20verify%20my%20account%20(ID:${currentUser.id}).`; window.open(url, '_blank'); }} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"><ScanFace size={18}/> {config.kyc?.provider === 'didit' || !config.kyc ? 'Start Automated Verification' : 'Contact Admin for Verification'}</button>
-                        </div> 
-                    )}
-                 </Card>
-
-                 {/* 3. Password Change */}
-                 <Card>
-                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Lock size={20}/> Change Password</h3>
-                     <div className="space-y-4">
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div><label className="block text-sm font-medium mb-1">New Password</label><div className="relative"><input type={showNewPass ? "text" : "password"} className="w-full border p-2 rounded" value={accountForm.newPassword} onChange={e => setAccountForm({...accountForm, newPassword: e.target.value})} /><button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></div>
-                             <div><label className="block text-sm font-medium mb-1">Confirm New Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} className="w-full border p-2 rounded" value={accountForm.confirmNewPassword} onChange={e => setAccountForm({...accountForm, confirmNewPassword: e.target.value})} /><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></div>
-                         </div>
-                     </div>
-                 </Card>
-
-                 {/* 4. Two-Factor Settings (SYNTAX ERROR FIXED) */}
-                 <Card>
-                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Fingerprint size={20}/> Two-Factor Authentication</h3>
-                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                         <div><p className="font-bold text-gray-800">WhatsApp 2FA</p><p className="text-sm text-gray-500">Require OTP from WhatsApp when logging in.</p></div>
-                         <button 
-                             onClick={() => { 
-                                 if(!currentUser.isPhoneVerified && !currentUser.twoFactorEnabled) return alert("Verify WhatsApp first!");
-                                 // Placeholder logic for now, waiting for backend
-                                 alert("Please confirm your password to toggle 2FA (Coming Soon in UI, currently managed by Admin)");
-                             }} 
-                             className={`px-4 py-2 rounded-lg font-bold transition-colors ${currentUser.twoFactorEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}
-                         >
-                             {currentUser.twoFactorEnabled ? 'Enabled' : 'Disabled'}
-                         </button>
-                     </div>
-                 </Card>
-
-                 <div className="pt-4">
-                     <button onClick={handleUpdateAccount} disabled={apiLoading} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Update Profile</button>
-                 </div>
-             </div>
-          )}
-          {/* ... (Rest of views) ... */}
-        </div>
-      </main>
-    </div>
-  );
-}
-// Add missing icon import
-function MinusCircle({size}:{size:number}) { return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
+          <div className="
