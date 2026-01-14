@@ -1,40 +1,25 @@
 
 -- =============================================================================
--- DATABASE SCHEMA (FULL DUMP V4.8)
--- Import file ini ke phpMyAdmin untuk instalasi baru.
--- Jika update, lihat bagian "ALTER TABLE" di bawah.
+-- DATABASE SCHEMA (UPDATE V4.0 - VERIFICATION & GROUPS)
+-- Rename file ini menjadi "database.sql" sebelum import.
 -- =============================================================================
 
+-- 1. Buat Tabel Users (Updated)
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) DEFAULT NULL,
-  `phone` varchar(20) DEFAULT NULL,
-  `password` varchar(255) DEFAULT NULL, -- Nullable for Social Login
+  `password` varchar(255) NOT NULL,
   `role` enum('superadmin','merchant','cs','user') NOT NULL DEFAULT 'user',
-  `merchant_config` text, 
-  `creator_id` int(11) DEFAULT 1,
-  
-  -- Verification & Security
-  `is_verified` tinyint(1) DEFAULT 0,
-  `is_phone_verified` tinyint(1) DEFAULT 0,
-  `is_kyc_verified` tinyint(1) DEFAULT 0,
+  `merchant_config` text, -- Disini data Branding disimpan (JSON)
+  `creator_id` int(11) DEFAULT 1, -- ID User yang membuat akun ini (Grouping)
+  `is_verified` tinyint(1) DEFAULT 1, -- 1=Verified, 0=Unverified
   `verification_code` varchar(6) DEFAULT NULL,
-  `two_factor_enabled` tinyint(1) DEFAULT 0,
-  `wa_login_enabled` tinyint(1) DEFAULT 0,
-  
-  -- Social Auth
-  `auth_provider` varchar(20) DEFAULT 'local', -- local, google, github, facebook
-  `provider_id` varchar(255) DEFAULT NULL,
-  
-  `kyc_data` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`),
-  KEY `phone` (`phone`),
-  KEY `auth_provider` (`auth_provider`,`provider_id`)
+  UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 2. Buat Tabel Transactions (UPDATED)
 CREATE TABLE IF NOT EXISTS `transactions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `trx_id` varchar(50) NOT NULL,
@@ -43,34 +28,18 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `description` varchar(255) DEFAULT NULL,
   `status` enum('pending','paid','expired','cancelled') NOT NULL DEFAULT 'pending',
   `qr_string` text,
-  `payment_token` varchar(64) DEFAULT NULL,
-  `payment_url` text DEFAULT NULL,
-  `expires_at` datetime DEFAULT NULL,
-  `is_single_use` tinyint(1) DEFAULT 0,
+  `payment_token` varchar(64) DEFAULT NULL, -- Token Unik (Hash) untuk Link
+  `payment_url` text DEFAULT NULL,          -- Full URL Link
+  `expires_at` datetime DEFAULT NULL,       -- Waktu Kadaluarsa
+  `is_single_use` tinyint(1) DEFAULT 0,     -- 1 = Link hangus setelah dibayar
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `external_ref_id` varchar(100) DEFAULT NULL,
   `external_callback_url` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `trx_id` (`trx_id`),
-  UNIQUE KEY `payment_token` (`payment_token`)
+  UNIQUE KEY `payment_token` (`payment_token`) -- Index biar akses link cepat
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- DEFAULT SUPERADMIN (Password: admin)
-INSERT INTO `users` (`username`, `email`, `phone`, `password`, `role`, `merchant_config`, `is_verified`, `is_phone_verified`) VALUES
-('admin', 'admin@qioslink.com', '628123456789', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","auth":{"verifyEmail":true,"verifyWhatsapp":true,"loginMethod":"hybrid","waLoginScope":"universal_except_admin"}}', 1, 1);
-
--- =============================================================================
--- PERINTAH UPDATE UNTUK PENGGUNA LAMA (Jalankan ini jika tabel users sudah ada)
--- =============================================================================
-/*
-ALTER TABLE `users` 
-ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL AFTER `email`,
-ADD COLUMN `is_phone_verified` TINYINT(1) DEFAULT 0 AFTER `is_verified`,
-ADD COLUMN `wa_login_enabled` TINYINT(1) DEFAULT 0 AFTER `is_phone_verified`,
-ADD COLUMN `two_factor_enabled` TINYINT(1) DEFAULT 0 AFTER `wa_login_enabled`,
-ADD COLUMN `auth_provider` VARCHAR(20) DEFAULT 'local' AFTER `two_factor_enabled`,
-ADD COLUMN `provider_id` VARCHAR(255) DEFAULT NULL AFTER `auth_provider`;
-
-ALTER TABLE `users` ADD INDEX(`phone`);
-ALTER TABLE `users` ADD INDEX(`auth_provider`, `provider_id`);
-*/
+-- 3. Data Awal (Default Superadmin Verified)
+INSERT INTO `users` (`username`, `email`, `password`, `role`, `merchant_config`, `creator_id`, `is_verified`) VALUES
+('admin', 'admin@qioslink.com', 'admin', 'superadmin', '{"merchantName":"Narpra Digital","merchantCode":"QP040887","apiKey":"KEY123","qrisString":"00020101021126670016COM.NOBUBANK.WWW01189360050300000907180214905487390387780303UMI51440014ID.CO.QRIS.WWW0215ID20254619920700303UMI5204581753033605802ID5914Narpra Digital6009INDRAMAYU61054521162070703A016304D424"}', 0, 1);
