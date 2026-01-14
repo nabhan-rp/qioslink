@@ -64,6 +64,7 @@ import {
   Fingerprint,
   ToggleLeft,
   ToggleRight,
+  MinusCircle, // IMPORTED CORRECTLY HERE
   HelpCircle as QuestionMark
 } from 'lucide-react';
 import { 
@@ -200,7 +201,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
       </nav>
 
       <main>
-        {/* ... (Hero Section & Content Remains Same) ... */}
+        {/* Hero Section */}
         <section id="home" className="relative pt-32 pb-20 overflow-hidden">
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
@@ -985,5 +986,3 @@ export default function App() {
     </div>
   );
 }
-// Add missing icon import
-function MinusCircle({size}:{size:number}) { return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>; }
