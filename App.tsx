@@ -7,46 +7,28 @@ import {
   Code2, 
   LogOut, 
   Menu, 
-  Wallet, 
   History,
   Copy,
   CheckCircle2,
   ExternalLink,
-  Smartphone,
   Search,
   Eye,
   EyeOff,
   Link as LinkIcon,
   Download,
-  Share2,
   X,
-  Users,
   Shield,
   Lock,
-  Headphones,
-  ShoppingBag,
   Server,
-  FileCode,
   AlertCircle,
-  Package,
-  ShoppingCart,
   Loader2,
-  Plus,
-  Trash2,
-  Pencil,
   Save,
   ArrowRight,
   Zap,
   Globe,
-  BarChart3,
   Check,
-  User as UserIcon,
   Palette,
-  CreditCard,
   Mail,
-  Send,
-  Github,
-  Key,
   RefreshCw,
   Clock,
   Ban,
@@ -55,14 +37,10 @@ import {
   Rocket,
   PlayCircle,
   HardDrive,
-  MessageCircle,
   ScanFace,
   Phone,
-  Facebook,
-  Chrome,
   Fingerprint,
-  ToggleLeft,
-  ToggleRight
+  Users
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -73,44 +51,38 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { MerchantConfig, ViewState, Transaction, User, UserRole, SmtpConfig, AuthConfig } from './types';
+
+import { MerchantConfig, ViewState, Transaction, User, UserRole, AuthConfig } from './types';
 import { generateDynamicQR, formatRupiah } from './utils/qrisUtils';
 import { QRCodeDisplay } from './components/QRCodeDisplay';
 
-// --- FALLBACK ICONS (To prevent version mismatch crashes) ---
-// Defined locally to ensure stability regardless of lucide-react version
-const MinusCircle = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
-  </svg>
+// --- ICONS ---
+const GoogleIcon = ({ className = "" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className={className} fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .533 5.347.533 12S5.867 24 12.48 24c3.44 0 6.04-1.133 8.16-3.293 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.133H12.48z" /></svg>
 );
-
-const QuestionMark = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
-  </svg>
+const FacebookIcon = ({ className = "" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className={className} fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+);
+const GithubIcon = ({ className = "" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" className={className} fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
+);
+const PlugIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" /><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" /></svg>
+);
+const Wallet = ({ size = 24, className = "" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg>
 );
 
 // --- CONFIGURATION ---
-const APP_VERSION = "4.8.9 (Enterprise Stable)";
+const APP_VERSION = "4.9.1 (Stable UI Restoration)";
 
-const getEnv = () => {
-  try {
-    // @ts-ignore
-    return import.meta.env || {};
-  } catch {
-    return {};
-  }
-};
-
+const getEnv = () => { try { return import.meta.env || {}; } catch { return {}; } };
 const env: any = getEnv();
 const IS_DEMO_MODE = env.VITE_USE_DEMO_DATA !== 'false';
 const API_BASE = env.VITE_API_BASE_URL || './api';
 
-// --- HELPER: CHECK BOOLEAN LOOSELY ---
 const isTrue = (val: any) => val === true || val === '1' || val === 1 || val === 'true';
 
-// --- DEFAULT AUTH CONFIG ---
 const DEFAULT_AUTH_CONFIG: AuthConfig = {
     verifyEmail: true,
     verifyWhatsapp: false,
@@ -121,11 +93,7 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
     allowedRoles: ['user'],
     allowedSpecificUsers: [],
     twoFactorLogic: 'user_opt_in',
-    socialLogin: {
-        google: false,
-        github: false,
-        facebook: false
-    }
+    socialLogin: { google: false, github: false, facebook: false }
 };
 
 // --- COMPONENT: VERIFICATION BANNER ---
@@ -147,23 +115,17 @@ const VerificationBanner = ({ user, onVerifyClick }: { user: User, onVerifyClick
            </p>
         </div>
       </div>
-      <button 
-        onClick={onVerifyClick}
-        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg text-sm transition-colors whitespace-nowrap"
-      >
-        Verify Now
-      </button>
+      <button onClick={onVerifyClick} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg text-sm transition-colors whitespace-nowrap">Verify Now</button>
     </div>
   );
 };
 
-// --- LANDING PAGE COMPONENT (RESTORED V4.8 DESIGN) ---
+// --- LANDING PAGE (With Mobile Menu Fixed) ---
 const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister: () => void }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-indigo-100 selection:text-indigo-700">
-      {/* Navbar */}
       <nav aria-label="Main Navigation" className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -178,7 +140,7 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               <a href="#options" className="hover:text-indigo-600 transition-colors">Pricing & Hosting</a>
               <a href="#features" className="hover:text-indigo-600 transition-colors">Features</a>
               <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
-                <Github size={16} /> Open Source
+                <GithubIcon className="w-4 h-4" /> Open Source
               </a>
             </div>
 
@@ -189,195 +151,50 @@ const LandingPage = ({ onLogin, onRegister }: { onLogin: () => void, onRegister:
               </button>
             </div>
 
-            <button className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {/* RESTORED MOBILE MENU BUTTON */}
+            <button className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
         {mobileMenuOpen && (
-            <div className="md:hidden bg-white border-b border-gray-100 animate-in slide-in-from-top-2 shadow-xl">
+            <div className="md:hidden bg-white border-b border-gray-100 animate-in slide-in-from-top-2 shadow-xl absolute w-full left-0 z-50">
                 <div className="px-4 pt-2 pb-6 space-y-2">
                     <a href="#options" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">Pricing & Hosting</a>
                     <a href="#features" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">Features</a>
-                    
-                    {/* FIX 1: Add Open Source to Mobile Menu */}
-                    <a href="https://github.com/nabhan-rp/qioslink" target="_blank" rel="noopener noreferrer" onClick={()=>setMobileMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center gap-2"><Github size={18}/> Open Source</a>
-                    
-                    <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-gray-600 border border-gray-200 rounded-xl mt-2">Log In</button>
-                    <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-lg mt-2">Get Started</button>
+                    <button onClick={() => { setMobileMenuOpen(false); onLogin(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-gray-600 border border-gray-200 rounded-xl mt-2 hover:bg-gray-50">Log In</button>
+                    <button onClick={() => { setMobileMenuOpen(false); onRegister(); }} className="w-full text-center px-4 py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-lg mt-2 hover:bg-indigo-700">Get Started</button>
                 </div>
             </div>
         )}
       </nav>
 
       <main>
-        {/* Hero Section */}
         <section id="home" className="relative pt-32 pb-20 overflow-hidden">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
-            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-blue-50 rounded-full blur-3xl opacity-60"></div>
-          </div>
-          
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold mb-6 border border-indigo-200 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase tracking-wide">
-              <Zap size={12} fill="currentColor" /> UNIVERSAL SMTP ENGINE ADDED
-            </div>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 leading-tight">
               Dynamic QRIS Engine. <br/>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500">
                 Self-Hosted & SaaS Ready.
               </span>
             </h1>
-            <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+            <p className="max-w-2xl mx-auto text-xl text-gray-500 mb-10 leading-relaxed">
               Convert Nobu/Qiospay static QRIS into a dynamic payment gateway. Use our Cloud SaaS instantly or self-host it on your own server.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button onClick={onRegister} className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2">
                 Start Using Cloud <ArrowRight size={18} />
               </button>
-              <a href="#options" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all flex items-center justify-center gap-2">
-                <HardDrive size={20} /> Self-Host Options
-              </a>
             </div>
-            <p className="mt-6 text-sm text-gray-400">
-                Compatible with WHMCS, WooCommerce, and Shopify.
-            </p>
           </div>
-        </section>
-
-        {/* FEATURES GRID (V4.8 Design) */}
-        <section id="features" className="py-20 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold text-gray-900">What's New in v4.8</h2>
-                    <p className="mt-4 text-gray-500">Major security and usability updates for enterprise needs.</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6"><ScanFace size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">Automated KYC</h3>
-                        <p className="text-gray-500">Verify merchant identities instantly using Didit.me integration. Support for ID Cards and Liveness check.</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-6"><Globe size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">Social Login</h3>
-                        <p className="text-gray-500">Seamless login experience using Google, Facebook, and GitHub accounts. Zero friction onboarding.</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600 mb-6"><Phone size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp 2FA</h3>
-                        <p className="text-gray-500">Secure your dashboard with OTP sent via WhatsApp. Supports passwordless login flow.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {/* PRICING/DEPLOYMENT OPTIONS (V4.8 Design) */}
-        <section id="options" className="py-20 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-4"><span className="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Choose Your Deployment</span></div>
-                <div className="text-center mb-16">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Cloud Service vs Self-Hosted</h2>
-                    <p className="text-gray-500 max-w-2xl mx-auto text-lg">Use QiosLink directly as a service (SaaS) or host the source code yourself on JajanServer infrastructure.</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-                    {/* Cloud SaaS Card */}
-                    <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col hover:scale-105 transition-transform duration-300 shadow-2xl shadow-indigo-900/20">
-                        <div className="absolute top-0 right-0 p-4 opacity-10"><Cloud size={120}/></div>
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl mb-6 backdrop-blur-sm"><Cloud size={24} className="text-white"/></div>
-                        <h3 className="text-2xl font-bold mb-1">Cloud SaaS</h3>
-                        <p className="text-indigo-200 text-sm font-mono mb-6">bayar.jajanan.online</p>
-                        <p className="text-indigo-100 mb-8 flex-grow leading-relaxed">The easiest way to start. No installation needed. Register account, input your QRIS, and start accepting payments instantly. Multi-tenant support included.</p>
-                        <ul className="space-y-3 mb-8 text-sm font-medium text-indigo-100">
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Zero Maintenance</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Instant Activation</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-400"/> Free & Pro Plans</li>
-                        </ul>
-                        <button onClick={onRegister} className="w-full py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">Register Now</button>
-                    </div>
-
-                    {/* Self Host Free Card */}
-                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-gray-300 transition-colors">
-                        <div className="absolute top-0 right-0 p-4 opacity-5"><Server size={120}/></div>
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-6 text-emerald-600"><Zap size={24}/></div>
-                        <h3 className="text-2xl font-bold mb-1">Self-Host (Free)</h3>
-                        <p className="text-gray-400 text-sm font-mono mb-6">freehosting.jajanserver.com</p>
-                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">Perfect for students, testing, or small projects. Get a free subdomain and cPanel to host the QiosLink source code yourself.</p>
-                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
-                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> 0 Cost / Lifetime</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Free SSL Certificate</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-emerald-500"/> Open Source Control</li>
-                        </ul>
-                        <a href="https://freehosting.jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-white border border-emerald-500 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-center">Get Free Host</a>
-                    </div>
-
-                    {/* Self Host Paid Card */}
-                    <div className="bg-white rounded-3xl p-8 text-gray-800 relative overflow-hidden flex flex-col border border-gray-200 hover:border-yellow-400 transition-colors">
-                        <div className="absolute top-4 right-4"><span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded border border-yellow-200">ENTERPRISE</span></div>
-                        <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-xl mb-6 text-yellow-600"><Rocket size={24}/></div>
-                        <h3 className="text-2xl font-bold mb-1">Self-Host (Paid)</h3>
-                        <p className="text-gray-400 text-sm font-mono mb-6">jajanserver.com</p>
-                        <p className="text-gray-500 mb-8 flex-grow leading-relaxed">For serious businesses. High-performance NVMe cloud hosting to run your QiosLink instance with maximum speed and uptime.</p>
-                        <ul className="space-y-3 mb-8 text-sm font-medium text-gray-500">
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> 99.9% Uptime SLA</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Priority Support</li>
-                            <li className="flex items-center gap-2"><Check size={16} className="text-yellow-500"/> Daily Backups</li>
-                        </ul>
-                        <a href="https://jajanserver.com/" target="_blank" rel="noreferrer" className="w-full py-4 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-colors text-center shadow-lg shadow-yellow-500/20">View Plans</a>
-                    </div>
-                </div>
-
-                <div className="text-center mb-16 pt-8 border-t border-gray-200">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Why QiosLink?</h2>
-                    <p className="text-gray-500">The ultimate payment solution.</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6"><Server size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">Self Hosted</h3>
-                        <p className="text-gray-500 leading-relaxed">Host it on JajanServer or your own VPS. Supports cPanel, DirectAdmin, and even Free Hosting providers.</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6"><Palette size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">White Label Branding</h3>
-                        <p className="text-gray-500 leading-relaxed">Use your own logo, brand colors, and Custom Domain (CNAME). Make it look like your own bank.</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-6"><Code2 size={24}/></div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Integration</h3>
-                        <p className="text-gray-500 leading-relaxed">Ready-to-use modules for WHMCS and WooCommerce. JSON API available for custom apps.</p>
-                    </div>
-                </div>
-            </div>
         </section>
       </main>
-      <footer className="bg-white py-12 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col gap-2">
-             <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                    <QrCode size={18} />
-                 </div>
-                 <span className="font-bold text-gray-900">QiosLink</span>
-             </div>
-             <p className="text-sm text-gray-500">
-                &copy; 2026 Open Source Project by <a href="https://github.com/nabhan-rp" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">Nabhan Rafli</a>. Licensed under MIT. Sponsored by <a href="https://www.jajanserver.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-bold">JajanServer</a>.
-             </p>
-          </div>
-          <div className="flex items-center gap-6 text-sm font-medium">
-              <a href="https://qioslink-demo.orgz.top/?i=1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors"><PlayCircle size={16}/> Live Demo</a>
-              <a href="https://bayar.jajanan.online/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors"><Cloud size={16}/> Cloud Service</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
 
-// ... (Helper Components: SidebarItem, Card, TransactionModal - Keeping Existing) ...
+// ... (Helper Components) ...
 const SidebarItem = ({ active, icon, label, onClick }: any) => (
   <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'}`}>
     <div className={`${active ? 'text-white' : 'text-gray-400 group-hover:text-indigo-600'}`}>{icon}</div>
@@ -443,7 +260,6 @@ const MOCK_USERS: User[] = [
 ];
 
 export default function App() {
-  // ... (States remain the same) ...
   const [showLanding, setShowLanding] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -451,6 +267,7 @@ export default function App() {
   const [apiLoading, setApiLoading] = useState(false);
   const [view, setView] = useState<ViewState>('dashboard');
   const [settingsTab, setSettingsTab] = useState<'config' | 'account' | 'branding' | 'smtp' | 'kyc' | 'auth'>('config');
+  // RESTORED: SIDEBAR STATE LOGIC
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   
   const [config, setConfig] = useState<MerchantConfig>(DEFAULT_MERCHANT_CONFIG);
@@ -468,8 +285,6 @@ export default function App() {
   const [otpCode, setOtpCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showCurrentPass, setShowCurrentPass] = useState(false);
-  const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmNewPass, setShowConfirmNewPass] = useState(false);
   const [isUserModalOpen, setUserModalOpen] = useState(false);
   const [isUserAuthModalOpen, setUserAuthModalOpen] = useState(false); 
@@ -486,9 +301,8 @@ export default function App() {
   const [isPublicMode, setIsPublicMode] = useState(false);
   const [publicData, setPublicData] = useState<any>(null);
   const [isCheckingPublic, setIsCheckingPublic] = useState(false);
-  // FIX 2: Initialize with default but will be overwritten by API
   const [systemConfig, setSystemConfig] = useState<any>(DEFAULT_AUTH_CONFIG); 
-  const [loginMode, setLoginMode] = useState<'standard' | 'whatsapp' | 'social'>('standard'); 
+  const [loginMode, setLoginMode] = useState<'standard' | 'whatsapp' | 'social' | '2fa_verify'>('standard'); 
   const [showForgotPass, setShowForgotPass] = useState(false);
   const [forgotStep, setForgotStep] = useState<'input' | 'method' | 'verify' | 'reset'>('input');
   const [forgotIdentifier, setForgotIdentifier] = useState('');
@@ -498,7 +312,12 @@ export default function App() {
   const [resetToken, setResetToken] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmNewPass, setConfirmNewPass] = useState('');
+  
+  // NEW STATES FOR 2FA
+  const [tempUserId, setTempUserId] = useState<string | null>(null);
+  const [twoFaPhoneMasked, setTwoFaPhoneMasked] = useState<string>('');
 
+  // RESTORED: RESIZE HANDLER FOR SIDEBAR
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) setSidebarOpen(true);
@@ -516,7 +335,7 @@ export default function App() {
       }
   }, [systemConfig]); 
 
-  // --- REFRESH SESSION ON TAB CHANGE (Fix Sync Issue) ---
+  // --- REFRESH SESSION ON TAB CHANGE ---
   useEffect(() => {
       if (!IS_DEMO_MODE && currentUser && (view === 'settings' || view === 'dashboard')) {
           refreshSession();
@@ -542,12 +361,11 @@ export default function App() {
       }
   };
 
-  // ... (Keep existing Initialize and Poll Logic) ...
   useEffect(() => {
     let interval: any;
     if (isPublicMode && publicData?.status === 'pending' && !IS_DEMO_MODE) {
       interval = setInterval(() => {
-        handlePublicCheck(true); // Silent check (no alert)
+        handlePublicCheck(true);
       }, 10000); 
     }
     return () => clearInterval(interval);
@@ -559,9 +377,6 @@ export default function App() {
         const savedSysConfig = localStorage.getItem('qios_system_config');
         if (savedSysConfig) {
             setSystemConfig(JSON.parse(savedSysConfig));
-        } else {
-            const mockAdminConfig = MOCK_USERS.find(u => u.role === 'superadmin')?.merchantConfig?.auth;
-            if(mockAdminConfig) setSystemConfig(mockAdminConfig);
         }
         const savedUsers = localStorage.getItem('qios_users');
         if (savedUsers) {
@@ -571,12 +386,12 @@ export default function App() {
         }
     } else {
         try {
-            // FIX: Ensure System Config is loaded even if logged in as normal user
             const res = await fetch(`${API_BASE}/get_public_config.php`);
-            const data = await res.json();
-            if (data.success && data.config) {
-                // Merge loaded config with defaults to prevent missing keys
-                setSystemConfig(prev => ({...prev, ...data.config}));
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.config) {
+                    setSystemConfig(prev => ({...prev, ...data.config}));
+                }
             }
         } catch (e) {
             console.error("Failed to load public config", e);
@@ -621,7 +436,6 @@ export default function App() {
   };
 
   const handlePublicCheck = async (silent = false) => {
-      // ... (No changes here)
       if (!publicData?.trx_id || !publicData?.merchant_id) return;
       if (IS_DEMO_MODE) return;
       if (!silent) setIsCheckingPublic(true);
@@ -708,7 +522,6 @@ export default function App() {
       setApiLoading(false); 
   };
   
-  // ... (Other handlers like verifyEmail, resendOtp, etc. remain the same) ...
   const handleVerifyEmail = async () => { setApiLoading(true); if (IS_DEMO_MODE) { if (otpCode === '123456') { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert("Verified"); } else alert("Invalid"); } else { try { const res = await fetch(`${API_BASE}/verify_email.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id, code: otpCode }) }); const data = await res.json(); if (data.success) { const updated = {...currentUser!, isVerified: true}; loginSuccess(updated, false); alert(data.message); setOtpCode(''); } else alert(data.message); } catch(e) { alert("Connection Error"); } } setApiLoading(false); };
   const handleResendOtp = async () => { setApiLoading(true); if (IS_DEMO_MODE) alert("OTP: 123456"); else { try { const res = await fetch(`${API_BASE}/resend_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: currentUser?.id }) }); const data = await res.json(); alert(data.message || (data.success ? "OTP Sent" : "Failed")); } catch(e) { alert("Error"); } } setApiLoading(false); };
   
@@ -735,14 +548,76 @@ export default function App() {
       }
   };
 
-  // ... (Forgot Password Handlers - truncated for brevity) ...
   const handleForgotCheck = async (e: React.FormEvent) => { e.preventDefault(); setApiLoading(true); if(IS_DEMO_MODE) { setTimeout(() => { setForgotMethods({has_wa: true, phone_masked: "081****789", has_email: true, email_masked: "ad***@example.com"}); setForgotStep('method'); setApiLoading(false); }, 500); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=check`, { method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier }) }); const data = await res.json(); if(data.success) { setForgotMethods(data.methods); setForgotStep('method'); if(!data.methods.has_wa) setSelectedMethod('email'); } else alert(data.message); } catch(e) { alert("Connection error"); } finally { setApiLoading(false); } } };
   const handleForgotSend = async () => { setApiLoading(true); if(IS_DEMO_MODE) { if(selectedMethod === 'wa') { alert("OTP: 123456 (Demo)"); setForgotStep('verify'); } else { alert("Link sent to email (Demo)"); setShowForgotPass(false); setForgotStep('input'); } setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=send`, { method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier, method: selectedMethod }) }); const data = await res.json(); if(data.success) { if(selectedMethod === 'wa') { setForgotStep('verify'); } else { alert(data.message); setShowForgotPass(false); setForgotStep('input'); } } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
   const handleForgotVerify = async () => { setApiLoading(true); if(IS_DEMO_MODE) { if(forgotOtp === '123456') { setForgotStep('reset'); setResetToken('demo-token'); } else alert('Invalid OTP'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=verify`, { method: 'POST', body: JSON.stringify({ identifier: forgotIdentifier, otp: forgotOtp }) }); const data = await res.json(); if(data.success) { setResetToken(data.token); setForgotStep('reset'); } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
   const handleForgotReset = async (e: React.FormEvent) => { e.preventDefault(); if(newPass !== confirmNewPass) return alert("Password mismatch"); setApiLoading(true); if(IS_DEMO_MODE) { alert("Password Reset Success (Demo)"); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/forgot_password.php?action=reset`, { method: 'POST', body: JSON.stringify({ token: resetToken, password: newPass }) }); const data = await res.json(); if(data.success) { alert("Password changed successfully. Please login."); setShowForgotPass(false); setForgotStep('input'); setForgotIdentifier(''); } else alert(data.message); } catch(e) { alert("Error"); } finally { setApiLoading(false); } } };
 
   const handleLogout = () => { setCurrentUser(null); sessionStorage.removeItem('qios_user'); setShowLanding(true); setTransactions([]); };
-  const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); setLoginError(''); setApiLoading(true); if (IS_DEMO_MODE) { let allUsers = [...users]; const savedUsers = localStorage.getItem('qios_users'); if (savedUsers) { const parsed = JSON.parse(savedUsers); allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; } const foundUser = allUsers.find(u => u.username === loginUser); if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); else setLoginError('Invalid (Demo: user=pass)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); const text = await res.text(); if (!text || text.trim() === '') throw new Error("Empty Response"); let data; try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } if (data.success) loginSuccess(data.user); else setLoginError(data.message || 'Login failed'); } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } } };
+  
+  // RESTORED 2FA LOGIC IN LOGIN
+  const handleLogin = async (e: React.FormEvent) => { 
+      e.preventDefault(); 
+      setLoginError(''); 
+      setApiLoading(true); 
+      
+      if (IS_DEMO_MODE) { 
+          let allUsers = [...users]; 
+          const savedUsers = localStorage.getItem('qios_users'); 
+          if (savedUsers) { 
+              const parsed = JSON.parse(savedUsers); 
+              allUsers = [...MOCK_USERS, ...parsed.filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]; 
+          } 
+          const foundUser = allUsers.find(u => u.username === loginUser); 
+          if (loginUser === 'admin' && loginPass === 'admin') loginSuccess(MOCK_USERS[0]); 
+          else if (foundUser && loginPass === foundUser.username) loginSuccess(foundUser); 
+          else setLoginError('Invalid (Demo: user=pass)'); 
+          setApiLoading(false); 
+      } else { 
+          try { 
+              const res = await fetch(`${API_BASE}/login.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: loginUser, password: loginPass }) }); 
+              const text = await res.text(); 
+              if (!text || text.trim() === '') throw new Error("Empty Response"); 
+              let data; 
+              try { data = JSON.parse(text); } catch (e) { throw new Error(`Invalid JSON: ${text.substring(0, 100)}...`); } 
+              
+              if (data.success) {
+                  loginSuccess(data.user);
+              } else if (data.require_2fa) {
+                  // 2FA TRIGGER
+                  setTempUserId(data.user_id);
+                  setTwoFaPhoneMasked(data.phone_masked);
+                  setLoginMode('2fa_verify');
+                  // Auto send OTP
+                  await fetch(`${API_BASE}/send_otp.php`, { method: 'POST', body: JSON.stringify({ user_id: data.user_id, action: '2fa' }) });
+                  alert(`OTP has been sent to your WhatsApp: ${data.phone_masked}`);
+              } else {
+                  setLoginError(data.message || 'Login failed'); 
+              }
+          } catch (err: any) { setLoginError(err.message || 'Connection Error'); } finally { setApiLoading(false); } 
+      } 
+  };
+
+  const handleVerify2FA = async () => {
+      setApiLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/verify_otp.php`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ user_id: tempUserId, code: otpCode })
+          });
+          const data = await res.json();
+          if (data.success) {
+              loginSuccess(data.user);
+          } else {
+              setLoginError('Invalid OTP');
+          }
+      } catch (e) {
+          setLoginError('Verification failed');
+      }
+      setApiLoading(false);
+  };
+
   const handleRegister = async (e: React.FormEvent) => { e.preventDefault(); setRegError(''); if (regPass !== regConfirmPass) { setRegError('Mismatch'); return; } setApiLoading(true); if (IS_DEMO_MODE) { const newUser: User = { id: Date.now().toString(), username: regUser, email: regEmail, role: 'user', isVerified: true }; const currentUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); currentUsers.push(newUser); localStorage.setItem('qios_users', JSON.stringify(currentUsers)); loginSuccess(newUser); setShowRegister(false); alert('Success (Demo)'); setApiLoading(false); } else { try { const res = await fetch(`${API_BASE}/register.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: regUser, email: regEmail, password: regPass, confirmPassword: regConfirmPass }) }); const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { throw new Error(text.substring(0, 50)); } if (data.success) { alert('Success! ' + (data.warning || 'Please login.')); setShowRegister(false); setLoginUser(regUser); } else setRegError(data.message || 'Failed'); } catch (err: any) { setRegError(err.message || 'Error'); } finally { setApiLoading(false); } } };
   const handleManualVerifyUser = async (targetUserId: string) => { if(!confirm("Verify user?")) return; setApiLoading(true); if(IS_DEMO_MODE) { setUsers(users.map(u => u.id === targetUserId ? {...u, isVerified: true} : u)); alert("Verified"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php?action=verify`, { method: 'POST', body: JSON.stringify({ id: targetUserId }) }); const data = await res.json(); if(data.success) { alert("Success"); fetchUsers(); } else alert(data.message); } catch(e) { alert("Error"); } } setApiLoading(false); };
   const handleDeleteUser = async (targetUser: User) => { if (currentUser?.id === targetUser.id) return alert("You cannot delete your own account."); if (!confirm(`Are you sure you want to delete user "${targetUser.username}"? This action cannot be undone.`)) return; setApiLoading(true); if (IS_DEMO_MODE) { setUsers(users.filter(u => u.id !== targetUser.id)); const savedUsers = JSON.parse(localStorage.getItem('qios_users') || '[]'); const newSaved = savedUsers.filter((u: User) => u.id !== targetUser.id); localStorage.setItem('qios_users', JSON.stringify(newSaved)); alert("User deleted (Demo)"); } else { try { const res = await fetch(`${API_BASE}/manage_users.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete', id: targetUser.id }) }); const data = await res.json(); if (data.success) { alert("User deleted successfully"); fetchUsers(); } else { alert("Failed to delete: " + data.message); } } catch (e) { alert("Connection Error"); } } setApiLoading(false); };
@@ -754,10 +629,9 @@ export default function App() {
   const fetchTransactions = async (user: User) => { if (IS_DEMO_MODE) { const savedTx = localStorage.getItem('qios_transactions'); if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions(Array(5).fill(0).map((_, i) => ({ id: `TRX-DEMO-${1000+i}`, merchantId: user.id, amount: 10000 + (i * 5000), description: `Demo ${i+1}`, status: i % 2 === 0 ? 'paid' : 'pending', createdAt: new Date().toISOString(), qrString: user.merchantConfig?.qrisString || '', paymentUrl: window.location.origin + '/?pay=demo' + i }))); return; } try { const res = await fetch(`${API_BASE}/get_data.php?user_id=${user.id}&role=${user.role}`); const data = await res.json(); if (data.success && data.transactions) setTransactions(data.transactions); } catch (e) { console.error(e); } };
   const fetchUsers = async () => { if (IS_DEMO_MODE) { const savedUsers = localStorage.getItem('qios_users'); setUsers([...MOCK_USERS, ...(savedUsers ? JSON.parse(savedUsers) : []).filter((u:User) => !MOCK_USERS.find(m => m.id === u.id))]); return; } try { const res = await fetch(`${API_BASE}/manage_users.php?action=list`); const data = await res.json(); if (data.success && data.users) setUsers(data.users); } catch (e) { console.error(e); } };
   const loginSuccess = (user: User, redirect = true) => { if (user.username === 'admin' && user.role !== 'superadmin') user.role = 'superadmin'; if (user.isVerified === undefined) user.isVerified = true; setCurrentUser(user); sessionStorage.setItem('qios_user', JSON.stringify(user)); if (user.merchantConfig) setConfig(user.merchantConfig); setAccountForm({ username: user.username, email: user.email || '', phone: user.phone || '', password: '', newPassword: '', confirmNewPassword: '' }); if (user.merchantConfig?.branding?.brandColor) document.documentElement.style.setProperty('--brand-color', user.merchantConfig.branding.brandColor); setView(user.role === 'user' ? 'history' : 'dashboard'); if (redirect) setShowLanding(false); fetchTransactions(user); if (['superadmin', 'merchant', 'cs'].includes(user.role)) fetchUsers(); };
-  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions(transactions.map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
-  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...transactions]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...transactions]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
+  const handleRevokeLink = async (trx: Transaction) => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!confirm("Cancel link?")) return; if (IS_DEMO_MODE) { /* @ts-ignore */ setTransactions((transactions || []).map(t => t.id === trx.id ? {...t, status: 'cancelled'} : t)); alert("Revoked"); } else { try { const res = await fetch(`${API_BASE}/revoke_link.php`, { method: 'POST', body: JSON.stringify({ trx_id: trx.id }) }); const data = await res.json(); if (data.success) { fetchTransactions(currentUser!); alert("Revoked"); } else alert(data.message); } catch(e) { alert("Error"); } } };
+  const handleGenerateQR = async () => { if (currentUser?.isVerified === false) return alert("Verify email first."); if (!tempAmount || isNaN(Number(tempAmount))) return; setApiLoading(true); setGeneratedQR(null); setGeneratedLink(null); if (IS_DEMO_MODE) { const qr = generateDynamicQR(config.qrisString, Number(tempAmount)); const token = Math.random().toString(36).substring(7); const link = `${window.location.origin}/?pay=${token}`; setTimeout(() => { setGeneratedQR(qr); setGeneratedLink(link); setTransactions([{ id: `TRX-${Date.now()}`, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: qr, paymentUrl: link }, ...(transactions || [])]); setApiLoading(false); }, 800); } else { try { const res = await fetch(`${API_BASE}/create_payment.php`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ merchant_id: currentUser?.id, amount: Number(tempAmount), description: tempDesc, expiry_minutes: expiryMinutes ? parseInt(expiryMinutes) : 0, single_use: singleUse, api_key: config.appSecretKey }) }); const data = await res.json(); if (data.success) { setGeneratedQR(data.qr_string); setGeneratedLink(data.payment_url); setTransactions([{ id: data.trx_id, merchantId: currentUser?.id || '0', amount: Number(tempAmount), description: tempDesc, status: 'pending', createdAt: new Date().toISOString(), qrString: data.qr_string, paymentUrl: data.payment_url }, ...(transactions || [])]); } else alert(data.message); } catch (e) { alert("Error"); } finally { setApiLoading(false); } } };
 
-  // ... (Render Logic) ...
   if (isPublicMode) {
      const brandColor = config.branding?.brandColor || '#4f46e5';
      const logo = config.branding?.logoUrl;
@@ -773,7 +647,6 @@ export default function App() {
                 <div><h1 className="text-2xl font-bold text-gray-800">{config.merchantName || publicData?.merchant_name}</h1><p className="text-gray-500 text-sm mt-1">{publicData?.description}</p>{publicData?.expires_at && <p className="text-xs text-orange-500 font-bold mt-2 flex justify-center items-center gap-1"><Clock size={12}/> Expires: {new Date(publicData.expires_at).toLocaleString()}</p>}</div>
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 relative"><div className="flex justify-center">{generatedQR && <QRCodeDisplay data={generatedQR} width={220} logoUrl={logo} />}</div></div>
                 <div style={{color: brandColor}} className="text-4xl font-extrabold">{formatRupiah(Number(tempAmount))}</div>
-                
                 {!isPaid && !isExpired && (
                     <div className="flex flex-col gap-3 w-full mt-4 animate-in fade-in slide-in-from-bottom-4">
                         <button onClick={() => handlePublicCheck(false)} disabled={isCheckingPublic} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
@@ -788,30 +661,25 @@ export default function App() {
      );
   }
   
-  // RESTORED: LOGIC LOGIN & REGISTER PAGE
   if (showLanding && !currentUser) { return <LandingPage onLogin={() => setShowLanding(false)} onRegister={() => { setShowLanding(false); setShowRegister(true); }} />; }
   
   if (!currentUser) { 
       if (showRegister) { return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"><div className="bg-indigo-600 p-8 text-center relative"><button onClick={()=>{setShowRegister(false);setShowLanding(true);}} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button><h1 className="text-2xl font-bold text-white">Create Account</h1></div><div className="p-8"><form onSubmit={handleRegister} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regUser} onChange={e=>setRegUser(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2 border border-gray-200 rounded-lg" value={regEmail} onChange={e=>setRegEmail(e.target.value)}/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><div className="relative"><input type={showPassword ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regPass} onChange={e=>setRegPass(e.target.value)}/><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><div className="relative"><input type={showConfirmNewPass ? "text" : "password"} required className="w-full px-4 py-2 border border-gray-200 rounded-lg pr-10" value={regConfirmPass} onChange={e=>setRegConfirmPass(e.target.value)}/><button type="button" onClick={() => setShowConfirmNewPass(!showConfirmNewPass)} className="absolute right-3 top-2 text-gray-400 hover:text-gray-600">{showConfirmNewPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>{regError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{regError}</div>}<button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Sign Up'}</button>
       
-      {/* SOCIAL LOGIN FOR REGISTER - USING SYSTEM CONFIG */}
       {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && (
           <>
               <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or sign up with</span></div></div>
               <div className="grid grid-cols-3 gap-3">
-                  {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Chrome size={20} className="text-red-500"/></button>}
-                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Github size={20}/></button>}
-                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><Facebook size={20} className="text-blue-600"/></button>}
+                  {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GoogleIcon className="text-red-500"/></button>}
+                  {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GithubIcon className="text-gray-900"/></button>}
+                  {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><FacebookIcon className="text-blue-600"/></button>}
               </div>
           </>
       )}
       </form></div></div></div>; } 
       
-      // ... (Login Screen remains same) ...
       return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          {/* ... (Forgot Password Logic) ... */}
-          {/* ... */}
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
               <div className="bg-indigo-600 p-8 text-center relative">
                   <button onClick={()=>setShowLanding(true)} className="absolute top-4 left-4 text-white/50 hover:text-white"><X size={20}/></button>
@@ -824,6 +692,17 @@ export default function App() {
                   )}
               </div>
               <div className="p-8">
+                  {loginMode === '2fa_verify' && (
+                      <div className="space-y-6 animate-in fade-in">
+                          <div className="bg-indigo-50 p-4 rounded-lg text-sm text-indigo-700 mb-4 border border-indigo-100 flex items-start gap-2">
+                              <Lock className="w-5 h-5 shrink-0 mt-0.5"/>
+                              <div><p className="font-bold">Two-Factor Authentication</p><p>Enter the code sent to your WhatsApp ({twoFaPhoneMasked})</p></div>
+                          </div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-2">OTP Code</label><input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-lg text-center text-2xl font-bold tracking-widest" value={otpCode} onChange={(e)=>setOtpCode(e.target.value)} maxLength={6}/></div>
+                          <button onClick={handleVerify2FA} disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Verify OTP'}</button>
+                          <button onClick={()=>setLoginMode('standard')} className="w-full text-center text-sm text-gray-500 hover:text-gray-700 mt-4">Back to Login</button>
+                      </div>
+                  )}
                   {loginMode === 'standard' && (
                       <form onSubmit={handleLogin} className="space-y-6">
                           <div><label className="block text-sm font-medium text-gray-700 mb-2">Username</label><input type="text" required className="w-full px-4 py-3 border border-gray-200 rounded-lg" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)}/></div>
@@ -838,7 +717,18 @@ export default function App() {
                           <button type="submit" disabled={apiLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold">{apiLoading?<Loader2 className="animate-spin"/>:'Login'}</button>
                       </form>
                   )}
-                  {/* ... (WA Login & Social Buttons remain) ... */}
+                  
+                  {/* RESTORED SOCIAL LOGIN BUTTONS */}
+                  {(systemConfig.socialLogin?.google || systemConfig.socialLogin?.github || systemConfig.socialLogin?.facebook) && loginMode !== '2fa_verify' && (
+                      <>
+                          <div className="relative my-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div></div>
+                          <div className="grid grid-cols-3 gap-3">
+                              {systemConfig.socialLogin?.google && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GoogleIcon className="text-red-500"/></button>}
+                              {systemConfig.socialLogin?.github && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><GithubIcon className="text-gray-900"/></button>}
+                              {systemConfig.socialLogin?.facebook && <button type="button" className="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"><FacebookIcon className="text-blue-600"/></button>}
+                          </div>
+                      </>
+                  )}
               </div>
           </div>
       </div>
@@ -848,150 +738,595 @@ export default function App() {
   // ... (Dashboard) ...
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-      {/* ... (Transaction Modal & User Modals) ... */}
       
-      {/* ... (Sidebar) ... */}
+      {/* SIDEBAR (With Mobile Overlay) */}
+      {isSidebarOpen && window.innerWidth < 1024 && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-40 bg-white w-64 border-r border-gray-100 flex flex-col h-full transform transition-transform duration-300 lg:translate-x-0 lg:static lg:h-screen ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 flex items-center px-6 border-b border-gray-50 justify-between">
+          <div className="flex items-center">
+             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white mr-3">
+               <QrCode size={20} />
+             </div>
+             <span className="font-bold text-xl tracking-tight text-gray-800">QiosLink</span>
+          </div>
+          <button className="lg:hidden text-gray-400" onClick={() => setSidebarOpen(false)}><X size={20}/></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+          {currentUser?.role !== 'user' && <SidebarItem active={view === 'dashboard'} icon={<LayoutDashboard size={20} />} label="Dashboard" onClick={() => setView('dashboard')} />}
+          <SidebarItem active={view === 'history'} icon={<History size={20} />} label="Transactions" onClick={() => setView('history')} />
+          {currentUser?.role !== 'user' && <SidebarItem active={view === 'terminal'} icon={<Code2 size={20} />} label="Payment Terminal" onClick={() => setView('terminal')} />}
+          <SidebarItem active={view === 'links'} icon={<LinkIcon size={20} />} label="Active Links" onClick={() => setView('links')} />
+          
+          {['superadmin', 'merchant'].includes(currentUser?.role || '') && (
+            <div className="pt-4 mt-4 border-t border-gray-50">
+              <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Management</p>
+              <SidebarItem active={view === 'users'} icon={<Users size={20} />} label="User Management" onClick={() => setView('users')} />
+            </div>
+          )}
+
+          <div className="pt-4 mt-4 border-t border-gray-50">
+            <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">System</p>
+            <SidebarItem active={view === 'integration'} icon={<PlugIcon size={20}/>} label="Integration" onClick={() => setView('integration')} />
+            <SidebarItem active={view === 'settings'} icon={<Settings size={20} />} label="Settings & Profile" onClick={() => setView('settings')} />
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-gray-50">
+          <button onClick={handleLogout} className="flex items-center space-x-3 text-red-500 hover:bg-red-50 w-full px-4 py-2 rounded-lg transition-colors">
+            <LogOut size={20} />
+            <span className="font-medium">Logout</span>
+          </button>
+        </div>
+      </aside>
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
-        {/* ... (Header) ... */}
-        
+        {/* DASHBOARD HEADER WITH MOBILE TOGGLE */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
+            <div className="flex items-center">
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 mr-4 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <Menu size={24} />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 capitalize">{view}</h2>
+            </div>
+            <div className="flex items-center gap-3">
+                 {isTrue(currentUser.isVerified) ? <span className="hidden md:flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full"><CheckCircle2 size={12}/> Verified</span> : null}
+                 <span className="font-medium text-sm text-gray-600">{currentUser.username}</span>
+            </div>
+        </header>
+
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 pb-20">
           <VerificationBanner user={currentUser} onVerifyClick={() => { setView('settings'); setSettingsTab('account'); }} />
           
-          {/* ... (Dashboard Views) ... */}
-          
-          {/* SETTINGS - KYC TAB UPDATE */}
-          {view === 'settings' && settingsTab === 'kyc' && (
-             <Card>
-                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><ScanFace size={20}/> KYC Configuration</h3>
-                 <div className="mb-6 p-4 border border-indigo-100 rounded-lg bg-indigo-50/50">
-                     <div className="flex items-center gap-2">
-                         <input type="checkbox" id="enableKyc" className="h-5 w-5 text-indigo-600 rounded" checked={config.kyc?.enabled || false} onChange={e => setConfig({...config, kyc: {...config.kyc!, enabled: e.target.checked}})} />
-                         <div><label htmlFor="enableKyc" className="text-base font-medium text-gray-900 cursor-pointer">Enable Identity Verification System</label><p className="text-sm text-gray-500">If enabled, users will see an option to verify their identity.</p></div>
-                     </div>
-                 </div>
-                 
-                 {config.kyc?.enabled && (
-                    <div className="animate-in fade-in slide-in-from-top-4">
-                        <div className="space-y-4">
-                             <div>
-                                 <label className="block text-sm font-medium mb-1">Verification Provider</label>
-                                 <select className="w-full border p-2 rounded bg-white" value={config.kyc?.provider || 'manual'} onChange={e => setConfig({...config, kyc: {...config.kyc!, provider: e.target.value as any}})}>
-                                     <option value="manual">Manual (Contact Admin)</option>
-                                     <option value="didit">Didit.me (Automated)</option>
-                                 </select>
-                             </div>
-
-                             {config.kyc?.provider === 'manual' && (
-                                 <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
-                                     <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                                         <h4 className="font-bold text-gray-800 mb-2">Manual Verification Contact</h4>
-                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                             <div><label className="block text-sm font-medium mb-1">Contact Method</label><select className="w-full border p-2 rounded bg-white" value={config.kyc?.manualContactType || 'whatsapp'} onChange={e => setConfig({...config, kyc: {...config.kyc!, manualContactType: e.target.value as any}})}><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></div>
-                                             <div><label className="block text-sm font-medium mb-1">Contact Value (Number/Email)</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.manualContactValue || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, manualContactValue: e.target.value}})} placeholder={config.kyc?.manualContactType === 'email' ? 'admin@example.com' : '628123456789'} /></div>
-                                         </div>
-                                         <p className="text-xs text-yellow-800 mt-2">When users click "Verify Identity", they will be redirected to this contact.</p>
-                                     </div>
-                                 </div>
-                             )}
-
-                             {config.kyc?.provider === 'didit' && (
-                                 <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
-                                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 flex gap-3 items-start"><div className="text-blue-600 mt-1"><AlertCircle size={20}/></div><div className="text-sm text-blue-800"><p className="font-bold mb-1">Didit.me Integration</p><p className="mb-2">Enter your App ID, API Key, and Webhook Secret from the Didit Dashboard.</p><a href="https://business.didit.me" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 font-bold hover:underline">Go to Didit Console <ExternalLink size={12}/></a></div></div>
-                                     <div className="bg-white border p-4 rounded-lg shadow-sm">
-                                         <h4 className="font-bold text-gray-800 mb-4 border-b pb-2">API Credentials</h4>
-                                         <div className="space-y-4">
-                                             <div><label className="block text-sm font-medium mb-1">App ID (Optional)</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditAppId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditAppId: e.target.value}})} placeholder="Enter Didit App ID"/></div>
-                                             <div><label className="block text-sm font-medium mb-1">API Key</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditApiKey || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditApiKey: e.target.value}})} placeholder="Enter Didit API Key"/></div>
-                                             
-                                             {/* NEW: Workflow ID Input */}
-                                             <div>
-                                                 <label className="block text-sm font-bold text-gray-900 mb-1">Workflow ID (Required for Didit V2/V3)</label>
-                                                 <input type="text" className="w-full border p-2 rounded bg-indigo-50 border-indigo-200" value={config.kyc?.diditWorkflowId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWorkflowId: e.target.value}})} placeholder="Example: wfl_12345678"/>
-                                                 <p className="text-xs text-gray-500 mt-1">Get this from Didit Console -> Workflows.</p>
-                                             </div>
-
-                                             <div><label className="block text-sm font-medium mb-1">Webhook Secret</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditWebhookSecret || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWebhookSecret: e.target.value}})} placeholder="Enter Webhook Secret"/></div>
-                                             <div className="pt-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Webhook URL (Callback)</label><div className="flex gap-2"><input type="text" readOnly className="w-full bg-gray-50 border p-2 rounded text-gray-600 font-mono text-xs" value={window.location.origin + "/api/kyc_callback.php"} /><button onClick={() => copyToClipboard(window.location.origin + "/api/kyc_callback.php")} className="px-3 bg-gray-100 border rounded hover:bg-gray-200 text-gray-600"><Copy size={16}/></button></div></div>
-                                         </div>
-                                     </div>
-                                 </div>
-                             )}
+          {/* DASHBOARD VIEW (CHART & STATS) */}
+          {view === 'dashboard' && currentUser?.role !== 'user' && (
+            <div className="space-y-6 animate-in fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0">
+                        <div className="flex justify-between items-start">
+                            <div><p className="text-indigo-100 text-sm font-medium">Total Revenue</p><h3 className="text-3xl font-bold mt-1">{formatRupiah((transactions || []).filter(t => t.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0))}</h3></div>
+                            <div className="p-2 bg-white/20 rounded-lg"><Wallet size={24} /></div>
                         </div>
+                    </Card>
+                    <Card>
+                        <div className="flex justify-between items-start">
+                            <div><p className="text-gray-500 text-sm font-medium">Successful Transactions</p><h3 className="text-3xl font-bold mt-1 text-gray-900">{(transactions || []).filter(t => t.status === 'paid').length}</h3></div>
+                            <div className="p-2 bg-green-50 rounded-lg"><CheckCircle2 size={24} className="text-green-600" /></div>
+                        </div>
+                    </Card>
+                    <Card>
+                        <div className="flex justify-between items-start">
+                            <div><p className="text-gray-500 text-sm font-medium">Pending Payments</p><h3 className="text-3xl font-bold mt-1 text-gray-900">{(transactions || []).filter(t => t.status === 'pending').length}</h3></div>
+                            <div className="p-2 bg-orange-50 rounded-lg"><Clock size={24} className="text-orange-600" /></div>
+                        </div>
+                    </Card>
+                </div>
+
+                {/* CHART SECTION */}
+                <Card className="h-[400px]">
+                    <h3 className="text-lg font-bold mb-6 text-gray-800">Transaction Overview</h3>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={(transactions || []).slice(0, 10).map(t => ({ name: new Date(t.createdAt).toLocaleDateString(), amount: t.amount }))}>
+                            <defs>
+                                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(value) => `Rp${value/1000}k`} />
+                            <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                            <Area type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={2} fillOpacity={1} fill="url(#colorAmount)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </Card>
+            </div>
+          )}
+
+          {/* HISTORY VIEW */}
+          {view === 'history' && (
+            <Card>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <h2 className="text-xl font-bold text-gray-800">Transaction History</h2>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+                  <input type="text" placeholder="Search ID or Customer..." className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="pb-3 pl-4">ID</th>
+                      <th className="pb-3">Date</th>
+                      <th className="pb-3">Amount</th>
+                      <th className="pb-3">Description</th>
+                      <th className="pb-3">Status</th>
+                      <th className="pb-3 pr-4">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {(transactions || []).filter(t => t.id.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase())).map((trx) => (
+                      <tr key={trx.id} className="hover:bg-gray-50 transition-colors group">
+                        <td className="py-4 pl-4 font-mono text-sm text-gray-600">{trx.id}</td>
+                        <td className="py-4 text-sm text-gray-500">{new Date(trx.createdAt).toLocaleDateString()}</td>
+                        <td className="py-4 font-medium text-gray-900">{formatRupiah(trx.amount)}</td>
+                        <td className="py-4 text-sm text-gray-500 max-w-xs truncate">{trx.description}</td>
+                        <td className="py-4"><span className={`px-2 py-1 rounded-full text-xs font-medium ${trx.status === 'paid' ? 'bg-green-100 text-green-700' : trx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{trx.status.toUpperCase()}</span></td>
+                        <td className="py-4 pr-4"><button onClick={() => setSelectedTransaction(trx)} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm">View</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {selectedTransaction && <TransactionModal transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} onCopyLink={(t: Transaction) => copyToClipboard(t.paymentUrl || '')} branding={config.branding} onCheckStatus={handleCheckStatus} />}
+            </Card>
+          )}
+
+          {/* TERMINAL VIEW */}
+          {view === 'terminal' && currentUser?.role !== 'user' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Code2 size={24}/> Payment Terminal</h2>
+                    <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100">Live Mode</div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (IDR)</label>
+                    <div className="relative">
+                        <span className="absolute left-4 top-3 text-gray-400 font-bold">Rp</span>
+                        <input type="number" className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg font-bold" placeholder="0" value={tempAmount} onChange={(e) => setTempAmount(e.target.value)} />
                     </div>
-                 )}
-                 <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings</button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description / Order ID</label>
+                    <input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. Order #123" value={tempDesc} onChange={(e) => setTempDesc(e.target.value)} />
+                  </div>
+                  <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Expiry (Minutes)</label>
+                        <input type="number" className="w-full px-4 py-3 border border-gray-200 rounded-xl" placeholder="0 = Forever" value={expiryMinutes} onChange={(e) => setExpiryMinutes(e.target.value)} />
+                      </div>
+                      <div className="flex items-center pt-6">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="checkbox" className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" checked={singleUse} onChange={(e) => setSingleUse(e.target.checked)} />
+                              <span className="text-gray-700 font-medium">Single Use Only</span>
+                          </label>
+                      </div>
+                  </div>
+                  <button onClick={handleGenerateQR} disabled={apiLoading || !config.qrisString} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {apiLoading ? <Loader2 className="animate-spin" /> : <QrCode size={24} />}
+                    Generate Payment Link
+                  </button>
+                  {!config.qrisString && <p className="text-red-500 text-sm text-center">Please configure QRIS String in Settings first.</p>}
+                </div>
+              </Card>
+
+              <div className="space-y-6">
+                {generatedQR ? (
+                  <Card className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-right-4 bg-white border border-indigo-100 shadow-xl">
+                    <div className="mb-2"><span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold tracking-wide">READY TO SCAN</span></div>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-1">{formatRupiah(Number(tempAmount))}</h3>
+                    <p className="text-gray-500 text-sm mb-6">{tempDesc}</p>
+                    <div className="p-4 bg-white rounded-xl shadow-inner border border-gray-100 mb-6">
+                        <QRCodeDisplay data={generatedQR} width={240} logoUrl={config.branding?.logoUrl} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                        <button onClick={() => copyToClipboard(generatedLink || '')} className="flex items-center justify-center gap-2 py-3 px-4 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors border border-gray-200"><LinkIcon size={18}/> Copy Link</button>
+                        <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(generatedQR)}`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 py-3 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium transition-colors border border-indigo-200"><Download size={18}/> Save QR</a>
+                    </div>
+                  </Card>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 p-12 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                    <QrCode size={64} className="mb-4 opacity-20" />
+                    <p className="text-center font-medium">Generated QR Code will appear here</p>
+                    <p className="text-sm text-center mt-2 opacity-60">Fill the form and click generate</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE LINKS VIEW */}
+          {view === 'links' && (
+             <Card>
+                 <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2"><LinkIcon size={24}/> Active Payment Links</h2>
+                 <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                                <th className="p-4">Description</th>
+                                <th className="p-4">Amount</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4">URL</th>
+                                <th className="p-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {(transactions || []).filter(t => t.paymentUrl).map(t => (
+                                <tr key={t.id} className="hover:bg-gray-50">
+                                    <td className="p-4"><p className="font-bold text-gray-800">{t.description}</p><p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleString()}</p></td>
+                                    <td className="p-4 font-mono font-medium">{formatRupiah(t.amount)}</td>
+                                    <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${t.status==='paid'?'bg-green-100 text-green-700':t.status==='pending'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}`}>{t.status.toUpperCase()}</span></td>
+                                    <td className="p-4"><div className="flex items-center gap-2 max-w-xs"><input readOnly value={t.paymentUrl} className="bg-gray-50 border border-gray-200 text-xs p-1 rounded w-full text-gray-500"/><button onClick={()=>copyToClipboard(t.paymentUrl!)}><Copy size={14}/></button></div></td>
+                                    <td className="p-4 text-right">{t.status === 'pending' && <button onClick={()=>handleRevokeLink(t)} className="text-red-500 text-xs font-bold hover:underline">Revoke</button>}</td>
+                                </tr>
+                            ))}
+                            {(transactions || []).filter(t => t.paymentUrl).length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No active links found.</td></tr>}
+                        </tbody>
+                    </table>
+                 </div>
              </Card>
           )}
 
-          {/* SETTINGS - ACCOUNT TAB (FIXED VERIFICATION LOGIC) */}
-          {view === 'settings' && settingsTab === 'account' && (
+          {/* USER MANAGEMENT VIEW */}
+          {view === 'users' && ['superadmin', 'merchant'].includes(currentUser?.role || '') && (
+              <Card>
+                  <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Users size={24}/> User Management</h2>
+                      <button onClick={() => { setEditingUser(null); setUserFormData({username:'', email:'', password:'', role:'user', merchantName:'', merchantCode:'', apiKey:'', qrisString:''}); setUserModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 flex items-center gap-2"><Users size={16}/> Add New User</button>
+                  </div>
+                  <div className="overflow-x-auto">
+                      <table className="w-full">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                              <tr>
+                                  <th className="text-left p-4 text-sm font-semibold text-gray-600">User</th>
+                                  <th className="text-left p-4 text-sm font-semibold text-gray-600">Role</th>
+                                  <th className="text-left p-4 text-sm font-semibold text-gray-600">Status</th>
+                                  <th className="text-right p-4 text-sm font-semibold text-gray-600">Actions</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                              {(users || []).map(u => (
+                                  <tr key={u.id} className="hover:bg-gray-50">
+                                      <td className="p-4">
+                                          <div className="font-bold text-gray-800">{u.username}</div>
+                                          <div className="text-xs text-gray-500">{u.email}</div>
+                                      </td>
+                                      <td className="p-4"><span className="px-2 py-1 bg-gray-100 rounded text-xs font-mono uppercase border border-gray-200">{u.role}</span></td>
+                                      <td className="p-4">
+                                          <div className="flex flex-col gap-1">
+                                              {isTrue(u.isVerified) ? <span className="text-green-600 text-xs flex items-center gap-1"><CheckCircle2 size={12}/> Email Verified</span> : <button onClick={() => handleManualVerifyUser(u.id)} className="text-orange-500 text-xs hover:underline flex items-center gap-1"><AlertCircle size={12}/> Verify Email</button>}
+                                              {isTrue(u.isKycVerified) ? <span className="text-blue-600 text-xs flex items-center gap-1"><Shield size={12}/> KYC Approved</span> : <button onClick={() => handleManualApproveKyc(u.id)} className="text-gray-400 text-xs hover:underline flex items-center gap-1"><Shield size={12}/> Approve KYC</button>}
+                                          </div>
+                                      </td>
+                                      <td className="p-4 text-right">
+                                          <button onClick={() => handleDeleteUser(u)} className="text-red-500 hover:text-red-700 text-sm font-medium">Delete</button>
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+                  
+                  {/* MODAL ADD USER */}
+                  {isUserModalOpen && (
+                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                              <h3 className="text-lg font-bold mb-4">{editingUser ? 'Edit User' : 'Create New User'}</h3>
+                              <form onSubmit={handleUserManagementSubmit} className="space-y-4">
+                                  <div><label className="block text-xs font-bold text-gray-500 uppercase">Username</label><input className="w-full border p-2 rounded" value={userFormData.username} onChange={e=>setUserFormData({...userFormData, username: e.target.value})} required/></div>
+                                  <div><label className="block text-xs font-bold text-gray-500 uppercase">Email</label><input className="w-full border p-2 rounded" type="email" value={userFormData.email} onChange={e=>setUserFormData({...userFormData, email: e.target.value})} required/></div>
+                                  {!editingUser && <div><label className="block text-xs font-bold text-gray-500 uppercase">Password</label><input className="w-full border p-2 rounded" type="password" value={userFormData.password} onChange={e=>setUserFormData({...userFormData, password: e.target.value})} required/></div>}
+                                  <div><label className="block text-xs font-bold text-gray-500 uppercase">Role</label><select className="w-full border p-2 rounded" value={userFormData.role} onChange={e=>setUserFormData({...userFormData, role: e.target.value as any})}><option value="user">User (Regular)</option><option value="cs">CS (Customer Service)</option><option value="merchant">Merchant (Partner)</option></select></div>
+                                  
+                                  {userFormData.role === 'merchant' && (
+                                      <div className="p-4 bg-gray-50 rounded border border-gray-200 space-y-3">
+                                          <p className="text-xs font-bold text-gray-400">MERCHANT CONFIG</p>
+                                          <input placeholder="Merchant Name" className="w-full border p-2 rounded text-sm" value={userFormData.merchantName} onChange={e=>setUserFormData({...userFormData, merchantName: e.target.value})} />
+                                          <textarea placeholder="Paste Static QRIS String (000201...)" className="w-full border p-2 rounded text-sm h-20 font-mono text-xs" value={userFormData.qrisString} onChange={e=>setUserFormData({...userFormData, qrisString: e.target.value})} />
+                                      </div>
+                                  )}
+                                  
+                                  <div className="flex justify-end gap-2 pt-4">
+                                      <button type="button" onClick={()=>setUserModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+                                      <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700">Save User</button>
+                                  </div>
+                              </form>
+                          </div>
+                      </div>
+                  )}
+              </Card>
+          )}
+
+          {/* INTEGRATION VIEW */}
+          {view === 'integration' && (
+              <div className="space-y-6">
+                  <Card>
+                      <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><PlugIcon size={24}/> Integration Modules</h2>
+                      <p className="text-gray-500 mb-6">Download ready-to-use plugins for your platform.</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="border border-gray-200 p-4 rounded-xl hover:border-indigo-500 transition-colors cursor-pointer group">
+                              <h3 className="font-bold text-gray-800 group-hover:text-indigo-600">WHMCS Module</h3>
+                              <p className="text-sm text-gray-500 mb-4">Accept QRIS payments automatically in WHMCS.</p>
+                              <a href="#" className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg">Download ZIP</a>
+                          </div>
+                          <div className="border border-gray-200 p-4 rounded-xl hover:border-indigo-500 transition-colors cursor-pointer group">
+                              <h3 className="font-bold text-gray-800 group-hover:text-indigo-600">WooCommerce Plugin</h3>
+                              <p className="text-sm text-gray-500 mb-4">WordPress payment gateway for online stores.</p>
+                              <a href="#" className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg">Download ZIP</a>
+                          </div>
+                      </div>
+                  </Card>
+                  <Card>
+                      <h3 className="font-bold text-gray-800 mb-2">API Credentials</h3>
+                      <div className="space-y-2">
+                          <div><label className="text-xs text-gray-400 font-bold uppercase">Merchant ID</label><div className="bg-gray-50 p-2 rounded border border-gray-200 font-mono text-sm">{currentUser.id}</div></div>
+                          <div><label className="text-xs text-gray-400 font-bold uppercase">Secret Key</label><div className="bg-gray-50 p-2 rounded border border-gray-200 font-mono text-sm break-all">{config.appSecretKey}</div></div>
+                      </div>
+                  </Card>
+              </div>
+          )}
+
+          {/* SETTINGS VIEW (FULL) */}
+          {view === 'settings' && (
              <div className="space-y-6">
-                 {/* ... (Profile Form) ... */}
-                 
-                 {/* 2. Verification Status */}
-                 <Card>
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Verification Status</h3>
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                            <div className="flex items-center gap-3"><Mail size={20} className="text-gray-500"/><div><p className="font-medium">Email Verification</p><p className="text-xs text-gray-500">{currentUser.email}</p></div></div>
-                            {isTrue(currentUser.isVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <div className="flex gap-2"><input type="text" placeholder="OTP" className="w-20 border p-1 rounded text-xs" value={otpCode} onChange={e=>setOtpCode(e.target.value)} /><button onClick={handleVerifyEmail} className="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Submit</button><button onClick={handleResendOtp} className="text-xs text-indigo-600 underline">Resend</button></div>}
-                        </div>
+                 {/* Navigation Tabs */}
+                 <div className="flex overflow-x-auto gap-2 pb-2 mb-2 border-b border-gray-100">
+                     {[
+                         {id: 'config', label: 'Core Config', icon: <Settings size={16}/>},
+                         {id: 'account', label: 'Account & Security', icon: <Shield size={16}/>},
+                         {id: 'branding', label: 'Branding', icon: <Palette size={16}/>},
+                         {id: 'smtp', label: 'SMTP Email', icon: <Mail size={16}/>},
+                         {id: 'kyc', label: 'KYC Verification', icon: <ScanFace size={16}/>},
+                         {id: 'auth', label: 'Auth System', icon: <Lock size={16}/>} // Only for Superadmin usually
+                     ].map(tab => (
+                         <button 
+                            key={tab.id}
+                            onClick={() => setSettingsTab(tab.id as any)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${settingsTab === tab.id ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}
+                         >
+                             {tab.icon} {tab.label}
+                         </button>
+                     ))}
+                 </div>
 
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                            <div className="flex items-center gap-3"><Phone size={20} className="text-gray-500"/><div><p className="font-medium">WhatsApp Verification</p><p className="text-xs text-gray-500">{currentUser.phone || 'Not set'}</p></div></div>
-                            {isTrue(currentUser.isPhoneVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <button onClick={() => { if(!accountForm.phone) return alert("Save phone number first"); handleResendOtp(); }} className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded">Send OTP</button>}
-                        </div>
+                 {/* TAB: CORE CONFIG */}
+                 {settingsTab === 'config' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4">Merchant Configuration</h3>
+                         <div className="space-y-4">
+                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Merchant Name</label><input type="text" className="w-full border p-2 rounded" value={config.merchantName} onChange={e=>setConfig({...config, merchantName: e.target.value})}/></div>
+                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Static QRIS String (Nobu/Qiospay)</label><textarea className="w-full border p-2 rounded h-32 font-mono text-xs" value={config.qrisString} onChange={e=>setConfig({...config, qrisString: e.target.value})}/></div>
+                             <div><label className="block text-sm font-medium text-gray-700 mb-1">Callback URL (Webhook)</label><input type="text" className="w-full border p-2 rounded bg-gray-50" value={config.callbackUrl} readOnly/></div>
+                             <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading?<Loader2 className="animate-spin"/>:<Save size={18}/>} Save Config</button>
+                         </div>
+                     </Card>
+                 )}
 
-                        {/* KYC STATUS LOGIC UPDATED TO USE GLOBAL CONFIG */}
-                        {(isTrue(systemConfig.verifyKyc) || isTrue(systemConfig.kyc?.enabled) || isTrue(config.kyc?.enabled)) && (
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                                <div className="flex items-center gap-3"><ScanFace size={20} className="text-gray-500"/><div><p className="font-medium">Identity Verification (KYC)</p><p className="text-xs text-gray-500">Required for higher limits</p></div></div>
-                                {isTrue(currentUser.isKycVerified) ? 
-                                    <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : 
-                                    <span className="text-gray-500 text-xs font-medium">Not Verified</span>
-                                }
-                            </div>
-                        )}
-                    </div>
+                 {/* TAB: BRANDING */}
+                 {settingsTab === 'branding' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4">White Label Branding</h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div><label className="block text-sm font-medium mb-1">Brand Color</label><input type="color" className="w-full h-10 border rounded cursor-pointer" value={config.branding?.brandColor || '#4f46e5'} onChange={e=>setConfig({...config, branding: {...config.branding, brandColor: e.target.value}})}/></div>
+                             <div><label className="block text-sm font-medium mb-1">Logo URL</label><input type="text" className="w-full border p-2 rounded" placeholder="https://..." value={config.branding?.logoUrl || ''} onChange={e=>setConfig({...config, branding: {...config.branding, logoUrl: e.target.value}})}/></div>
+                             <div className="col-span-2"><label className="block text-sm font-medium mb-1">Custom Domain (CNAME)</label><input type="text" className="w-full border p-2 rounded" placeholder="pay.yourdomain.com" value={config.branding?.customDomain || ''} onChange={e=>setConfig({...config, branding: {...config.branding, customDomain: e.target.value}})}/></div>
+                         </div>
+                         <button onClick={handleUpdateConfig} disabled={apiLoading} className="mt-4 bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading?<Loader2 className="animate-spin"/>:<Save size={18}/>} Save Branding</button>
+                     </Card>
+                 )}
 
-                    {!isTrue(currentUser.isKycVerified) && (isTrue(systemConfig.verifyKyc) || isTrue(systemConfig.kyc?.enabled)) && ( 
-                        <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
-                            <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
-                            <button 
-                                onClick={() => {
-                                    // LOGIC FIX: Prioritize Global System Config for verification method
-                                    const provider = systemConfig.kyc?.provider || config.kyc?.provider || 'manual';
-                                    
-                                    if (provider === 'didit') {
-                                        handleStartDiditKyc();
-                                    } else {
-                                        const type = systemConfig.kyc?.manualContactType || config.kyc?.manualContactType || 'whatsapp';
-                                        const value = systemConfig.kyc?.manualContactValue || config.kyc?.manualContactValue || '628123456789';
-                                        
-                                        let url = '';
-                                        if (type === 'whatsapp') {
-                                            url = `https://wa.me/${value.replace(/[^0-9]/g,'')}?text=Halo%20Admin,%20saya%20${currentUser.username}%20(ID:${currentUser.id})%20ingin%20verifikasi%20KYC%20manual.`;
-                                        } else {
-                                            url = `mailto:${value}?subject=KYC%20Verification%20Request%20(${currentUser.username})&body=Hello%20Admin,%20I%20want%20to%20verify%20my%20account%20(ID:${currentUser.id}).`;
+                 {/* TAB: SMTP */}
+                 {settingsTab === 'smtp' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4">SMTP Email Server</h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div><label className="block text-sm font-medium mb-1">Host</label><input className="w-full border p-2 rounded" value={config.smtp?.host} onChange={e=>setConfig({...config, smtp: {...config.smtp!, host: e.target.value}})}/></div>
+                             <div><label className="block text-sm font-medium mb-1">Port</label><input className="w-full border p-2 rounded" value={config.smtp?.port} onChange={e=>setConfig({...config, smtp: {...config.smtp!, port: e.target.value}})}/></div>
+                             <div><label className="block text-sm font-medium mb-1">Username</label><input className="w-full border p-2 rounded" value={config.smtp?.user} onChange={e=>setConfig({...config, smtp: {...config.smtp!, user: e.target.value}})}/></div>
+                             <div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full border p-2 rounded" value={config.smtp?.pass} onChange={e=>setConfig({...config, smtp: {...config.smtp!, pass: e.target.value}})}/></div>
+                         </div>
+                         <div className="mt-4 flex gap-2">
+                             <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading?<Loader2 className="animate-spin"/>:<Save size={18}/>} Save SMTP</button>
+                             <button onClick={handleTestEmail} className="bg-gray-100 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-200">Test Email</button>
+                         </div>
+                     </Card>
+                 )}
+
+                 {/* TAB: ACCOUNT (Verification) */}
+                 {settingsTab === 'account' && (
+                     <div className="space-y-6">
+                         <Card>
+                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Shield size={20}/> Verification Status</h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                    <div className="flex items-center gap-3"><Mail size={20} className="text-gray-500"/><div><p className="font-medium">Email Verification</p><p className="text-xs text-gray-500">{currentUser.email}</p></div></div>
+                                    {isTrue(currentUser.isVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <div className="flex gap-2"><input type="text" placeholder="OTP" className="w-20 border p-1 rounded text-xs" value={otpCode} onChange={e=>setOtpCode(e.target.value)} /><button onClick={handleVerifyEmail} className="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Submit</button><button onClick={handleResendOtp} className="text-xs text-indigo-600 underline">Resend</button></div>}
+                                </div>
+
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                    <div className="flex items-center gap-3"><Phone size={20} className="text-gray-500"/><div><p className="font-medium">WhatsApp Verification</p><p className="text-xs text-gray-500">{currentUser.phone || 'Not set'}</p></div></div>
+                                    {isTrue(currentUser.isPhoneVerified) ? <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : <button onClick={() => { if(!accountForm.phone) return alert("Save phone number first"); handleResendOtp(); }} className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded">Send OTP</button>}
+                                </div>
+
+                                {(isTrue(systemConfig.verifyKyc) || isTrue(systemConfig.kyc?.enabled) || isTrue(config.kyc?.enabled)) && (
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                        <div className="flex items-center gap-3"><ScanFace size={20} className="text-gray-500"/><div><p className="font-medium">Identity Verification (KYC)</p><p className="text-xs text-gray-500">Required for higher limits</p></div></div>
+                                        {isTrue(currentUser.isKycVerified) ? 
+                                            <span className="text-green-600 text-sm font-bold flex items-center gap-1"><CheckCircle2 size={16}/> Verified</span> : 
+                                            <span className="text-gray-500 text-xs font-medium">Not Verified</span>
                                         }
-                                        window.open(url, '_blank');
-                                    }
-                                }} 
-                                className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
-                            >
-                                <ScanFace size={18}/> 
-                                {(systemConfig.kyc?.provider === 'didit' || config.kyc?.provider === 'didit') ? 'Start Automated Verification' : 'Contact Admin for Verification'}
-                            </button>
-                        </div> 
-                    )}
-                 </Card>
-                 
-                 {/* ... (Change Password & 2FA Cards) ... */}
+                                    </div>
+                                )}
+                            </div>
+
+                            {!isTrue(currentUser.isKycVerified) && (isTrue(systemConfig.verifyKyc) || isTrue(systemConfig.kyc?.enabled)) && ( 
+                                <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 animate-in fade-in">
+                                    <p className="text-sm text-blue-800 mb-3">Upgrade your account security and limits by verifying your identity.</p>
+                                    <button 
+                                        onClick={() => {
+                                            const provider = systemConfig.kyc?.provider || config.kyc?.provider || 'manual';
+                                            if (provider === 'didit') {
+                                                handleStartDiditKyc();
+                                            } else {
+                                                const type = systemConfig.kyc?.manualContactType || config.kyc?.manualContactType || 'whatsapp';
+                                                const value = systemConfig.kyc?.manualContactValue || config.kyc?.manualContactValue || '628123456789';
+                                                let url = type === 'whatsapp' ? `https://wa.me/${value.replace(/[^0-9]/g,'')}?text=Request%20KYC` : `mailto:${value}`;
+                                                window.open(url, '_blank');
+                                            }
+                                        }} 
+                                        className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+                                    >
+                                        <ScanFace size={18}/> 
+                                        {(systemConfig.kyc?.provider === 'didit' || config.kyc?.provider === 'didit') ? 'Start Automated Verification' : 'Contact Admin for Verification'}
+                                    </button>
+                                </div> 
+                            )}
+                         </Card>
+                         
+                         {/* Profile Update Form */}
+                         <Card>
+                             <h3 className="text-lg font-bold mb-4">Edit Profile</h3>
+                             <div className="space-y-4">
+                                 <div><label className="block text-sm font-medium mb-1">Username</label><input type="text" className="w-full border p-2 rounded" value={accountForm.username} onChange={e=>setAccountForm({...accountForm, username: e.target.value})}/></div>
+                                 <div><label className="block text-sm font-medium mb-1">Email</label><input type="email" className="w-full border p-2 rounded" value={accountForm.email} onChange={e=>setAccountForm({...accountForm, email: e.target.value})}/></div>
+                                 <div><label className="block text-sm font-medium mb-1">WhatsApp Number (e.g. 62812345678)</label><input type="text" className="w-full border p-2 rounded" value={accountForm.phone} onChange={e=>setAccountForm({...accountForm, phone: e.target.value})}/></div>
+                                 <div><label className="block text-sm font-medium mb-1">New Password (Optional)</label><input type="password" className="w-full border p-2 rounded" value={accountForm.newPassword} onChange={e=>setAccountForm({...accountForm, newPassword: e.target.value})}/></div>
+                                 <button onClick={handleUpdateAccount} className="bg-indigo-600 text-white px-6 py-2 rounded font-bold hover:bg-indigo-700">Update Profile</button>
+                             </div>
+                         </Card>
+                     </div>
+                 )}
+
+                 {/* TAB: KYC CONFIG */}
+                 {settingsTab === 'kyc' && (
+                     <Card>
+                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><ScanFace size={20}/> KYC Configuration</h3>
+                         <div className="mb-6 p-4 border border-indigo-100 rounded-lg bg-indigo-50/50">
+                             <div className="flex items-center gap-2">
+                                 <input type="checkbox" id="enableKyc" className="h-5 w-5 text-indigo-600 rounded" checked={config.kyc?.enabled || false} onChange={e => setConfig({...config, kyc: {...config.kyc!, enabled: e.target.checked}})} />
+                                 <div><label htmlFor="enableKyc" className="text-base font-medium text-gray-900 cursor-pointer">Enable Identity Verification System</label><p className="text-sm text-gray-500">If enabled, users will see an option to verify their identity.</p></div>
+                             </div>
+                         </div>
+                         
+                         {config.kyc?.enabled && (
+                            <div className="animate-in fade-in slide-in-from-top-4">
+                                <div className="space-y-4">
+                                     <div>
+                                         <label className="block text-sm font-medium mb-1">Verification Provider</label>
+                                         <select className="w-full border p-2 rounded bg-white" value={config.kyc?.provider || 'manual'} onChange={e => setConfig({...config, kyc: {...config.kyc!, provider: e.target.value as any}})}>
+                                             <option value="manual">Manual (Contact Admin)</option>
+                                             <option value="didit">Didit.me (Automated)</option>
+                                         </select>
+                                     </div>
+
+                                     {config.kyc?.provider === 'manual' && (
+                                         <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
+                                             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                                 <h4 className="font-bold text-gray-800 mb-2">Manual Verification Contact</h4>
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                     <div><label className="block text-sm font-medium mb-1">Contact Method</label><select className="w-full border p-2 rounded bg-white" value={config.kyc?.manualContactType || 'whatsapp'} onChange={e => setConfig({...config, kyc: {...config.kyc!, manualContactType: e.target.value as any}})}><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></div>
+                                                     <div><label className="block text-sm font-medium mb-1">Contact Value</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.manualContactValue || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, manualContactValue: e.target.value}})} placeholder="628123456789" /></div>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     )}
+
+                                     {config.kyc?.provider === 'didit' && (
+                                         <div className="mt-4 space-y-4 border-t pt-4 animate-in fade-in">
+                                             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 flex gap-3 items-start"><div className="text-blue-600 mt-1"><AlertCircle size={20}/></div><div className="text-sm text-blue-800"><p className="font-bold mb-1">Didit.me Integration</p><p className="mb-2">Enter your App ID, API Key, and Webhook Secret.</p><a href="https://business.didit.me" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 font-bold hover:underline">Go to Didit Console <ExternalLink size={12}/></a></div></div>
+                                             <div className="bg-white border p-4 rounded-lg shadow-sm">
+                                                 <h4 className="font-bold text-gray-800 mb-4 border-b pb-2">API Credentials</h4>
+                                                 <div className="space-y-4">
+                                                     <div><label className="block text-sm font-medium mb-1">App ID (Optional)</label><input type="text" className="w-full border p-2 rounded" value={config.kyc?.diditAppId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditAppId: e.target.value}})} placeholder="Enter Didit App ID"/></div>
+                                                     <div><label className="block text-sm font-medium mb-1">API Key</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditApiKey || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditApiKey: e.target.value}})} placeholder="Enter Didit API Key"/></div>
+                                                     <div>
+                                                         <label className="block text-sm font-bold text-gray-900 mb-1">Workflow ID (Required for Didit V2/V3)</label>
+                                                         <input type="text" className="w-full border p-2 rounded bg-indigo-50 border-indigo-200" value={config.kyc?.diditWorkflowId || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWorkflowId: e.target.value}})} placeholder="Example: wfl_12345678"/>
+                                                     </div>
+                                                     <div><label className="block text-sm font-medium mb-1">Webhook Secret</label><input type="password" className="w-full border p-2 rounded" value={config.kyc?.diditWebhookSecret || ''} onChange={e => setConfig({...config, kyc: {...config.kyc!, diditWebhookSecret: e.target.value}})} placeholder="Enter Webhook Secret"/></div>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     )}
+                                </div>
+                            </div>
+                         )}
+                         <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 mt-4">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save KYC Settings</button>
+                     </Card>
+                  )}
+
+                  {/* TAB: AUTH CONFIG */}
+                  {settingsTab === 'auth' && (
+                      <Card>
+                          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Lock size={20}/> Authentication & Security</h3>
+                          <div className="space-y-6">
+                              {/* 1. Login Methods */}
+                              <div className="border p-4 rounded-xl">
+                                  <h4 className="font-bold text-gray-700 mb-3">Login Methods</h4>
+                                  <div className="flex flex-col gap-2">
+                                      <label className="flex items-center gap-2"><input type="radio" name="loginMethod" value="standard" checked={config.auth?.loginMethod === 'standard'} onChange={() => setConfig({...config, auth: {...config.auth!, loginMethod: 'standard'}})} /> Email & Password Only</label>
+                                      <label className="flex items-center gap-2"><input type="radio" name="loginMethod" value="whatsapp_otp" checked={config.auth?.loginMethod === 'whatsapp_otp'} onChange={() => setConfig({...config, auth: {...config.auth!, loginMethod: 'whatsapp_otp'}})} /> WhatsApp OTP Only (Passwordless)</label>
+                                      <label className="flex items-center gap-2"><input type="radio" name="loginMethod" value="hybrid" checked={config.auth?.loginMethod === 'hybrid'} onChange={() => setConfig({...config, auth: {...config.auth!, loginMethod: 'hybrid'}})} /> Hybrid (Both Available)</label>
+                                  </div>
+                              </div>
+
+                              {/* 2. WhatsApp Gateway */}
+                              <div className="border p-4 rounded-xl">
+                                  <h4 className="font-bold text-gray-700 mb-3">WhatsApp Gateway Provider</h4>
+                                  <div className="space-y-3">
+                                      <select className="w-full border p-2 rounded" value={config.auth?.waProvider} onChange={e => setConfig({...config, auth: {...config.auth!, waProvider: e.target.value as any}})}>
+                                          <option value="fonnte">Unofficial (Fonnte) - Easiest</option>
+                                          <option value="meta">Meta Cloud API (Official)</option>
+                                      </select>
+                                      {config.auth?.waProvider === 'fonnte' && (
+                                          <div><label className="block text-xs font-bold text-gray-500 uppercase">Fonnte Token</label><input type="password" className="w-full border p-2 rounded" value={config.auth?.fonnteToken || ''} onChange={e => setConfig({...config, auth: {...config.auth!, fonnteToken: e.target.value}})} placeholder="Enter Token from Fonnte Dashboard"/></div>
+                                      )}
+                                  </div>
+                              </div>
+
+                              {/* 3. Social Login */}
+                              <div className="border p-4 rounded-xl">
+                                  <h4 className="font-bold text-gray-700 mb-3">Social Login (OAuth)</h4>
+                                  <div className="space-y-4">
+                                      <div className="flex items-center gap-3">
+                                          <input type="checkbox" checked={config.auth?.socialLogin?.google} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, google: e.target.checked}}})} />
+                                          <div className="flex-1"><label className="font-bold">Google Login</label></div>
+                                      </div>
+                                      {config.auth?.socialLogin?.google && <input type="text" className="w-full border p-2 rounded text-sm" placeholder="Google Client ID" value={config.auth?.socialLogin?.googleClientId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, googleClientId: e.target.value}}})} />}
+                                      
+                                      <div className="flex items-center gap-3 pt-2 border-t">
+                                          <input type="checkbox" checked={config.auth?.socialLogin?.github} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, github: e.target.checked}}})} />
+                                          <div className="flex-1"><label className="font-bold">GitHub Login</label></div>
+                                      </div>
+                                      {config.auth?.socialLogin?.github && <input type="text" className="w-full border p-2 rounded text-sm" placeholder="GitHub Client ID" value={config.auth?.socialLogin?.githubClientId || ''} onChange={e => setConfig({...config, auth: {...config.auth!, socialLogin: {...config.auth!.socialLogin, githubClientId: e.target.value}}})} />}
+                                  </div>
+                              </div>
+                              
+                              <button onClick={handleUpdateConfig} disabled={apiLoading} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2">{apiLoading ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Save Security Settings</button>
+                          </div>
+                      </Card>
+                  )}
              </div>
           )}
           
-          {/* ... (Rest of views) ... */}
         </div>
       </main>
     </div>
